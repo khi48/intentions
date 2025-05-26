@@ -1,0 +1,307 @@
+import Foundation
+import SwiftData
+import FamilyControls
+import ManagedSettings
+
+// MARK: - Data Persistence Protocol
+protocol DataPersisting: Sendable {
+    func save<T: Codable & Sendable>(_ object: T, forKey key: String) async throws
+    func load<T: Codable & Sendable>(_ type: T.Type, forKey key: String) async throws -> T?
+    func delete(forKey key: String) async throws
+    func saveAppGroup(_ group: AppGroup) async throws
+    func loadAppGroups() async throws -> [AppGroup]
+    func deleteAppGroup(_ id: UUID) async throws
+    func saveScheduleSettings(_ settings: ScheduleSettings) async throws
+    func loadScheduleSettings() async throws -> ScheduleSettings?
+    func saveIntentionSession(_ session: IntentionSession) async throws
+    func loadIntentionSessions() async throws -> [IntentionSession]
+    func deleteIntentionSession(_ id: UUID) async throws
+    func clearExpiredSessions() async throws
+}
+
+// MARK: - Data Persistence Service Implementation
+final class DataPersistenceService: DataPersisting, @unchecked Sendable {
+    private let modelContainer: ModelContainer
+    private let modelContext: ModelContext // Background context for service operations
+    
+    // UserDefaults for simple key-value storage
+    private let userDefaults = UserDefaults.standard
+    
+    // MARK: - Initialization
+    init(container: ModelContainer? = nil) throws {
+        let schema = Schema([
+            PersistentAppGroup.self,
+            PersistentIntentionSession.self,
+            PersistentScheduleSettings.self
+        ])
+        
+        let modelConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .private("IntentionsAppDatabase")
+        )
+        
+        if let container = container {
+            // Use provided test container with background context
+            // Background context avoids @MainActor isolation issues
+            self.modelContainer = container
+            self.modelContext = ModelContext(container)
+        } else {
+            // Production initialization with background context
+            // Background context is appropriate for service layer operations
+            do {
+                self.modelContainer = try ModelContainer(
+                    for: schema,
+                    configurations: [modelConfiguration]
+                )
+                self.modelContext = ModelContext(modelContainer)
+            } catch {
+                throw AppError.dataInitializationFailed(error.localizedDescription)
+            }
+        }
+    }
+    
+    // MARK: - Generic Storage Methods (UserDefaults-based)
+    func save<T: Codable & Sendable>(_ object: T, forKey key: String) async throws {
+        // Validate key
+        guard !key.isEmpty else {
+            throw AppError.validationFailed("key", reason: "Storage key cannot be empty")
+        }
+        
+        // Use prefixed key for namespace safety
+        let prefixedKey = key.prefixedKey
+        
+        // Perform encoding and storage on a background queue for consistency
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            DispatchQueue.global(qos: .utility).async {
+                do {
+                    let encoder = JSONEncoder()
+                    encoder.dateEncodingStrategy = .iso8601
+                    let data = try encoder.encode(object)
+                    
+                    // Validate data size
+                    guard data.count <= AppConstants.Storage.maxExportFileSize else {
+                        continuation.resume(throwing: AppError.persistenceError("Data size exceeds maximum allowed"))
+                        return
+                    }
+                    
+                    // Store on main queue (UserDefaults is thread-safe but for consistency)
+                    DispatchQueue.main.async {
+                        self.userDefaults.set(data, forKey: prefixedKey)
+                        continuation.resume()
+                    }
+                } catch {
+                    continuation.resume(throwing: AppError.persistenceError("Failed to save \(key): \(error.localizedDescription)"))
+                }
+            }
+        }
+    }
+    
+    func load<T: Codable & Sendable>(_ type: T.Type, forKey key: String) async throws -> T? {
+        // Validate key
+        guard !key.isEmpty else {
+            throw AppError.validationFailed("key", reason: "Storage key cannot be empty")
+        }
+        
+        let prefixedKey = key.prefixedKey
+        
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T?, Error>) in
+            DispatchQueue.global(qos: .utility).async {
+                guard let data = self.userDefaults.data(forKey: prefixedKey) else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                
+                do {
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    let object = try decoder.decode(type, from: data)
+                    continuation.resume(returning: object)
+                } catch {
+                    continuation.resume(throwing: AppError.persistenceError("Failed to load \(key): \(error.localizedDescription)"))
+                }
+            }
+        }
+    }
+    
+    func delete(forKey key: String) async throws {
+        guard !key.isEmpty else {
+            throw AppError.validationFailed("key", reason: "Storage key cannot be empty")
+        }
+        
+        let prefixedKey = key.prefixedKey
+        
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            DispatchQueue.main.async {
+                self.userDefaults.removeObject(forKey: prefixedKey)
+                continuation.resume()
+            }
+        }
+    }
+    
+    // MARK: - App Group Methods
+    func saveAppGroup(_ group: AppGroup) async throws {
+        do {
+            let persistentGroup = PersistentAppGroup(from: group)
+            
+            // Check if group already exists and update it - load all groups and filter in memory
+            let descriptor = FetchDescriptor<PersistentAppGroup>()
+            let allGroups = try modelContext.fetch(descriptor)
+            let existingGroups = allGroups.filter { $0.id == group.id }
+            
+            if let existingGroup = existingGroups.first {
+                existingGroup.update(from: group)
+            } else {
+                modelContext.insert(persistentGroup)
+            }
+            
+            try modelContext.save()
+        } catch {
+            throw AppError.persistenceError("Failed to save AppGroup \(group.name): \(error.localizedDescription)")
+        }
+    }
+    
+    func loadAppGroups() async throws -> [AppGroup] {
+        do {
+            let descriptor = FetchDescriptor<PersistentAppGroup>(
+                sortBy: [SortDescriptor(\.name)]
+            )
+            
+            let persistentGroups = try modelContext.fetch(descriptor)
+            return persistentGroups.compactMap { $0.toAppGroup() }
+        } catch {
+            throw AppError.persistenceError("Failed to load AppGroups: \(error.localizedDescription)")
+        }
+    }
+    
+    func deleteAppGroup(_ id: UUID) async throws {
+        do {
+            // Load all groups and filter in memory to avoid predicate issues
+            let descriptor = FetchDescriptor<PersistentAppGroup>()
+            let allGroups = try modelContext.fetch(descriptor)
+            let groups = allGroups.filter { $0.id == id }
+            
+            guard let group = groups.first else {
+                throw AppError.dataNotFound("AppGroup with ID \(id)")
+            }
+            
+            modelContext.delete(group)
+            try modelContext.save()
+        } catch let error as AppError {
+            throw error
+        } catch {
+            throw AppError.persistenceError("Failed to delete AppGroup \(id): \(error.localizedDescription)")
+        }
+    }
+    
+    // MARK: - Schedule Settings Methods
+    func saveScheduleSettings(_ settings: ScheduleSettings) async throws {
+        do {
+            let persistentSettings = PersistentScheduleSettings(from: settings)
+            
+            // Remove existing settings (there should only be one)
+            let descriptor = FetchDescriptor<PersistentScheduleSettings>()
+            let existingSettings = try modelContext.fetch(descriptor)
+            
+            for existing in existingSettings {
+                modelContext.delete(existing)
+            }
+            
+            modelContext.insert(persistentSettings)
+            try modelContext.save()
+        } catch {
+            throw AppError.persistenceError("Failed to save ScheduleSettings: \(error.localizedDescription)")
+        }
+    }
+    
+    func loadScheduleSettings() async throws -> ScheduleSettings? {
+        do {
+            let descriptor = FetchDescriptor<PersistentScheduleSettings>()
+            let persistentSettings = try modelContext.fetch(descriptor)
+            
+            return persistentSettings.first?.toScheduleSettings()
+        } catch {
+            throw AppError.persistenceError("Failed to load ScheduleSettings: \(error.localizedDescription)")
+        }
+    }
+    
+    // MARK: - Intention Session Methods
+    func saveIntentionSession(_ session: IntentionSession) async throws {
+        do {
+            let persistentSession = PersistentIntentionSession(from: session)
+            
+            // Check if session already exists and update it - load all sessions and filter in memory
+            let descriptor = FetchDescriptor<PersistentIntentionSession>()
+            let allSessions = try modelContext.fetch(descriptor)
+            let existingSessions = allSessions.filter { $0.id == session.id }
+            
+            if let existingSession = existingSessions.first {
+                existingSession.update(from: session)
+            } else {
+                modelContext.insert(persistentSession)
+            }
+            
+            try modelContext.save()
+        } catch {
+            throw AppError.persistenceError("Failed to save IntentionSession \(session.id): \(error.localizedDescription)")
+        }
+    }
+    
+    func loadIntentionSessions() async throws -> [IntentionSession] {
+        do {
+            let descriptor = FetchDescriptor<PersistentIntentionSession>(
+                sortBy: [SortDescriptor(\.startTime, order: .reverse)]
+            )
+            
+            let persistentSessions = try modelContext.fetch(descriptor)
+            return persistentSessions.compactMap { $0.toIntentionSession() }
+        } catch {
+            throw AppError.persistenceError("Failed to load IntentionSessions: \(error.localizedDescription)")
+        }
+    }
+    
+    func deleteIntentionSession(_ id: UUID) async throws {
+        do {
+            // Load all sessions and filter in memory to avoid predicate issues
+            let descriptor = FetchDescriptor<PersistentIntentionSession>()
+            let allSessions = try modelContext.fetch(descriptor)
+            let sessions = allSessions.filter { $0.id == id }
+            
+            guard let session = sessions.first else {
+                throw AppError.dataNotFound("IntentionSession with ID \(id)")
+            }
+            
+            modelContext.delete(session)
+            try modelContext.save()
+        } catch let error as AppError {
+            throw error
+        } catch {
+            throw AppError.persistenceError("Failed to delete IntentionSession \(id): \(error.localizedDescription)")
+        }
+    }
+    
+    func clearExpiredSessions() async throws {
+        do {
+            // Load all sessions and filter in memory to avoid SwiftData predicate issues
+            let descriptor = FetchDescriptor<PersistentIntentionSession>()
+            let allSessions = try modelContext.fetch(descriptor)
+            
+            // Calculate cutoff date (7 days ago)
+            let cutoffDate = Date().addingTimeInterval(-AppConstants.DataCleanup.retentionInterval)
+            
+            // Filter expired sessions in memory
+            let expiredSessions = allSessions.filter { session in
+                session.startTime < cutoffDate
+            }
+            
+            for session in expiredSessions {
+                modelContext.delete(session)
+            }
+            
+            try modelContext.save()
+        } catch {
+            throw AppError.persistenceError("Failed to clear expired sessions: \(error.localizedDescription)")
+        }
+    }
+}
+
