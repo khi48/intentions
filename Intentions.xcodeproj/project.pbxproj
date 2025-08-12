@@ -7,7 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+<<<<<<< HEAD
 		206592142DFF50FD00B93819 /* ScreenTimeStatusInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 206592132DFF50FD00B93819 /* ScreenTimeStatusInfoTests.swift */; };
+=======
+		2029BD712DEC67D100B26433 /* ScheduleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2029BD702DEC67D100B26433 /* ScheduleManager.swift */; };
+		2029BD732DEC684200B26433 /* ScheuldeManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2029BD722DEC684200B26433 /* ScheuldeManagerTests.swift */; };
+		204DB03B2DF3F251006A6FF1 /* ViewInspector in Frameworks */ = {isa = PBXBuildFile; productRef = 204DB03A2DF3F251006A6FF1 /* ViewInspector */; };
+		204DB0572DF40F5D006A6FF1 /* IntentionsModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 204DB0552DF40F5D006A6FF1 /* IntentionsModel.xcdatamodeld */; };
+		204DB0742DF410CB006A6FF1 /* UsageSchedule+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 204DB0732DF410CB006A6FF1 /* UsageSchedule+CoreDataProperties.swift */; };
+		204DB0752DF410CB006A6FF1 /* AppGroup+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 204DB0702DF410CB006A6FF1 /* AppGroup+CoreDataClass.swift */; };
+		204DB0762DF410CB006A6FF1 /* AppGroup+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 204DB0712DF410CB006A6FF1 /* AppGroup+CoreDataProperties.swift */; };
+		204DB0772DF410CB006A6FF1 /* UsageSchedule+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 204DB0722DF410CB006A6FF1 /* UsageSchedule+CoreDataClass.swift */; };
+>>>>>>> main
 		2071C4942DE43AC600DF737F /* IntentionsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4932DE43AC600DF737F /* IntentionsApp.swift */; };
 		2071C4962DE43AC600DF737F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4952DE43AC600DF737F /* ContentView.swift */; };
 		2071C4982DE43AC800DF737F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2071C4972DE43AC800DF737F /* Assets.xcassets */; };
@@ -15,6 +26,7 @@
 		2071C4A52DE43AC800DF737F /* IntentionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4A42DE43AC800DF737F /* IntentionsTests.swift */; };
 		2071C4AF2DE43AC800DF737F /* IntentionsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4AE2DE43AC800DF737F /* IntentionsUITests.swift */; };
 		2071C4B12DE43AC800DF737F /* IntentionsUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4B02DE43AC800DF737F /* IntentionsUITestsLaunchTests.swift */; };
+<<<<<<< HEAD
 		2085A8E12DF559940011EB9A /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8E02DF559910011EB9A /* AppGroup.swift */; };
 		2085A8E32DF55A060011EB9A /* IntentionsSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8E22DF55A060011EB9A /* IntentionsSession.swift */; };
 		2085A8E52DF55A2A0011EB9A /* ScheduleSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8E42DF55A250011EB9A /* ScheduleSettings.swift */; };
@@ -67,6 +79,18 @@
 		20EB26B22E389F4900FC4BE4 /* IsolatedFamilyActivityPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26B02E389F4900FC4BE4 /* IsolatedFamilyActivityPicker.swift */; };
 		20EB26F42E488A1400FC4BE4 /* CategoryMappingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26F32E488A1400FC4BE4 /* CategoryMappingService.swift */; };
 		20EB26F72E488A5A00FC4BE4 /* CategoryMappingSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26F52E488A5A00FC4BE4 /* CategoryMappingSetupView.swift */; };
+=======
+		2071C4BF2DE6DEE800DF737F /* AppGroupModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4BE2DE6DEE800DF737F /* AppGroupModel.swift */; };
+		2071C4CD2DE8EACE00DF737F /* PersistanceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4CC2DE8EACE00DF737F /* PersistanceController.swift */; };
+		2071C4CF2DE8EBDA00DF737F /* GroupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4CE2DE8EBDA00DF737F /* GroupManager.swift */; };
+		2071C4D72DEADDFA00DF737F /* UsageScheduleModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4C02DE6E77700DF737F /* UsageScheduleModel.swift */; };
+		2071C4DC2DEADE4100DF737F /* GroupManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4D02DE8ED8400DF737F /* GroupManagerTests.swift */; };
+		2092FEFE2DF16E040055A01D /* AppBlockerProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2092FEFD2DF16E040055A01D /* AppBlockerProtocol.swift */; };
+		2092FF002DF16E5B0055A01D /* UnlockPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2092FEFF2DF16E5B0055A01D /* UnlockPromptView.swift */; };
+		2092FF022DF18CFC0055A01D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2092FF012DF18CFC0055A01D /* SettingsView.swift */; };
+		2092FF062DF1921C0055A01D /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2092FF052DF1921C0055A01D /* FamilyControls.framework */; };
+		2092FF082DF22BD70055A01D /* SettingsViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2092FF072DF22BD70055A01D /* SettingsViewTests.swift */; };
+>>>>>>> main
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -87,7 +111,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+<<<<<<< HEAD
 		206592132DFF50FD00B93819 /* ScreenTimeStatusInfoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeStatusInfoTests.swift; sourceTree = "<group>"; };
+=======
+		2029BD702DEC67D100B26433 /* ScheduleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleManager.swift; sourceTree = "<group>"; };
+		2029BD722DEC684200B26433 /* ScheuldeManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheuldeManagerTests.swift; sourceTree = "<group>"; };
+		204DB0562DF40F5D006A6FF1 /* IntentionsModel.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = IntentionsModel.xcdatamodel; sourceTree = "<group>"; };
+		204DB0702DF410CB006A6FF1 /* AppGroup+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppGroup+CoreDataClass.swift"; sourceTree = "<group>"; };
+		204DB0712DF410CB006A6FF1 /* AppGroup+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppGroup+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		204DB0722DF410CB006A6FF1 /* UsageSchedule+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UsageSchedule+CoreDataClass.swift"; sourceTree = "<group>"; };
+		204DB0732DF410CB006A6FF1 /* UsageSchedule+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UsageSchedule+CoreDataProperties.swift"; sourceTree = "<group>"; };
+>>>>>>> main
 		2071C4902DE43AC600DF737F /* Intentions.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Intentions.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2071C4932DE43AC600DF737F /* IntentionsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsApp.swift; sourceTree = "<group>"; };
 		2071C4952DE43AC600DF737F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -98,6 +132,7 @@
 		2071C4AA2DE43AC800DF737F /* IntentionsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = IntentionsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2071C4AE2DE43AC800DF737F /* IntentionsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsUITests.swift; sourceTree = "<group>"; };
 		2071C4B02DE43AC800DF737F /* IntentionsUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsUITestsLaunchTests.swift; sourceTree = "<group>"; };
+<<<<<<< HEAD
 		2085A8E02DF559910011EB9A /* AppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroup.swift; sourceTree = "<group>"; };
 		2085A8E22DF55A060011EB9A /* IntentionsSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsSession.swift; sourceTree = "<group>"; };
 		2085A8E42DF55A250011EB9A /* ScheduleSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleSettings.swift; sourceTree = "<group>"; };
@@ -151,6 +186,19 @@
 		20EB26B02E389F4900FC4BE4 /* IsolatedFamilyActivityPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsolatedFamilyActivityPicker.swift; sourceTree = "<group>"; };
 		20EB26F32E488A1400FC4BE4 /* CategoryMappingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingService.swift; sourceTree = "<group>"; };
 		20EB26F52E488A5A00FC4BE4 /* CategoryMappingSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingSetupView.swift; sourceTree = "<group>"; };
+=======
+		2071C4BE2DE6DEE800DF737F /* AppGroupModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupModel.swift; sourceTree = "<group>"; };
+		2071C4C02DE6E77700DF737F /* UsageScheduleModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageScheduleModel.swift; sourceTree = "<group>"; };
+		2071C4CC2DE8EACE00DF737F /* PersistanceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistanceController.swift; sourceTree = "<group>"; };
+		2071C4CE2DE8EBDA00DF737F /* GroupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupManager.swift; sourceTree = "<group>"; };
+		2071C4D02DE8ED8400DF737F /* GroupManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupManagerTests.swift; sourceTree = "<group>"; };
+		2092FEFD2DF16E040055A01D /* AppBlockerProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBlockerProtocol.swift; sourceTree = "<group>"; };
+		2092FEFF2DF16E5B0055A01D /* UnlockPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockPromptView.swift; sourceTree = "<group>"; };
+		2092FF012DF18CFC0055A01D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		2092FF032DF191010055A01D /* Intentions.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Intentions.entitlements; sourceTree = "<group>"; };
+		2092FF052DF1921C0055A01D /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
+		2092FF072DF22BD70055A01D /* SettingsViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewTests.swift; sourceTree = "<group>"; };
+>>>>>>> main
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -163,6 +211,10 @@
 		2071C49D2DE43AC800DF737F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+<<<<<<< HEAD
+=======
+				204DB03B2DF3F251006A6FF1 /* ViewInspector in Frameworks */,
+>>>>>>> main
 			);
 		};
 		2071C4A72DE43AC800DF737F /* Frameworks */ = {
@@ -198,6 +250,7 @@
 			isa = PBXGroup;
 			children = (
 				2092FF032DF191010055A01D /* Intentions.entitlements */,
+<<<<<<< HEAD
 				2085A8D42DF54F480011EB9A /* App */,
 				2085A8DC2DF550200011EB9A /* Extensions */,
 				2071C4BD2DE6DC9400DF737F /* Models */,
@@ -209,6 +262,17 @@
 				2085A8DF2DF550440011EB9A /* Utilities */,
 				2085A9002DF6D2E60011EB9A /* Mocks */,
 				2071C4992DE43AC800DF737F /* Preview Content */,
+=======
+				2071C4CA2DE8EA5C00DF737F /* Views */,
+				2071C4CB2DE8EA6000DF737F /* Controllers */,
+				2071C4932DE43AC600DF737F /* IntentionsApp.swift */,
+				2071C4952DE43AC600DF737F /* ContentView.swift */,
+				2071C4972DE43AC800DF737F /* Assets.xcassets */,
+				2071C4BD2DE6DC9400DF737F /* Model */,
+				2071C4C52DE8E9CF00DF737F /* CoreData */,
+				2071C4992DE43AC800DF737F /* Preview Content */,
+				204DB0552DF40F5D006A6FF1 /* IntentionsModel.xcdatamodeld */,
+>>>>>>> main
 			);
 			path = Intentions;
 			sourceTree = "<group>";
@@ -224,6 +288,7 @@
 		2071C4A32DE43AC800DF737F /* IntentionsTests */ = {
 			isa = PBXGroup;
 			children = (
+<<<<<<< HEAD
 				20EB269C2E316F2A00FC4BE4 /* Views */,
 				20EB268A2E258CE600FC4BE4 /* Integration */,
 				20EB26692E22F25A00FC4BE4 /* ViewModels */,
@@ -231,6 +296,12 @@
 				2085A9052DF6D5C10011EB9A /* Services */,
 				2085A9042DF6D5B30011EB9A /* ModelTests */,
 				2071C4A42DE43AC800DF737F /* IntentionsTests.swift */,
+=======
+				2071C4D02DE8ED8400DF737F /* GroupManagerTests.swift */,
+				2029BD722DEC684200B26433 /* ScheuldeManagerTests.swift */,
+				2071C4A42DE43AC800DF737F /* IntentionsTests.swift */,
+				2092FF072DF22BD70055A01D /* SettingsViewTests.swift */,
+>>>>>>> main
 			);
 			path = IntentionsTests;
 			sourceTree = "<group>";
@@ -244,6 +315,7 @@
 			path = IntentionsUITests;
 			sourceTree = "<group>";
 		};
+<<<<<<< HEAD
 		2071C4BD2DE6DC9400DF737F /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -418,6 +490,46 @@
 				2085A90B2DFACD350011EB9A /* MockScreenTimeServiceTests.swift */,
 			);
 			path = Mocks;
+=======
+		2071C4BD2DE6DC9400DF737F /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				2071C4BE2DE6DEE800DF737F /* AppGroupModel.swift */,
+				2071C4C02DE6E77700DF737F /* UsageScheduleModel.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		2071C4C52DE8E9CF00DF737F /* CoreData */ = {
+			isa = PBXGroup;
+			children = (
+				204DB0702DF410CB006A6FF1 /* AppGroup+CoreDataClass.swift */,
+				204DB0712DF410CB006A6FF1 /* AppGroup+CoreDataProperties.swift */,
+				204DB0722DF410CB006A6FF1 /* UsageSchedule+CoreDataClass.swift */,
+				204DB0732DF410CB006A6FF1 /* UsageSchedule+CoreDataProperties.swift */,
+				2071C4CC2DE8EACE00DF737F /* PersistanceController.swift */,
+			);
+			path = CoreData;
+			sourceTree = "<group>";
+		};
+		2071C4CA2DE8EA5C00DF737F /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				2092FEFF2DF16E5B0055A01D /* UnlockPromptView.swift */,
+				2092FF012DF18CFC0055A01D /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		2071C4CB2DE8EA6000DF737F /* Controllers */ = {
+			isa = PBXGroup;
+			children = (
+				2071C4CE2DE8EBDA00DF737F /* GroupManager.swift */,
+				2029BD702DEC67D100B26433 /* ScheduleManager.swift */,
+				2092FEFD2DF16E040055A01D /* AppBlockerProtocol.swift */,
+			);
+			path = Controllers;
+>>>>>>> main
 			sourceTree = "<group>";
 		};
 		2092FF042DF1921C0055A01D /* Frameworks */ = {
@@ -428,6 +540,7 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+<<<<<<< HEAD
 		20EB26692E22F25A00FC4BE4 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
@@ -483,6 +596,8 @@
 			path = TestViews;
 			sourceTree = "<group>";
 		};
+=======
+>>>>>>> main
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -497,6 +612,12 @@
 			buildRules = (
 			);
 			name = Intentions;
+<<<<<<< HEAD
+=======
+			packageProductDependencies = (
+				2092FF0A2DF3D95B0055A01D /* ViewInspector */,
+			);
+>>>>>>> main
 			productName = Intentions;
 			productReference = 2071C4902DE43AC600DF737F /* Intentions.app */;
 			productType = "com.apple.product-type.application";
@@ -569,6 +690,10 @@
 			);
 			mainGroup = 2071C4872DE43AC600DF737F;
 			packageReferences = (
+<<<<<<< HEAD
+=======
+				2092FF092DF3D95B0055A01D /* XCRemoteSwiftPackageReference "ViewInspector" */,
+>>>>>>> main
 			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 2071C4912DE43AC600DF737F /* Products */;
@@ -606,6 +731,7 @@
 		2071C48C2DE43AC600DF737F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+<<<<<<< HEAD
 				20EB26532E13229900FC4BE4 /* DataPersistingService.swift in Sources */,
 				20EB265D2E1EF9A800FC4BE4 /* Constants.swift in Sources */,
 				2085A8FF2DF6D2D40011EB9A /* ScreenTimeStatusInfo.swift in Sources */,
@@ -636,11 +762,29 @@
 				20EB26642E21A3E900FC4BE4 /* IntentionPromptView.swift in Sources */,
 				20EB26652E21A3E900FC4BE4 /* AppGroupsView.swift in Sources */,
 				20EB26672E21A3F300FC4BE4 /* SettingsView.swift in Sources */,
+=======
+				2092FF022DF18CFC0055A01D /* SettingsView.swift in Sources */,
+				204DB0572DF40F5D006A6FF1 /* IntentionsModel.xcdatamodeld in Sources */,
+				2092FF002DF16E5B0055A01D /* UnlockPromptView.swift in Sources */,
+				2071C4CD2DE8EACE00DF737F /* PersistanceController.swift in Sources */,
+				204DB0742DF410CB006A6FF1 /* UsageSchedule+CoreDataProperties.swift in Sources */,
+				204DB0752DF410CB006A6FF1 /* AppGroup+CoreDataClass.swift in Sources */,
+				204DB0762DF410CB006A6FF1 /* AppGroup+CoreDataProperties.swift in Sources */,
+				204DB0772DF410CB006A6FF1 /* UsageSchedule+CoreDataClass.swift in Sources */,
+				2029BD712DEC67D100B26433 /* ScheduleManager.swift in Sources */,
+				2092FEFE2DF16E040055A01D /* AppBlockerProtocol.swift in Sources */,
+				2071C4CF2DE8EBDA00DF737F /* GroupManager.swift in Sources */,
+				2071C4962DE43AC600DF737F /* ContentView.swift in Sources */,
+				2071C4D72DEADDFA00DF737F /* UsageScheduleModel.swift in Sources */,
+				2071C4BF2DE6DEE800DF737F /* AppGroupModel.swift in Sources */,
+				2071C4942DE43AC600DF737F /* IntentionsApp.swift in Sources */,
+>>>>>>> main
 			);
 		};
 		2071C49C2DE43AC800DF737F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+<<<<<<< HEAD
 				2085A8F12DF55F980011EB9A /* WeekdayTests.swift in Sources */,
 				2071C4A52DE43AC800DF737F /* IntentionsTests.swift in Sources */,
 				20EB26872E258CDB00FC4BE4 /* IntentionPromptViewModelTests.swift in Sources */,
@@ -666,6 +810,12 @@
 				2085A8F32DF55FAF0011EB9A /* AppErrorTests.swift in Sources */,
 				2085A8EF2DF55F820011EB9A /* ScheduleSettingsTests.swift in Sources */,
 				20EB26592E1322C900FC4BE4 /* DataPersistenceIntegrationTests.swift in Sources */,
+=======
+				2071C4A52DE43AC800DF737F /* IntentionsTests.swift in Sources */,
+				2092FF082DF22BD70055A01D /* SettingsViewTests.swift in Sources */,
+				2071C4DC2DEADE4100DF737F /* GroupManagerTests.swift in Sources */,
+				2029BD732DEC684200B26433 /* ScheuldeManagerTests.swift in Sources */,
+>>>>>>> main
 			);
 		};
 		2071C4A62DE43AC800DF737F /* Sources */ = {
@@ -792,7 +942,10 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = QUR55L9SP5;
+<<<<<<< HEAD
 				"DYLIB_CURRENT_VERSION[arch=*]" = "";
+=======
+>>>>>>> main
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -979,6 +1132,46 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+<<<<<<< HEAD
+=======
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2092FF092DF3D95B0055A01D /* XCRemoteSwiftPackageReference "ViewInspector" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/nalexn/ViewInspector";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.10.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		204DB03A2DF3F251006A6FF1 /* ViewInspector */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2092FF092DF3D95B0055A01D /* XCRemoteSwiftPackageReference "ViewInspector" */;
+			productName = ViewInspector;
+		};
+		2092FF0A2DF3D95B0055A01D /* ViewInspector */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2092FF092DF3D95B0055A01D /* XCRemoteSwiftPackageReference "ViewInspector" */;
+			productName = ViewInspector;
+		};
+/* End XCSwiftPackageProductDependency section */
+
+/* Begin XCVersionGroup section */
+		204DB0552DF40F5D006A6FF1 /* IntentionsModel.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				204DB0562DF40F5D006A6FF1 /* IntentionsModel.xcdatamodel */,
+			);
+			currentVersion = 204DB0562DF40F5D006A6FF1 /* IntentionsModel.xcdatamodel */;
+			path = IntentionsModel.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
+>>>>>>> main
 	};
 	rootObject = 2071C4882DE43AC600DF737F /* Project object */;
 }
