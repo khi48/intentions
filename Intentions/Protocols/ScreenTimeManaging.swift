@@ -52,11 +52,12 @@ protocol ScreenTimeManaging: Sendable {
     /// - Returns: Current status information
     func getStatusInfo() async -> ScreenTimeStatusInfo
     
-    /// Store discovered app/category selection for proper "block everything except" implementation
-    /// - Parameter allAvailable: Complete FamilyActivitySelection discovered from device
-    func setDiscoveredAppSelection(_ allAvailable: FamilyActivitySelection) async
     
     /// Set the category mapping service for intelligent app blocking
     /// - Parameter service: CategoryMappingService to use for prioritized blocking
     func setCategoryMappingService(_ service: CategoryMappingService) async
+    
+    /// Clean up all resources and reset service state
+    /// Cancels running tasks, clears settings, and resets internal state
+    func cleanup() async
 }

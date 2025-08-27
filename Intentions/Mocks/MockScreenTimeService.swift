@@ -77,8 +77,8 @@ actor MockScreenTimeService: ScreenTimeManaging {
             throw AppError.screenTimeAuthorizationFailed
         }
         
-        try await blockAllApps()
         mockIsInitialized = true
+        print("🧪 MockScreenTimeService: Initialized (blocking will be applied separately)")
     }
     
     func blockAllApps() async throws {
@@ -121,7 +121,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
             }
         }
         
-        print("Mock: Allowed \(tokens.count) apps for \(duration) seconds")
+        print("Mock: Allowed \(tokens.count) apps and \(categories.count) categories for \(duration) seconds")
     }
     
     func getCurrentlyAllowedApps() async -> Set<ApplicationToken> {
@@ -153,15 +153,23 @@ actor MockScreenTimeService: ScreenTimeManaging {
         )
     }
     
-    func setDiscoveredAppSelection(_ allAvailable: FamilyActivitySelection) async {
-        // Mock implementation - just log it
-        let appCount = allAvailable.applications.compactMap { $0.token }.count
-        let categoryCount = allAvailable.categories.compactMap { $0.token }.count
-        print("Mock: Received app discovery - \(appCount) apps, \(categoryCount) categories")
-    }
     
     func setCategoryMappingService(_ service: CategoryMappingService) async {
         // Mock implementation - just log it
         print("Mock: Category mapping service configured")
+    }
+    
+    func cleanup() async {
+        // Cancel any running session task
+        mockSessionTask?.cancel()
+        mockSessionTask = nil
+        
+        // Clear all tracking
+        mockCurrentlyAllowedApps.removeAll()
+        mockSystemApps.removeAll()
+        
+        // NOTE: Keep mockIsInitialized = true so service remains usable after cleanup
+        
+        print("Mock: All resources cleaned up - service remains initialized")
     }
 }

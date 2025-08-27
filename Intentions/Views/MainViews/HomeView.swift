@@ -48,76 +48,25 @@ private struct ActiveSessionCard: View {
         self.viewModel = viewModel
         self._sessionStatusViewModel = State(initialValue: SessionStatusViewModel(
             session: session,
-            dataService: viewModel.dataServiceProvider
+            contentViewModel: viewModel
         ))
     }
     
     var body: some View {
-        VStack(spacing: 16) {
-            // Session header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Active Session")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                    
-                    Text("Focus time in progress")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                
-                Spacer()
-                
-                // Session status indicator
-                Circle()
-                    .fill(.green)
-                    .frame(width: 12, height: 12)
+        SessionStatusView(
+            viewModel: sessionStatusViewModel,
+            onEndSession: {
+                await viewModel.endCurrentSession()
+            },
+            onExtendSession: { _ in
+                // Extension is handled internally by SessionStatusViewModel
+                // This callback is kept for interface compatibility but does nothing
             }
-            
-            // Time remaining
-            VStack(spacing: 8) {
-                Text(sessionStatusViewModel.formattedRemainingTime)
-                    .font(.largeTitle.monospacedDigit())
-                    .fontWeight(.bold)
-                    .foregroundStyle(.primary)
-                
-                Text("remaining")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            
-            // Progress bar
-            ProgressView(value: sessionStatusViewModel.progress)
-                .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                .scaleEffect(y: 2)
-            
-            // Session actions
-            HStack(spacing: 16) {
-                Button("Extend") {
-                    // TODO: Implement extend session
-                }
-                .buttonStyle(.bordered)
-                
-                Button("End Session") {
-                    Task {
-                        await viewModel.endCurrentSession()
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .foregroundStyle(.white)
-            }
-        }
-        .padding()
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        )
         .onAppear {
-            // Set up session callbacks
-            sessionStatusViewModel.onSessionExpired = {
-                await viewModel.endCurrentSession()
-            }
-            sessionStatusViewModel.onSessionEnded = {
-                await viewModel.endCurrentSession()
-            }
+            // Legacy callback setup - no longer needed with direct dependency injection
+            // SessionStatusViewModel now directly calls ContentViewModel methods
+            // This block kept temporarily for any remaining edge cases
         }
         .onChange(of: session.id) { _, _ in
             // Update the session status view model when session changes

@@ -111,12 +111,13 @@ final class SessionStatusViewModel: Sendable {
     
     private let dataService: DataPersisting
     private let screenTimeService: ScreenTimeManaging
+    private let contentViewModel: ContentViewModel
     
     // MARK: - Timer
     
     nonisolated(unsafe) private var timer: Timer?
     
-    // MARK: - Callbacks
+    // MARK: - Callbacks (Legacy - will be removed)
     
     var onSessionExpired: (() async -> Void)?
     var onSessionExtended: ((TimeInterval) async -> Void)?
@@ -126,12 +127,14 @@ final class SessionStatusViewModel: Sendable {
     
     init(
         session: IntentionSession? = nil,
-        dataService: DataPersisting = MockDataPersistenceService(),
-        screenTimeService: ScreenTimeManaging = MockScreenTimeService()
+        contentViewModel: ContentViewModel,
+        dataService: DataPersisting? = nil,
+        screenTimeService: ScreenTimeManaging? = nil
     ) {
         self.session = session
-        self.dataService = dataService
-        self.screenTimeService = screenTimeService
+        self.contentViewModel = contentViewModel
+        self.dataService = dataService ?? contentViewModel.dataServiceProvider
+        self.screenTimeService = screenTimeService ?? contentViewModel.screenTimeService
         
         if let session = session {
             updateRemainingTime()
@@ -209,6 +212,10 @@ final class SessionStatusViewModel: Sendable {
                 session = endedSession
                 stopTimer()
                 
+                // Directly call ContentViewModel to handle blocking logic
+                await contentViewModel.endCurrentSession()
+                
+                // Keep legacy callback for backward compatibility during transition
                 await onSessionEnded?()
                 
             } catch {
@@ -295,6 +302,10 @@ final class SessionStatusViewModel: Sendable {
         if remainingTime <= 0 {
             stopTimer()
             Task {
+                // Directly call ContentViewModel to handle session expiration
+                await contentViewModel.endCurrentSession()
+                
+                // Keep legacy callback for backward compatibility during transition
                 await onSessionExpired?()
             }
         }

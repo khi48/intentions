@@ -225,18 +225,26 @@ final class IntentionPromptViewModel: Sendable {
             // Ensure ScreenTimeService has the latest category mapping service
             await screenTimeService.setCategoryMappingService(categoryMappingService)
             var allApplications: Set<ApplicationToken> = []
-            let allowedCategories: Set<ActivityCategoryToken> = []
+            var allowedCategories: Set<ActivityCategoryToken> = []
             
-            // Get apps from Family Activity Picker selection
+            // Get apps AND categories from Family Activity Picker selection
             if !familyActivitySelection.applications.isEmpty {
                 allApplications = Set(familyActivitySelection.applications.compactMap { $0.token })
                 print("🎯 SESSION SETUP: \(allApplications.count) apps from FamilyActivityPicker")
             }
             
-            // Also include any selected app groups
+            // Get categories from Family Activity Picker selection
+            if !familyActivitySelection.categories.isEmpty {
+                allowedCategories = Set(familyActivitySelection.categories.compactMap { $0.token })
+                print("🏷️ SESSION SETUP: \(allowedCategories.count) categories from FamilyActivityPicker")
+            }
+            
+            // Also include any selected app groups (both apps AND categories)
             for groupId in selectedAppGroups {
                 if let group = availableAppGroups.first(where: { $0.id == groupId }) {
                     allApplications.formUnion(group.applications)
+                    allowedCategories.formUnion(group.categories)
+                    print("📦 SESSION SETUP: Added \(group.applications.count) apps and \(group.categories.count) categories from group '\(group.name)'")
                 }
             }
             
@@ -244,14 +252,15 @@ final class IntentionPromptViewModel: Sendable {
             allApplications.formUnion(selectedApplications)
             
             // Validate that something is selected to allow
-            guard !allApplications.isEmpty else {
-                await handleError(AppError.invalidConfiguration("Please select at least some apps to allow during your session"))
+            guard !allApplications.isEmpty || !allowedCategories.isEmpty else {
+                await handleError(AppError.invalidConfiguration("Please select at least some apps or categories to allow during your session"))
                 return
             }
             
             print("🎯 FINAL SESSION SETUP:")
             print("   - Total apps to ALLOW: \(allApplications.count)")
-            print("   - All other apps will be BLOCKED (sophisticated backend logic)")
+            print("   - Total categories to ALLOW: \(allowedCategories.count)")
+            print("   - All other apps/categories will be BLOCKED")
             print("   - Session duration: \(selectedDuration.formattedMinutesSeconds)")
             
             // Create the session with apps to allow
