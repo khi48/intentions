@@ -122,8 +122,7 @@ final class IntentionPromptViewModel: Sendable {
     func loadData() async {
         await withLoading {
             do {
-                // Load app groups
-                availableAppGroups = try await dataService.loadAppGroups()
+                await refreshAppGroups()
                 
                 // For now, create some mock discovered apps since app discovery
                 // requires Screen Time authorization and complex setup
@@ -136,8 +135,31 @@ final class IntentionPromptViewModel: Sendable {
                 await loadAllAvailableApps()
                 
             } catch {
+                print("❌ INTENTION PROMPT: Failed to load data: \(error)")
                 await handleError(error)
             }
+        }
+    }
+    
+    /// Refresh app groups from persistence
+    func refreshAppGroups() async {
+        print("🔄 INTENTION PROMPT: Starting refresh of app groups...")
+        do {
+            let loadedGroups = try await dataService.loadAppGroups()
+            await MainActor.run {
+                let oldCount = availableAppGroups.count
+                availableAppGroups = loadedGroups
+                print("🔄 INTENTION PROMPT: Refreshed app groups - before: \(oldCount), after: \(availableAppGroups.count)")
+                for group in availableAppGroups {
+                    print("   - \(group.name): \(group.applications.count) apps, \(group.categories.count) categories")
+                }
+                
+                // Verify the data service instance
+                print("🗄️ INTENTION PROMPT: Using dataService: \(type(of: dataService))")
+            }
+        } catch {
+            print("❌ INTENTION PROMPT: Failed to refresh app groups: \(error)")
+            await handleError(error)
         }
     }
     
@@ -186,6 +208,7 @@ final class IntentionPromptViewModel: Sendable {
     func clearSelections() {
         selectedAppGroups.removeAll()
         selectedApplications.removeAll()
+        familyActivitySelection = FamilyActivitySelection(includeEntireCategory: true)
     }
     
     // MARK: - Duration Management

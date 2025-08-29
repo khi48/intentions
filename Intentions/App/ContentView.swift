@@ -12,7 +12,16 @@ import SwiftUI
 
 /// Main app content view with navigation and authorization handling
 struct ContentView: View {
-    @State private var viewModel = ContentViewModel()
+    @State private var viewModel: ContentViewModel
+    
+    init() {
+        do {
+            self._viewModel = State(wrappedValue: try ContentViewModel())
+        } catch {
+            // If ContentViewModel initialization fails, we have a critical app failure
+            fatalError("Failed to initialize ContentViewModel: \(error)")
+        }
+    }
     private let managedSettingsStore = ManagedSettingsStore()
     
     var body: some View {
@@ -59,7 +68,7 @@ private struct MainTabView: View {
                 .tag(AppTab.home)
             
             // Groups Tab - App group management
-            AppGroupsView()
+            AppGroupsView(dataService: viewModel.dataServiceProvider, contentViewModel: viewModel)
                 .tabItem {
                     Label(AppTab.groups.rawValue, systemImage: AppTab.groups.systemImage)
                 }
@@ -86,6 +95,7 @@ private struct MainTabView: View {
                 dataService: viewModel.dataServiceProvider,
                 screenTimeService: viewModel.screenTimeService,
                 categoryMappingService: viewModel.categoryMappingService,
+                contentViewModel: viewModel,
                 onSessionStart: { session in
                     await viewModel.startSession(session)
                 },

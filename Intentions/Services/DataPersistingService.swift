@@ -29,6 +29,8 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
     
     // MARK: - Initialization
     init(container: ModelContainer? = nil) throws {
+        print("🚀 DATA PERSISTENCE: Initializing DataPersistenceService")
+        
         let schema = Schema([
             PersistentAppGroup.self,
             PersistentIntentionSession.self,
@@ -37,25 +39,33 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         
         let modelConfiguration = ModelConfiguration(
             schema: schema,
-            isStoredInMemoryOnly: false,
-            cloudKitDatabase: .private("IntentionsAppDatabase")
+            isStoredInMemoryOnly: false
+            // Temporarily disable CloudKit to isolate the issue
+            // cloudKitDatabase: .private("IntentionsAppDatabase")
         )
+        
+        print("🔧 DATA PERSISTENCE: Schema configured with \(schema.entities.count) entities")
+        print("💾 DATA PERSISTENCE: Using persistent storage (CloudKit temporarily disabled)")
         
         if let container = container {
             // Use provided test container with background context
             // Background context avoids @MainActor isolation issues
+            print("🧪 DATA PERSISTENCE: Using provided test container")
             self.modelContainer = container
             self.modelContext = ModelContext(container)
         } else {
             // Production initialization with background context
             // Background context is appropriate for service layer operations
             do {
+                print("🏗️ DATA PERSISTENCE: Creating production ModelContainer")
                 self.modelContainer = try ModelContainer(
                     for: schema,
                     configurations: [modelConfiguration]
                 )
                 self.modelContext = ModelContext(modelContainer)
+                print("✅ DATA PERSISTENCE: Successfully initialized with persistent storage")
             } catch {
+                print("❌ DATA PERSISTENCE: Failed to initialize: \(error)")
                 throw AppError.dataInitializationFailed(error.localizedDescription)
             }
         }
@@ -142,6 +152,7 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
     // MARK: - App Group Methods
     func saveAppGroup(_ group: AppGroup) async throws {
         do {
+            print("💾 DATA PERSISTENCE: Saving app group '\(group.name)'")
             let persistentGroup = PersistentAppGroup(from: group)
             
             // Check if group already exists and update it - load all groups and filter in memory
@@ -150,26 +161,46 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
             let existingGroups = allGroups.filter { $0.id == group.id }
             
             if let existingGroup = existingGroups.first {
+                print("🔄 DATA PERSISTENCE: Updating existing group")
                 existingGroup.update(from: group)
             } else {
+                print("➕ DATA PERSISTENCE: Inserting new group")
                 modelContext.insert(persistentGroup)
             }
             
             try modelContext.save()
+            print("✅ DATA PERSISTENCE: Successfully saved app group to SwiftData")
+            
+            // Verify the save by immediately fetching
+            let verifyDescriptor = FetchDescriptor<PersistentAppGroup>()
+            let savedGroups = try modelContext.fetch(verifyDescriptor)
+            print("🔍 DATA PERSISTENCE: Verification - \(savedGroups.count) groups in storage after save")
+            
         } catch {
+            print("❌ DATA PERSISTENCE: Failed to save app group: \(error)")
             throw AppError.persistenceError("Failed to save AppGroup \(group.name): \(error.localizedDescription)")
         }
     }
     
     func loadAppGroups() async throws -> [AppGroup] {
         do {
+            print("📖 DATA PERSISTENCE: Loading app groups from SwiftData")
             let descriptor = FetchDescriptor<PersistentAppGroup>(
                 sortBy: [SortDescriptor(\.name)]
             )
             
             let persistentGroups = try modelContext.fetch(descriptor)
-            return persistentGroups.compactMap { $0.toAppGroup() }
+            print("📊 DATA PERSISTENCE: Found \(persistentGroups.count) persistent groups in storage")
+            
+            let appGroups = persistentGroups.compactMap { $0.toAppGroup() }
+            print("✅ DATA PERSISTENCE: Successfully loaded \(appGroups.count) app groups")
+            for group in appGroups {
+                print("   - \(group.name): \(group.applications.count) apps, \(group.categories.count) categories")
+            }
+            
+            return appGroups
         } catch {
+            print("❌ DATA PERSISTENCE: Failed to load app groups: \(error)")
             throw AppError.persistenceError("Failed to load AppGroups: \(error.localizedDescription)")
         }
     }

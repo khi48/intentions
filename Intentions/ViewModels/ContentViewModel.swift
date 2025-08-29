@@ -47,6 +47,9 @@ final class ContentViewModel: Sendable {
     /// Current selected tab for navigation
     var selectedTab: AppTab = .home
     
+    /// Trigger to notify when app groups have changed
+    var appGroupsDidChange: UUID = UUID()
+    
     // MARK: - Dependencies
     
     let screenTimeService: ScreenTimeManaging
@@ -62,9 +65,16 @@ final class ContentViewModel: Sendable {
     init(
         screenTimeService: ScreenTimeManaging? = nil,
         dataService: DataPersisting? = nil
-    ) {
+    ) throws {
         self.screenTimeService = screenTimeService ?? ScreenTimeService()
-        self.dataService = dataService ?? (try? DataPersistenceService()) ?? MockDataPersistenceService()
+        
+        if let providedService = dataService {
+            self.dataService = providedService
+            print("🗄️ CONTENT VM: Using provided data service")
+        } else {
+            self.dataService = try DataPersistenceService()
+            print("✅ CONTENT VM: Successfully initialized real DataPersistenceService")
+        }
     }
     
     // MARK: - App Lifecycle
@@ -507,6 +517,14 @@ final class ContentViewModel: Sendable {
         isLoading = true
         defer { isLoading = false }
         return try await operation()
+    }
+    
+    // MARK: - App Group Notifications
+    
+    /// Notify that app groups have been modified
+    func notifyAppGroupsChanged() {
+        appGroupsDidChange = UUID()
+        print("📢 CONTENT VM: App groups changed notification sent")
     }
 }
 

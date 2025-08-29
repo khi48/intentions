@@ -200,5 +200,5 @@ private struct QuickActionCard: View {
 }
 
 #Preview {
-    HomeView(viewModel: ContentViewModel())
+    HomeView(viewModel: try! ContentViewModel(dataService: MockDataPersistenceService()))
 }

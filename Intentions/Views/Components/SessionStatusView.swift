@@ -368,7 +368,7 @@ private struct ExtensionOptionButton: View {
         duration: 1800 // 30 minutes
     )
     
-    let mockContentViewModel = ContentViewModel()
+    let mockContentViewModel = try! ContentViewModel(dataService: MockDataPersistenceService())
     let mockViewModel = SessionStatusViewModel(
         session: mockSession,
         contentViewModel: mockContentViewModel

@@ -68,6 +68,8 @@
 		20EB26F42E488A1400FC4BE4 /* CategoryMappingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26F32E488A1400FC4BE4 /* CategoryMappingService.swift */; };
 		20EB26F72E488A5A00FC4BE4 /* CategoryMappingSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26F52E488A5A00FC4BE4 /* CategoryMappingSetupView.swift */; };
 		20EB27002E4D5FAA00FC4BE4 /* SessionStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26FF2E4D5FAA00FC4BE4 /* SessionStatusView.swift */; };
+		20EB27032E603C5100FC4BE4 /* AppGroupEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27012E603C5100FC4BE4 /* AppGroupEditorSheet.swift */; };
+		20EB27042E603C5100FC4BE4 /* AppGroupListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27022E603C5100FC4BE4 /* AppGroupListView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -153,6 +155,8 @@
 		20EB26F32E488A1400FC4BE4 /* CategoryMappingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingService.swift; sourceTree = "<group>"; };
 		20EB26F52E488A5A00FC4BE4 /* CategoryMappingSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingSetupView.swift; sourceTree = "<group>"; };
 		20EB26FF2E4D5FAA00FC4BE4 /* SessionStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStatusView.swift; sourceTree = "<group>"; };
+		20EB27012E603C5100FC4BE4 /* AppGroupEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupEditorSheet.swift; sourceTree = "<group>"; };
+		20EB27022E603C5100FC4BE4 /* AppGroupListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -307,6 +311,8 @@
 		2085A8D72DF54FAF0011EB9A /* MainViews */ = {
 			isa = PBXGroup;
 			children = (
+				20EB27012E603C5100FC4BE4 /* AppGroupEditorSheet.swift */,
+				20EB27022E603C5100FC4BE4 /* AppGroupListView.swift */,
 				20EB26602E21A3E900FC4BE4 /* AppGroupsView.swift */,
 				20EB26612E21A3E900FC4BE4 /* HomeView.swift */,
 				20EB26622E21A3E900FC4BE4 /* IntentionPromptView.swift */,
@@ -633,6 +639,8 @@
 				2085A8E12DF559940011EB9A /* AppGroup.swift in Sources */,
 				20EB26F72E488A5A00FC4BE4 /* CategoryMappingSetupView.swift in Sources */,
 				2085A8E92DF55AA90011EB9A /* AppError.swift in Sources */,
+				20EB27032E603C5100FC4BE4 /* AppGroupEditorSheet.swift in Sources */,
+				20EB27042E603C5100FC4BE4 /* AppGroupListView.swift in Sources */,
 				20EB26A72E32BF9100FC4BE4 /* AppGroupsViewModel.swift in Sources */,
 				20EB26A82E32BF9100FC4BE4 /* SessionStatusViewModel.swift in Sources */,
 				20EB26A92E32BF9100FC4BE4 /* HomeViewModel.swift in Sources */,

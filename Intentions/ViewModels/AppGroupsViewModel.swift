@@ -67,12 +67,15 @@ final class AppGroupsViewModel: Sendable {
     // MARK: - Dependencies
     
     private let dataService: DataPersisting
+    private weak var contentViewModel: ContentViewModel?
     
     // MARK: - Initialization
     
-    init(dataService: DataPersisting = MockDataPersistenceService()) {
+    init(dataService: DataPersisting, contentViewModel: ContentViewModel? = nil) {
         self.dataService = dataService
+        self.contentViewModel = contentViewModel
         self.searchResults = []
+        print("🗄️ APP GROUPS VM: Initialized with dataService: \(type(of: dataService))")
     }
     
     // MARK: - Data Loading
@@ -96,7 +99,7 @@ final class AppGroupsViewModel: Sendable {
     // MARK: - App Group Management
     
     /// Create a new app group
-    func createAppGroup(name: String, applicationTokens: Set<ApplicationToken>) async {
+    func createAppGroup(name: String, applicationTokens: Set<ApplicationToken>, categoryTokens: Set<ActivityCategoryToken> = []) async {
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             await handleError(AppError.invalidConfiguration("Group name cannot be empty"))
             return
@@ -108,12 +111,21 @@ final class AppGroupsViewModel: Sendable {
                     id: UUID(),
                     name: name.trimmingCharacters(in: .whitespacesAndNewlines),
                     applications: applicationTokens,
+                    categories: categoryTokens,
                     createdAt: Date(),
                     lastModified: Date()
                 )
                 
                 try await dataService.saveAppGroup(newGroup)
                 appGroups.append(newGroup)
+                print("✅ APP GROUP CREATED: '\(newGroup.name)' saved to persistence")
+                print("📊 CURRENT APP GROUPS: \(appGroups.count) total")
+                print("🗄️ APP GROUPS VM: Using dataService: \(type(of: dataService))")
+                
+                // Notify that app groups have changed
+                await MainActor.run {
+                    contentViewModel?.notifyAppGroupsChanged()
+                }
                 
                 // Close editor
                 showingGroupEditor = false
@@ -126,7 +138,7 @@ final class AppGroupsViewModel: Sendable {
     }
     
     /// Update an existing app group
-    func updateAppGroup(id: UUID, name: String, applicationTokens: Set<ApplicationToken>) async {
+    func updateAppGroup(id: UUID, name: String, applicationTokens: Set<ApplicationToken>, categoryTokens: Set<ActivityCategoryToken> = []) async {
         guard let groupIndex = appGroups.firstIndex(where: { $0.id == id }) else {
             await handleError(AppError.invalidConfiguration("Group not found"))
             return
@@ -143,6 +155,7 @@ final class AppGroupsViewModel: Sendable {
                     id: id,
                     name: name.trimmingCharacters(in: .whitespacesAndNewlines),
                     applications: applicationTokens,
+                    categories: categoryTokens,
                     createdAt: appGroups[groupIndex].createdAt,
                     lastModified: Date()
                 )

@@ -12,11 +12,13 @@ import SwiftUI
 struct IntentionPromptView: View {
     
     @State private var viewModel: IntentionPromptViewModel
+    let contentViewModel: ContentViewModel
     
     init(
         dataService: DataPersisting,
         screenTimeService: ScreenTimeManaging,
         categoryMappingService: CategoryMappingService,
+        contentViewModel: ContentViewModel,
         onSessionStart: @escaping (IntentionSession) async -> Void,
         onCancel: @escaping () -> Void
     ) {
@@ -28,6 +30,7 @@ struct IntentionPromptView: View {
             onCancel: onCancel
         )
         self._viewModel = State(wrappedValue: vm)
+        self.contentViewModel = contentViewModel
     }
     
     var body: some View {
@@ -79,6 +82,24 @@ struct IntentionPromptView: View {
         }
         .task {
             await viewModel.loadData()
+        }
+        .onAppear {
+            // Refresh app groups when view appears (in case new groups were created)
+            print("👁️ INTENTION PROMPT: View appeared, refreshing app groups...")
+            Task {
+                await viewModel.refreshAppGroups()
+            }
+        }
+        .refreshable {
+            // Allow pull-to-refresh
+            await viewModel.refreshAppGroups()
+        }
+        .onChange(of: contentViewModel.appGroupsDidChange) { _, _ in
+            // Refresh when app groups change
+            print("🔔 INTENTION PROMPT: App groups changed notification received")
+            Task {
+                await viewModel.refreshAppGroups()
+            }
         }
         .sheet(item: Binding(
             get: { viewModel.currentSheet },
@@ -180,38 +201,95 @@ struct IntentionPromptView: View {
                 Text("Choose Apps to Allow")
                     .font(.headline)
                 
-                Text("Select which applications you need for this focused session.")
+                Text("Select apps using groups (quick) or individual selection (precise).")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
             
-            // Main picker button
-            HStack {
-                Spacer()
-                
-                Button("Pick Apps") {
-                    viewModel.showingFamilyActivityPicker = true
+            // Selection methods
+            VStack(spacing: 16) {
+                // App Groups (if available)
+                if !viewModel.availableAppGroups.isEmpty {
+                    appGroupsSection
+                    
+                    HStack {
+                        Rectangle()
+                            .frame(height: 1)
+                            .foregroundColor(.secondary.opacity(0.3))
+                        
+                        Text("or")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 8)
+                        
+                        Rectangle()
+                            .frame(height: 1)
+                            .foregroundColor(.secondary.opacity(0.3))
+                    }
+                } else {
+                    // Show placeholder when no groups exist
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Quick Select: App Groups")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
+                        
+                        VStack(spacing: 8) {
+                            Text("No app groups created yet")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                            
+                            Text("Create app groups in Settings to enable quick selection")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                    }
+                    
+                    HStack {
+                        Rectangle()
+                            .frame(height: 1)
+                            .foregroundColor(.secondary.opacity(0.3))
+                        
+                        Text("or")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 8)
+                        
+                        Rectangle()
+                            .frame(height: 1)
+                            .foregroundColor(.secondary.opacity(0.3))
+                    }
                 }
-                .buttonStyle(.borderedProminent)
                 
-                Spacer()
+                // Individual app picker
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Individual App Selection")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    
+                    Button("Pick Individual Apps") {
+                        viewModel.showingFamilyActivityPicker = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .frame(maxWidth: .infinity)
+                }
             }
             
             // Selection summary
             if viewModel.selectionCount > 0 {
                 familyActivitySelectionSummary
             } else {
-                Text("Tap 'Pick Apps' to choose which applications you need for this focused session")
+                Text("Use app groups for quick selection or pick individual apps for precise control")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.vertical, 12)
-            }
-            
-            // App Groups (keep existing functionality)
-            if !viewModel.availableAppGroups.isEmpty {
-                Divider()
-                appGroupsSection
             }
         }
         .padding()
@@ -255,10 +333,24 @@ struct IntentionPromptView: View {
     
     private var appGroupsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("App Groups")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
+            HStack {
+                Text("Quick Select: App Groups")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                if !viewModel.selectedAppGroups.isEmpty {
+                    Text("\(viewModel.selectedAppGroups.count) selected")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.accentColor.opacity(0.1))
+                        .cornerRadius(4)
+                }
+            }
             
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
                 ForEach(viewModel.availableAppGroups) { group in
@@ -271,6 +363,13 @@ struct IntentionPromptView: View {
                     )
                 }
             }
+            
+            if !viewModel.availableAppGroups.isEmpty {
+                Text("Selecting an app group will include all its apps and categories in your session")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.leading)
+            }
         }
     }
     
@@ -280,7 +379,7 @@ struct IntentionPromptView: View {
     private var selectedItemsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Selected Items")
+                Text("Session Summary")
                     .font(.headline)
                 
                 Spacer()
@@ -292,13 +391,75 @@ struct IntentionPromptView: View {
                 .foregroundColor(.red)
             }
             
-            Text("\(viewModel.selectionCount) items selected")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            VStack(alignment: .leading, spacing: 8) {
+                if !viewModel.selectedAppGroups.isEmpty {
+                    selectedAppGroupsSummary
+                }
+                
+                if !viewModel.familyActivitySelection.applications.isEmpty || !viewModel.familyActivitySelection.categories.isEmpty {
+                    individualSelectionSummary
+                }
+                
+                if !viewModel.selectedApplications.isEmpty {
+                    manualAppsSummary
+                }
+            }
         }
         .padding()
         .background(Color(.systemBlue).opacity(0.1))
         .cornerRadius(AppConstants.UI.cornerRadius)
+    }
+    
+    private var selectedAppGroupsSummary: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Image(systemName: "square.stack.3d.up.fill")
+                    .foregroundColor(.blue)
+                Text("App Groups")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            
+            ForEach(Array(viewModel.selectedAppGroups), id: \.self) { groupId in
+                if let group = viewModel.availableAppGroups.first(where: { $0.id == groupId }) {
+                    Text("• \(group.name) (\(group.applications.count) apps, \(group.categories.count) categories)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+    
+    private var individualSelectionSummary: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Image(systemName: "hand.tap")
+                    .foregroundColor(.green)
+                Text("Individual Selection")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            
+            Text("• \(viewModel.familyActivitySelection.applications.count) apps, \(viewModel.familyActivitySelection.categories.count) categories")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+    
+    private var manualAppsSummary: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Image(systemName: "app.badge")
+                    .foregroundColor(.orange)
+                Text("Manual Selection")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            
+            Text("• \(viewModel.selectedApplications.count) apps")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
     }
     
     // MARK: - Action Buttons
@@ -404,9 +565,26 @@ struct AppGroupSelectionCard: View {
                     }
                 }
                 
-                Text("\(group.applications.count) apps")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HStack(spacing: 8) {
+                    if !group.applications.isEmpty {
+                        HStack(spacing: 2) {
+                            Image(systemName: "app.badge")
+                                .font(.caption2)
+                            Text("\(group.applications.count)")
+                                .font(.caption)
+                        }
+                    }
+                    
+                    if !group.categories.isEmpty {
+                        HStack(spacing: 2) {
+                            Image(systemName: "folder.badge")
+                                .font(.caption2)
+                            Text("\(group.categories.count)")
+                                .font(.caption)
+                        }
+                    }
+                }
+                .foregroundColor(.secondary)
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -635,6 +813,7 @@ struct AppSelectionRow: View {
         dataService: MockDataPersistenceService(),
         screenTimeService: MockScreenTimeService(),
         categoryMappingService: CategoryMappingService(),
+        contentViewModel: try! ContentViewModel(dataService: MockDataPersistenceService()),
         onSessionStart: { _ in },
         onCancel: { }
     )

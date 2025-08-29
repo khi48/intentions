@@ -7,44 +7,27 @@
 
 import SwiftUI
 
-/// Placeholder view for app groups management
-/// This will be implemented in a future task
+/// Main view for app groups management
+/// Uses AppGroupListView for the actual implementation
 struct AppGroupsView: View {
+    let dataService: DataPersisting
+    let contentViewModel: ContentViewModel
+    @State private var viewModel: AppGroupsViewModel
+    
+    init(dataService: DataPersisting, contentViewModel: ContentViewModel) {
+        self.dataService = dataService
+        self.contentViewModel = contentViewModel
+        self._viewModel = State(wrappedValue: AppGroupsViewModel(dataService: dataService, contentViewModel: contentViewModel))
+    }
+    
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                Spacer()
-                
-                Image(systemName: "square.stack.3d.up.fill")
-                    .font(.system(size: 80))
-                    .foregroundColor(.blue)
-                
-                Text("App Groups")
-                    .font(.title)
-                    .fontWeight(.semibold)
-                
-                Text("Create and manage collections of apps for quick session setup")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                
-                Text("Coming Soon")
-                    .font(.headline)
-                    .foregroundColor(.orange)
-                    .padding()
-                    .background(Color.orange.opacity(0.1))
-                    .cornerRadius(8)
-                
-                Spacer()
-            }
-            .padding()
-            .navigationTitle("Groups")
-            .navigationBarTitleDisplayMode(.large)
-        }
+        AppGroupListView(viewModel: viewModel)
     }
 }
 
 #Preview {
-    AppGroupsView()
+    AppGroupsView(
+        dataService: MockDataPersistenceService(),
+        contentViewModel: try! ContentViewModel(dataService: MockDataPersistenceService())
+    )
 }
