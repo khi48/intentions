@@ -48,9 +48,21 @@ actor ScreenTimeService: ScreenTimeManaging {
             throw AppError.serviceUnavailable("ScreenTimeService already initialized")
         }
         
-        // Request authorization first
-        let authorized = await requestAuthorization()
-        print("🔐 Authorization in initialize(): \(authorized)")
+        // Check current authorization status first
+        let currentStatus = await authorizationStatus()
+        print("🔐 Current authorization status: \(currentStatus)")
+        
+        let authorized: Bool
+        if currentStatus == .approved {
+            // Already authorized - no need to request again
+            authorized = true
+            print("✅ Already authorized - skipping authorization request")
+        } else {
+            // Need to request authorization
+            authorized = await requestAuthorization()
+            print("🔐 Authorization request result: \(authorized)")
+        }
+        
         guard authorized else {
             throw AppError.screenTimeAuthorizationFailed
         }

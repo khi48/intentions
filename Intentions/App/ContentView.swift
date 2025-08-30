@@ -76,10 +76,7 @@ private struct MainTabView: View {
             
             // Settings Tab
             SettingsView(
-                dataService: viewModel.dataServiceProvider,
-                onScheduleSettingsChanged: { newSettings in
-                    await viewModel.updateScheduleSettings(newSettings)
-                }
+                dataService: viewModel.dataServiceProvider
             )
                 .tabItem {
                     Label(AppTab.settings.rawValue, systemImage: AppTab.settings.systemImage)

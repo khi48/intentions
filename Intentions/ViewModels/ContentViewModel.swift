@@ -85,14 +85,20 @@ final class ContentViewModel: Sendable {
             do {
                 // Check authorization status
                 authorizationStatus = await screenTimeService.authorizationStatus()
+                print("🔐 CONTENT VM: Initial authorization status: \(authorizationStatus)")
                 
                 // Load schedule settings
                 await loadScheduleSettings()
                 
-                // Initialize the Screen Time service if authorized
+                // Initialize the Screen Time service - it will handle authorization if needed
+                try await screenTimeService.initialize()
+                
+                // Refresh authorization status after initialization
+                authorizationStatus = await screenTimeService.authorizationStatus()
+                print("🔐 CONTENT VM: Authorization status after initialize(): \(authorizationStatus)")
+                
+                // Only proceed if authorized after initialization
                 if authorizationStatus == .approved {
-                    try await screenTimeService.initialize()
-                    
                     // Configure category mapping service for intelligent blocking
                     await screenTimeService.setCategoryMappingService(categoryMappingService)
                     
@@ -240,7 +246,9 @@ final class ContentViewModel: Sendable {
     
     /// Check if app is ready to use (authorized and initialized)
     var isAppReady: Bool {
-        authorizationStatus == .approved
+        let ready = authorizationStatus == .approved
+        print("🔍 CONTENT VM: isAppReady check - authorizationStatus: \(authorizationStatus), ready: \(ready)")
+        return ready
     }
     
     // MARK: - Navigation Actions
