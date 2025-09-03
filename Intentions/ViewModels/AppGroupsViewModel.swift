@@ -69,6 +69,11 @@ final class AppGroupsViewModel: Sendable {
     private let dataService: DataPersisting
     private weak var contentViewModel: ContentViewModel?
     
+    // Expose dataService for direct access when needed (e.g., from sheets to avoid error propagation)
+    var dataServiceAccess: DataPersisting {
+        dataService
+    }
+    
     // MARK: - Initialization
     
     init(dataService: DataPersisting, contentViewModel: ContentViewModel? = nil) {
@@ -250,6 +255,31 @@ final class AppGroupsViewModel: Sendable {
     
     func clearError() {
         errorMessage = nil
+    }
+    
+    // MARK: - Direct Data Manipulation (for sheets to avoid error propagation)
+    
+    /// Update an app group directly in the local array (for use by sheets)
+    func updateAppGroupDirectly(_ updatedGroup: AppGroup) {
+        if let groupIndex = appGroups.firstIndex(where: { $0.id == updatedGroup.id }) {
+            appGroups[groupIndex] = updatedGroup
+        }
+    }
+    
+    /// Add an app group directly to the local array (for use by sheets)
+    func addAppGroupDirectly(_ newGroup: AppGroup) {
+        appGroups.append(newGroup)
+    }
+    
+    /// Close the group editor (for use by sheets)
+    func closeGroupEditor() {
+        showingGroupEditor = false
+        editingGroup = nil
+    }
+    
+    /// Notify that app groups have changed (for use by sheets)
+    func notifyAppGroupsChanged() {
+        contentViewModel?.notifyAppGroupsChanged()
     }
     
     // MARK: - Helper Methods

@@ -211,6 +211,40 @@ final class SettingsViewModel: Sendable {
         showingAppGroupEditor = false
     }
     
+    func resetSheetState() {
+        print("🔄 SETTINGS VM: Resetting sheet state")
+        print("   - Schedule editor was: \(showingScheduleEditor)")
+        print("   - App group editor was: \(showingAppGroupEditor)")
+        print("   - Delete confirmation was: \(showingDeleteConfirmation)")
+        
+        // Force dismiss any active sheets with explicit state changes
+        if showingScheduleEditor {
+            print("   🚫 Force dismissing schedule editor")
+            showingScheduleEditor = false
+        }
+        if showingAppGroupEditor {
+            print("   🚫 Force dismissing app group editor")
+            showingAppGroupEditor = false
+        }
+        if showingDeleteConfirmation {
+            print("   🚫 Force dismissing delete confirmation")
+            showingDeleteConfirmation = false
+        }
+        
+        // Reset all states regardless
+        showingScheduleEditor = false
+        showingAppGroupEditor = false
+        showingDeleteConfirmation = false
+        groupToDelete = nil
+        
+        print("   ✅ All sheet states reset to false")
+        
+        // Add a small delay to ensure UI updates
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            print("   🔄 Double-check: Schedule=\(self.showingScheduleEditor), AppGroup=\(self.showingAppGroupEditor)")
+        }
+    }
+    
     // MARK: - Computed Properties
     
     var scheduleStatusText: String {
@@ -262,15 +296,3 @@ final class SettingsViewModel: Sendable {
     }
 }
 
-// MARK: - Mock Data Service Extension
-
-private extension DataPersisting {
-    func loadScheduleSettings() async throws -> ScheduleSettings? {
-        // TODO: Implement actual persistence
-        return nil
-    }
-    
-    func saveScheduleSettings(_ settings: ScheduleSettings) async throws {
-        // TODO: Implement actual persistence
-    }
-}

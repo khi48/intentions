@@ -6,12 +6,16 @@
 //
 
 import SwiftUI
+import ManagedSettings
 import FamilyControls
 
 /// Comprehensive view for managing app groups and collections
 /// Provides CRUD operations for user-created app groups
 struct AppGroupListView: View {
     @Bindable var viewModel: AppGroupsViewModel
+    
+    // Tap debouncing for create group button
+    @State private var lastCreateTapTime: Date = .distantPast
     
     var body: some View {
         NavigationStack {
@@ -44,12 +48,26 @@ struct AppGroupListView: View {
             .alert("Delete App Group", isPresented: $viewModel.showingDeleteAlert) {
                 deleteConfirmationAlert
             }
-            .errorAlert(
-                isPresented: Binding(
-                    get: { viewModel.errorMessage != nil },
-                    set: { _ in viewModel.clearError() }
-                ),
-                message: viewModel.errorMessage ?? ""
+            // Use a more defensive approach for error alerts
+            .background(
+                EmptyView()
+                    .alert("Error", isPresented: Binding(
+                        get: { 
+                            // COMPLETELY DISABLE AppGroupListView alerts to prevent presentation conflicts
+                            false  // All errors will be handled by individual sheets/views
+                        },
+                        set: { _ in 
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                viewModel.clearError() 
+                            }
+                        }
+                    )) {
+                        Button("OK") {
+                            viewModel.clearError() 
+                        }
+                    } message: {
+                        Text(viewModel.errorMessage ?? "")
+                    }
             )
         }
         .task {
@@ -146,6 +164,11 @@ struct AppGroupListView: View {
             // Statistics header
             statisticsHeader
             
+            // Instructions for tap/swipe gestures
+            if !viewModel.appGroups.isEmpty {
+                instructionsHeader
+            }
+            
             // Groups list
             List {
                 ForEach(filteredAppGroups) { group in
@@ -154,6 +177,19 @@ struct AppGroupListView: View {
                         onEdit: { viewModel.showEditGroupEditor(for: group) },
                         onDelete: { viewModel.confirmDeleteGroup(group) }
                     )
+                    .contentShape(Rectangle()) // Make entire row tappable
+                    .onTapGesture {
+                        // Tap anywhere on the row to edit
+                        print("📝 ROW TAP: Opening editor for \(group.name)")
+                        viewModel.showEditGroupEditor(for: group)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button("Delete", role: .destructive) {
+                            print("🗑️ SWIPE DELETE: Confirming delete for \(group.name)")
+                            viewModel.confirmDeleteGroup(group)
+                        }
+                        .tint(.red)
+                    }
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
@@ -191,6 +227,17 @@ struct AppGroupListView: View {
     
     private var createGroupButton: some View {
         Button(action: {
+            // Debounce rapid taps to prevent multiple sheet presentations
+            let now = Date()
+            let timeSinceLastTap = now.timeIntervalSince(lastCreateTapTime)
+            
+            guard timeSinceLastTap > 1.0 else {
+                print("🚫 CREATE DEBOUNCE: Ignoring rapid tap (\(timeSinceLastTap)s ago)")
+                return
+            }
+            
+            lastCreateTapTime = now
+            print("➕ CREATE TAP: Opening group editor")
             viewModel.showCreateGroupEditor()
         }) {
             Image(systemName: "plus")
@@ -216,6 +263,36 @@ struct AppGroupListView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Instructions Header
+    
+    private var instructionsHeader: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "hand.tap")
+                    .font(.caption)
+                    .foregroundColor(.blue)
+                Text("Tap to edit")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Image(systemName: "hand.point.left")
+                    .font(.caption)
+                    .foregroundColor(.red)
+                Text("Swipe left to delete")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+            
+            Divider()
+                .padding(.horizontal)
+        }
+        .background(.regularMaterial.opacity(0.5))
     }
     
     // MARK: - Computed Properties
@@ -265,27 +342,15 @@ private struct AppGroupRowView: View {
                 
                 Spacer()
                 
-                // Action buttons
-                HStack(spacing: 8) {
-                    Button(action: onEdit) {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 16))
-                            .foregroundColor(.blue)
-                            .frame(width: 32, height: 32)
-                            .background(.blue.opacity(0.1))
-                            .clipShape(Circle())
-                    }
-                    
-                    Button(action: onDelete) {
-                        Image(systemName: "trash")
-                            .font(.system(size: 16))
-                            .foregroundColor(.red)
-                            .frame(width: 32, height: 32)
-                            .background(.red.opacity(0.1))
-                            .clipShape(Circle())
-                    }
-                }
+                // Visual indicator for tap/swipe actions
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .opacity(0.6)
             }
+            
+            // App icons preview
+            AppIconsPreview(group: group)
             
             // Stats and details
             HStack(spacing: 24) {
@@ -296,7 +361,7 @@ private struct AppGroupRowView: View {
                 )
                 
                 StatDetail(
-                    icon: "folder.badge",
+                    icon: "folder.fill",
                     label: "Categories", 
                     value: "\(group.categories.count)"
                 )
@@ -369,17 +434,69 @@ private struct StatDetail: View {
     }
 }
 
-// MARK: - Error Alert Extension
+// MARK: - App Icons Preview
 
-extension View {
-    func errorAlert(isPresented: Binding<Bool>, message: String) -> some View {
-        alert("Error", isPresented: isPresented) {
-            Button("OK") { }
-        } message: {
-            Text(message)
+private struct AppIconsPreview: View {
+    let group: AppGroup
+    
+    private let maxPreviewIcons = 3
+    private var applicationTokens: [ApplicationToken] {
+        Array(group.applications.prefix(maxPreviewIcons))
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Show app count only - no actual icons on main list to prevent Label hierarchy errors
+            if !applicationTokens.isEmpty {
+                HStack(spacing: 8) {
+                    Text("Apps")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fontWeight(.medium)
+                    
+                    Spacer()
+                    
+                    // Show app count with real app icons
+                    HStack(spacing: 8) {
+                        // Real app icons using FamilyControls Labels
+                        HStack(spacing: -2) {
+                            ForEach(Array(applicationTokens.prefix(3)).enumerated().map { $0 }, id: \.offset) { index, token in
+                                Label(token)
+                                    .labelStyle(.iconOnly)
+                                    .frame(width: 20, height: 20)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .stroke(Color.white, lineWidth: 1)
+                                    )
+                                    .zIndex(Double(3 - index))
+                                    .id("group_app_\(token.hashValue)")
+                            }
+                            
+                            // Show total count
+                            if applicationTokens.count > 3 {
+                                Text("+\(applicationTokens.count - 3)")
+                                    .font(.caption2)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                                    .frame(width: 20, height: 20)
+                                    .background(.blue)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                            }
+                        }
+                        
+                        Text("\(applicationTokens.count) app\(applicationTokens.count == 1 ? "" : "s")")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
         }
     }
 }
+
+// All app icons are shown only in the editor sheet where they can be properly managed
+
 
 // MARK: - Preview
 

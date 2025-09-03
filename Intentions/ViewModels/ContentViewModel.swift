@@ -35,9 +35,6 @@ final class ContentViewModel: Sendable {
     /// Whether we're showing the intention prompt
     var showingIntentionPrompt: Bool = false
     
-    /// Whether we're showing settings
-    var showingSettings: Bool = false
-    
     /// Whether we're showing the category mapping setup
     var showingCategoryMappingSetup: Bool = false
     
@@ -97,22 +94,25 @@ final class ContentViewModel: Sendable {
                 authorizationStatus = await screenTimeService.authorizationStatus()
                 print("🔐 CONTENT VM: Authorization status after initialize(): \(authorizationStatus)")
                 
-                // Only proceed if authorized after initialization
-                if authorizationStatus == .approved {
-                    // Configure category mapping service for intelligent blocking
-                    await screenTimeService.setCategoryMappingService(categoryMappingService)
-                    
-                    // Apply blocking only if schedule is currently active
-                    await applyScheduleBasedBlocking()
-                }
-                
                 // Load any existing active session
                 await loadActiveSession()
                 
-                // Clean up any stale sessions from previous app runs
+                // Clean up any stale sessions from previous app runs FIRST
                 if activeSession == nil {
                     print("🧹 No active session found - cleaning up any stale sessions from previous runs...")
                     await cleanupOldSessions()
+                }
+                
+                // Only proceed if authorized after initialization
+                if authorizationStatus == .approved {
+                    print("✅ CONTENT VM: Authorization approved - proceeding with blocking setup")
+                    // Configure category mapping service for intelligent blocking
+                    await screenTimeService.setCategoryMappingService(categoryMappingService)
+                    
+                    // Apply blocking only if schedule is currently active (after cleanup)
+                    await applyScheduleBasedBlocking()
+                } else {
+                    print("❌ CONTENT VM: Authorization not approved (\(authorizationStatus)) - skipping blocking setup")
                 }
                 
                 // Check if category mapping setup is needed
@@ -145,16 +145,17 @@ final class ContentViewModel: Sendable {
     private func applyScheduleBasedBlocking() async {
         do {
             let currentlyActive = scheduleSettings.isCurrentlyActive
-            print("🔍 Schedule evaluation:")
-            print("   - isEnabled: \(scheduleSettings.isEnabled)")
-            print("   - isCurrentlyActive: \(currentlyActive)")
             
-            if currentlyActive {
-                print("🚫 Schedule is active - applying blocking")
+            if scheduleSettings.isEnabled && currentlyActive {
+                print("🚫 Schedule is enabled and active - applying blocking")
                 try await screenTimeService.blockAllApps()
                 print("✅ Blocking applied successfully")
             } else {
-                print("✅ Schedule is inactive - allowing all apps")
+                if !scheduleSettings.isEnabled {
+                    print("✅ Schedule is disabled - allowing all apps")
+                } else {
+                    print("✅ Schedule is enabled but inactive - allowing all apps")
+                }
                 try await screenTimeService.allowAllAccess()
                 print("✅ Blocking removed successfully")
             }
@@ -170,27 +171,14 @@ final class ContentViewModel: Sendable {
             let sessions = try await dataService.loadIntentionSessions()
             let activeSessions = sessions.filter { $0.isActive }
             
-            print("🔍 SESSION LOADING ANALYSIS:")
-            print("   📊 Total sessions in database: \(sessions.count)")
-            print("   📈 Active sessions found: \(activeSessions.count)")
-            
             if activeSessions.count > 1 {
-                print("   ⚠️ MULTIPLE ACTIVE SESSIONS DETECTED - this could cause persistent app allowances!")
-                for (index, session) in activeSessions.enumerated() {
-                    let sessionId = session.id.uuidString.prefix(8)
-                    print("     Active Session \(index + 1): \(sessionId)")
-                    print("       - Apps: \(session.requestedApplications.count)")
-                    print("       - Categories: \(session.selectedCategories.count)")
-                    print("       - Remaining: \(session.remainingTime.formattedMinutesSeconds)")
-                }
+                print("⚠️ Multiple active sessions detected - cleaning up duplicates")
             }
             
             // Use the first active session (if any)
             activeSession = activeSessions.first
-            if let session = activeSession {
-                print("   ✅ Loaded active session: \(session.id.uuidString.prefix(8))")
-            } else {
-                print("   ✅ No active session found")
+            if activeSession != nil {
+                print("✅ Active session loaded")
             }
         } catch {
             // Non-critical error - just log it
@@ -264,15 +252,21 @@ final class ContentViewModel: Sendable {
         showingIntentionPrompt = true
     }
     
-    /// Show settings screen
+    /// Navigate to Settings tab and ensure we're at the home page
     func showSettings() {
-        showingSettings = true
+        // Navigate to Settings tab and reset navigation to home page
+        selectedTab = .settings
+        // The navigation reset will be handled by the TabView's selection binding
+        // which already has logic to reset navigation when navigating TO Settings
     }
     
     /// Navigate to specific tab
     func navigateToTab(_ tab: AppTab) {
         selectedTab = tab
     }
+    
+    // Callback to reset Settings state when navigating away
+    var onSettingsTabExit: (() -> Void)?
     
     // MARK: - Session Management
     
@@ -384,47 +378,8 @@ final class ContentViewModel: Sendable {
     /// This prevents any timing gaps where apps might slip through unblocked
     private func cleanupAndReapplyBlocking() async {
         do {
-            print("🔄 ATOMIC CLEANUP AND BLOCKING:")
-            
-            // Step 1: DETAILED analysis of all sessions in database
-            print("   📋 Step 1: Analyzing ALL sessions in database...")
             let allSessions = try await dataService.loadIntentionSessions()
-            
-            print("   🔍 DETAILED SESSION ANALYSIS:")
-            print("   📊 Total sessions in database: \(allSessions.count)")
-            print("   🎯 Current activeSession ID: \(activeSession?.id.uuidString.prefix(8) ?? "none")")
-            
-            // Categorize all sessions
             let activeSessions = allSessions.filter { $0.isActive }
-            let completedSessions = allSessions.filter { !$0.isActive }
-            
-            print("   📈 Active sessions: \(activeSessions.count)")
-            print("   ✅ Completed sessions: \(completedSessions.count)")
-            
-            // Show details of each active session
-            if !activeSessions.isEmpty {
-                print("   🔍 ACTIVE SESSIONS DETAILS:")
-                for (index, session) in activeSessions.enumerated() {
-                    let sessionId = session.id.uuidString.prefix(8)
-                    let isCurrentSession = session.id == activeSession?.id
-                    let sessionApps = session.requestedApplications.count
-                    let sessionCategories = session.selectedCategories.count
-                    let remainingTime = session.remainingTime
-                    
-                    print("     Session \(index + 1): \(sessionId) \(isCurrentSession ? "(CURRENT)" : "(STALE)")")
-                    print("       - Apps allowed: \(sessionApps)")
-                    print("       - Categories allowed: \(sessionCategories)")
-                    print("       - Remaining time: \(remainingTime.formattedMinutesSeconds)")
-                    print("       - Start time: \(session.startTime)")
-                    print("       - Duration: \(session.duration.formattedMinutesSeconds)")
-                    
-                    // Show specific apps if any
-                    if sessionApps > 0 {
-                        print("       - App tokens: \(session.requestedApplications.count) tokens")
-                        // Don't print actual tokens as they're opaque, just count
-                    }
-                }
-            }
             
             // Find stale sessions (active but not current)
             let staleSessions = activeSessions.filter { session in
@@ -432,36 +387,25 @@ final class ContentViewModel: Sendable {
             }
             
             if !staleSessions.isEmpty {
-                print("   ⚠️ Found \(staleSessions.count) STALE active sessions - these could be causing persistent app allowances!")
+                print("🧹 Cleaning up \(staleSessions.count) stale sessions")
                 for staleSession in staleSessions {
-                    print("     🧹 Completing stale session: \(staleSession.id.uuidString.prefix(8))")
                     staleSession.complete()
                     try await dataService.saveIntentionSession(staleSession)
                 }
-                print("   ✅ All stale sessions completed")
-            } else {
-                print("   ✅ No stale sessions found - only current session is active")
             }
             
-            // Step 2: Clean up ScreenTime state BEFORE applying new blocking
-            print("   🧹 Step 2: Cleaning up ScreenTime background tasks...")
+            // Clean up ScreenTime state and reapply blocking
             await screenTimeService.cleanup()
             
-            // Step 3: IMMEDIATELY apply fresh blocking after cleanup
-            print("   🛡️ Step 3: Applying fresh blocking after cleanup...")
             let currentlyActive = scheduleSettings.isCurrentlyActive
             
             if scheduleSettings.isEnabled && currentlyActive {
-                print("   🚫 Schedule is active - applying comprehensive blocking")
                 try await screenTimeService.blockAllApps()
-                print("   ✅ All apps blocked successfully")
             } else {
-                print("   ✅ Schedule is inactive - allowing all apps")
                 try await screenTimeService.allowAllAccess()
-                print("   ✅ All restrictions removed")
             }
             
-            print("✅ ATOMIC CLEANUP AND BLOCKING COMPLETED")
+            print("✅ Session cleanup and blocking completed")
             
         } catch {
             print("❌ Error during atomic cleanup and blocking: \(error)")
@@ -484,11 +428,7 @@ final class ContentViewModel: Sendable {
                         activeSession == nil
         
         if needsSetup {
-            print("🔧 CATEGORY MAPPING: Setup required for smart app blocking")
-            print("🔧 isSetupCompleted: \(categoryMappingService.isSetupCompleted), isTrulySetupCompleted: \(categoryMappingService.isTrulySetupCompleted)")
             showingCategoryMappingSetup = true
-        } else {
-            print("✅ CATEGORY MAPPING: No setup required - Truly completed: \(categoryMappingService.isTrulySetupCompleted)")
         }
     }
     

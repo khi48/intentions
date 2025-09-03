@@ -161,9 +161,6 @@ actor ScreenTimeService: ScreenTimeManaging {
             print("💡 Users must create focused sessions to access specific apps/categories")
             print("✅ This enforces intentional app usage - the core concept")
             
-            // DETAILED INSPECTION: Verify blocking was actually applied
-            print("🔍 MANAGED SETTINGS INSPECTION - AFTER BLOCKING:")
-            await inspectManagedSettingsState(label: "AFTER_BLOCKING")
             
         } catch {
             throw AppError.appBlockingFailed("Failed to apply comprehensive restrictions: \(error.localizedDescription)")
@@ -238,15 +235,11 @@ actor ScreenTimeService: ScreenTimeManaging {
             } else {
                 // Fallback when no category mapping service is available
                 if categories.isEmpty {
-                    // No explicit categories selected - block ALL categories (simple approach)
                     managedSettingsStore.shield.applicationCategories = .all()
                     managedSettingsStore.shield.applications = nil
-                    print("🚫 BLOCKING ALL APP CATEGORIES - no category mapping available")
                 } else {
-                    // Categories explicitly selected - allow those categories
                     managedSettingsStore.shield.applicationCategories = nil
                     managedSettingsStore.shield.applications = nil
-                    print("✅ Allowing selected categories (simplified fallback)")
                 }
             }
             
@@ -321,62 +314,26 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Clear current state tracking
         currentlyAllowedApps.removeAll()
         
-        // DETAILED INSPECTION: Check ManagedSettings state before clearing
-        print("🔍 MANAGED SETTINGS INSPECTION - BEFORE CLEARING:")
-        await inspectManagedSettingsState(label: "BEFORE_CLEANUP")
-        
-        // AGGRESSIVE CLEARING: Target specific shield types that might persist
-        print("🧹 AGGRESSIVE CLEARING - targeting all shield types...")
-        
-        // Method 1: Standard clear all
-        print("   📋 Step 1: Standard clearAllSettings()...")
+        // Standard clear all settings
         managedSettingsStore.clearAllSettings()
-        print("   ✅ Standard clear completed")
         
-        // Method 2: Explicitly clear individual app shields
-        print("   📱 Step 2: Explicitly clearing app shields...")
+        // Explicitly clear specific shield types
         managedSettingsStore.shield.applications = nil
-        print("   ✅ App shields explicitly cleared")
-        
-        // Method 3: Explicitly clear category shields
-        print("   🏷️ Step 3: Explicitly clearing category shields...")
         managedSettingsStore.shield.applicationCategories = nil
-        print("   ✅ Category shields explicitly cleared")
-        
-        // Method 4: Explicitly clear web content blocks
-        print("   🌐 Step 4: Explicitly clearing web content blocks...")
         managedSettingsStore.webContent.blockedByFilter = nil
-        print("   ✅ Web content blocks explicitly cleared")
-        
-        // Method 5: Clear any app-specific restrictions
-        print("   🎯 Step 5: Clearing app-specific restrictions...")
         managedSettingsStore.application.denyAppInstallation = nil
         managedSettingsStore.application.denyAppRemoval = nil
-        print("   ✅ App-specific restrictions cleared")
-        
-        // Method 6: Clear game center restrictions
-        print("   🎮 Step 6: Clearing Game Center restrictions...")
         managedSettingsStore.gameCenter.denyMultiplayerGaming = nil
         managedSettingsStore.gameCenter.denyAddingFriends = nil
-        print("   ✅ Game Center restrictions cleared")
         
-        print("🛡️ AGGRESSIVE CLEARING COMPLETED - all shield types explicitly cleared")
-        
-        // Add delay to ensure aggressive clearing takes effect
+        // Brief delay to ensure clearing takes effect
         do {
-            try await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
-            print("⏱️ Aggressive clearing delay completed")
+            try await Task.sleep(nanoseconds: 200_000_000)
         } catch {
-            print("⏱️ Delay interrupted - continuing with cleanup")
+            // Delay interrupted - continue
         }
         
-        // DETAILED INSPECTION: Check ManagedSettings state after clearing
-        print("🔍 MANAGED SETTINGS INSPECTION - AFTER CLEARING:")
-        await inspectManagedSettingsState(label: "AFTER_CLEANUP")
-        
-        // NOTE: We don't reset isInitialized here because the service should remain
-        // usable after cleanup. Cleanup is for clearing session state, not shutting down.
-        print("🧹 ScreenTimeService cleanup completed - ready for fresh blocking")
+        print("🧹 ScreenTimeService cleanup completed")
     }
     
     func isAppAllowed(_ token: sending ApplicationToken) async -> Bool {
@@ -399,11 +356,7 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// Set the category mapping service for intelligent app blocking
     func setCategoryMappingService(_ service: CategoryMappingService) async {
         categoryMappingService = service
-        print("🗂️ ScreenTimeService: Category mapping service configured")
-        
-        // Access MainActor-isolated property properly
-        let setupCompleted = await MainActor.run { service.isSetupCompleted }
-        print("   - Setup completed: \(setupCompleted)")
+        print("🗂️ Category mapping service configured")
     }
     
     /// Remove all system apps (for testing/reset purposes)
@@ -429,26 +382,12 @@ actor ScreenTimeService: ScreenTimeManaging {
     private func prioritizeAppsForBlocking(_ appsToBlock: Set<ApplicationToken>, limit: Int) -> Set<ApplicationToken> {
         guard appsToBlock.count > limit else { return appsToBlock }
         
-        // Use category mapping service for smart prioritization if available
-        if let mappingService = categoryMappingService {
-            // Note: We need to access MainActor properties from the actor context
-            // This is a limitation - for now, we'll use fallback prioritization
-            // In the future, we could redesign this to be async or move the service to actor context
-            print("🔄 CATEGORY MAPPING AVAILABLE: Using fallback due to MainActor constraints")
-        }
-        
-        // Fallback to deterministic selection (always for now due to MainActor constraints)
-        print("🎯 DETERMINISTIC PRIORITIZATION:")
-        print("   - Total apps to block: \(appsToBlock.count)")
-        print("   - API limit: \(limit)")
-        print("   - Using deterministic selection")
-        
+        // Use deterministic selection for app prioritization
         let sortedApps = Array(appsToBlock).sorted { token1, token2 in
             return token1.hashValue < token2.hashValue
         }
         
         let prioritizedApps = Set(sortedApps.prefix(limit))
-        print("   - Selected for blocking: \(prioritizedApps.count) apps")
         return prioritizedApps
     }
     
@@ -462,8 +401,6 @@ actor ScreenTimeService: ScreenTimeManaging {
         allowedAppTokens: Set<ApplicationToken>,
         mappingService: CategoryMappingService
     ) async {
-        print("🧠 APPLYING SMART CATEGORY BLOCKING:")
-        print("   🎯 Goal: Allow selected apps to work, block everything else intelligently")
         
         // Get the blocking strategy from category mapping service (MainActor context required)
         let (categoriesToBlockCompletely, appsToBlockWithinUsedCategories) = await MainActor.run {
@@ -471,9 +408,6 @@ actor ScreenTimeService: ScreenTimeManaging {
             return (blockingStrategy.categoriesToBlock, blockingStrategy.appsToBlockInUsedCategories)
         }
         
-        print("   📊 Strategy analysis:")
-        print("     - Categories with NO selected apps (block completely): \(categoriesToBlockCompletely.count)")
-        print("     - Individual apps to block within used categories: \(appsToBlockWithinUsedCategories.count)")
         
         // Step 1: Block entire categories that have NO selected apps
         // This allows categories with selected apps to remain accessible
@@ -487,14 +421,11 @@ actor ScreenTimeService: ScreenTimeManaging {
             
             if !finalCategoriesToBlock.isEmpty {
                 managedSettingsStore.shield.applicationCategories = .specific(finalCategoriesToBlock)
-                print("   🚫 BLOCKING \(finalCategoriesToBlock.count) entire categories (no apps selected from them)")
             } else {
                 managedSettingsStore.shield.applicationCategories = nil
-                print("   ✅ All categories have selected apps - no categories to block completely")
             }
         } else {
             managedSettingsStore.shield.applicationCategories = nil
-            print("   ✅ All categories have selected apps - no categories to block completely")
         }
         
         // Step 2: Within categories that have selected apps, block the unselected individual apps
@@ -505,91 +436,19 @@ actor ScreenTimeService: ScreenTimeManaging {
             if !appsToBlock.isEmpty {
                 if appsToBlock.count <= 50 {
                     managedSettingsStore.shield.applications = appsToBlock
-                    print("   📱 BLOCKING \(appsToBlock.count) individual apps within used categories")
                 } else {
-                    // Call actor method (properly isolated)
                     let prioritizedApps = prioritizeAppsForBlocking(appsToBlock, limit: 50)
                     managedSettingsStore.shield.applications = prioritizedApps
-                    print("   📱 BLOCKING \(prioritizedApps.count) prioritized apps (API limit)")
-                    print("   ⚠️ \(appsToBlock.count - prioritizedApps.count) apps unblocked due to API limit")
+                    print("⚠️ \(appsToBlock.count - prioritizedApps.count) apps unblocked due to API limit")
                 }
             } else {
                 managedSettingsStore.shield.applications = nil
-                print("   ✅ All apps within used categories are allowed - no individual apps to block")
             }
         } else {
             managedSettingsStore.shield.applications = nil
-            print("   ✅ No individual apps to block within used categories")
         }
         
-        print("✅ SMART BLOCKING RESULT:")
-        print("   - ✅ Selected apps can access their categories")  
-        print("   - 🚫 Unselected apps within those categories are blocked individually")
-        print("   - 🚫 Entire categories with no selected apps are blocked completely")
+        print("✅ Smart category blocking applied")
     }
     
-    /// Inspect the current state of ManagedSettingsStore for debugging
-    private func inspectManagedSettingsState(label: String) async {
-        print("   🔍 [\(label)] ManagedSettings State Inspection:")
-        
-        // Check web content settings
-        let webContentBlocked = managedSettingsStore.webContent.blockedByFilter != nil
-        print("     🌐 Web content blocked: \(webContentBlocked)")
-        if webContentBlocked {
-            print("     🌐 Web filter: \(String(describing: managedSettingsStore.webContent.blockedByFilter))")
-        }
-        
-        // Check application shields
-        let appShieldsActive = managedSettingsStore.shield.applications != nil
-        print("     📱 App shields active: \(appShieldsActive)")
-        if let appShields = managedSettingsStore.shield.applications {
-            print("     📱 Individual apps shielded: \(appShields.count)")
-        }
-        
-        // Check category shields  
-        let categoryShieldsActive = managedSettingsStore.shield.applicationCategories != nil
-        print("     🏷️ Category shields active: \(categoryShieldsActive)")
-        if let categoryShields = managedSettingsStore.shield.applicationCategories {
-            switch categoryShields {
-            case .all:
-                print("     🏷️ Category blocking: ALL categories")
-            case .specific(let tokens, except: let exceptions):
-                print("     🏷️ Category blocking: \(tokens.count) specific categories (with \(exceptions.count) exceptions)")
-            case .none:
-                print("     🏷️ Category blocking: NONE")
-            @unknown default:
-                print("     🏷️ Category blocking: Unknown type")
-            }
-        }
-        
-        // Check app limits (simplified check)
-        print("     ⏰ App time limits: [checking dateAndTime settings...]")
-        
-        // Check general restrictions
-        let generalRestrictionsActive = managedSettingsStore.application.denyAppInstallation != nil || 
-                                       managedSettingsStore.application.denyAppRemoval != nil
-        print("     🚫 General restrictions active: \(generalRestrictionsActive)")
-        
-        // Check Game Center restrictions
-        let gameCenterRestrictionsActive = managedSettingsStore.gameCenter.denyMultiplayerGaming != nil ||
-                                         managedSettingsStore.gameCenter.denyAddingFriends != nil
-        print("     🎮 Game Center restrictions active: \(gameCenterRestrictionsActive)")
-        
-        // Check media restrictions
-        let mediaRestrictionsActive = managedSettingsStore.media.denyExplicitContent != nil ||
-                                    managedSettingsStore.media.denyMusicService != nil
-        print("     🎵 Media restrictions active: \(mediaRestrictionsActive)")
-        
-        // Summary
-        let totalActiveRestrictions = [webContentBlocked, appShieldsActive, categoryShieldsActive, 
-                                     generalRestrictionsActive, gameCenterRestrictionsActive, 
-                                     mediaRestrictionsActive].filter { $0 }.count
-        print("     📊 Total active restriction types: \(totalActiveRestrictions)/6")
-        
-        if totalActiveRestrictions == 0 {
-            print("     ✅ [\(label)] NO RESTRICTIONS ACTIVE - All apps should be accessible")
-        } else {
-            print("     ⚠️ [\(label)] \(totalActiveRestrictions) RESTRICTION TYPES ACTIVE")
-        }
-    }
 }

@@ -182,4 +182,8 @@ enum Weekday: String, CaseIterable, Codable, Sendable {
         case .saturday: return "Sat"
         }
     }
+    
+    var displayName: String {
+        return rawValue
+    }
 }

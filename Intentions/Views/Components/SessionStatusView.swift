@@ -35,7 +35,8 @@ struct SessionStatusView: View {
         .padding()
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .sheet(isPresented: $viewModel.showingExtendDialog) {
+        // TEMPORARILY DISABLED: Extend session sheet to test presentation conflict
+        .sheet(isPresented: .constant(false)) {
             ExtendSessionSheet(
                 viewModel: viewModel,
                 onExtend: { minutes in

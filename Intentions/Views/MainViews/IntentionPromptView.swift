@@ -71,14 +71,18 @@ struct IntentionPromptView: View {
                 }
             }
         }
-        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+        .alert("Error", isPresented: Binding(
+            get: { 
+                // COMPLETELY DISABLE IntentionPromptView alerts to prevent presentation conflicts
+                false  // Sheet-based error handling only
+            },
+            set: { _ in viewModel.clearError() }
+        )) {
             Button("OK") {
                 viewModel.clearError()
             }
         } message: {
-            if let errorMessage = viewModel.errorMessage {
-                Text(errorMessage)
-            }
+            Text(viewModel.errorMessage ?? "")
         }
         .task {
             await viewModel.loadData()
@@ -101,8 +105,9 @@ struct IntentionPromptView: View {
                 await viewModel.refreshAppGroups()
             }
         }
+        // TEMPORARILY DISABLED: IntentionPrompt internal sheets to test presentation conflict
         .sheet(item: Binding(
-            get: { viewModel.currentSheet },
+            get: { nil }, // Disable all internal sheets
             set: { viewModel.currentSheet = $0 }
         )) { sheetType in
             switch sheetType {

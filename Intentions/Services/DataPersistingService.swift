@@ -19,10 +19,61 @@ protocol DataPersisting: Sendable {
     func clearExpiredSessions() async throws
 }
 
+// MARK: - Model Actor for Thread-Safe SwiftData Access
+@ModelActor
+actor DataModelActor {
+    func saveAppGroup(_ group: AppGroup) throws {
+        print("💾 MODEL ACTOR: Saving app group '\(group.name)'")
+        
+        // Check if group already exists and update it
+        let descriptor = FetchDescriptor<PersistentAppGroup>()
+        let allGroups = try modelContext.fetch(descriptor)
+        let existingGroups = allGroups.filter { $0.id == group.id }
+        
+        if let existingGroup = existingGroups.first {
+            print("🔄 MODEL ACTOR: Updating existing group")
+            existingGroup.update(from: group)
+        } else {
+            print("➕ MODEL ACTOR: Inserting new group")
+            let persistentGroup = PersistentAppGroup(from: group)
+            modelContext.insert(persistentGroup)
+        }
+        
+        try modelContext.save()
+        print("✅ MODEL ACTOR: Successfully saved app group '\(group.name)'")
+    }
+    
+    func loadAppGroups() throws -> [AppGroup] {
+        print("📖 MODEL ACTOR: Loading app groups from SwiftData")
+        let descriptor = FetchDescriptor<PersistentAppGroup>(
+            sortBy: [SortDescriptor(\.name)]
+        )
+        let persistentGroups = try modelContext.fetch(descriptor)
+        let appGroups = persistentGroups.compactMap { $0.toAppGroup() }
+        print("✅ MODEL ACTOR: Successfully loaded \(appGroups.count) app groups")
+        return appGroups
+    }
+    
+    func deleteAppGroup(_ id: UUID) throws {
+        let descriptor = FetchDescriptor<PersistentAppGroup>()
+        let allGroups = try modelContext.fetch(descriptor)
+        let matchingGroups = allGroups.filter { $0.id == id }
+        
+        if let group = matchingGroups.first {
+            modelContext.delete(group)
+            try modelContext.save()
+            print("✅ MODEL ACTOR: Successfully deleted app group")
+        } else {
+            throw AppError.persistenceError("AppGroup with ID \(id) not found")
+        }
+    }
+}
+
 // MARK: - Data Persistence Service Implementation
 final class DataPersistenceService: DataPersisting, @unchecked Sendable {
     private let modelContainer: ModelContainer
-    private let modelContext: ModelContext // Background context for service operations
+    private let dataActor: DataModelActor
+    private let modelContext: ModelContext // For non-app-group operations (will be replaced with more actors)
     
     // UserDefaults for simple key-value storage
     private let userDefaults = UserDefaults.standard
@@ -48,22 +99,22 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         print("💾 DATA PERSISTENCE: Using persistent storage (CloudKit temporarily disabled)")
         
         if let container = container {
-            // Use provided test container with background context
-            // Background context avoids @MainActor isolation issues
+            // Use provided test container
             print("🧪 DATA PERSISTENCE: Using provided test container")
             self.modelContainer = container
+            self.dataActor = DataModelActor(modelContainer: container)
             self.modelContext = ModelContext(container)
         } else {
-            // Production initialization with background context
-            // Background context is appropriate for service layer operations
+            // Production initialization with ModelActor for thread safety
             do {
                 print("🏗️ DATA PERSISTENCE: Creating production ModelContainer")
                 self.modelContainer = try ModelContainer(
                     for: schema,
                     configurations: [modelConfiguration]
                 )
+                self.dataActor = DataModelActor(modelContainer: modelContainer)
                 self.modelContext = ModelContext(modelContainer)
-                print("✅ DATA PERSISTENCE: Successfully initialized with persistent storage")
+                print("✅ DATA PERSISTENCE: Successfully initialized with ModelActor")
             } catch {
                 print("❌ DATA PERSISTENCE: Failed to initialize: \(error)")
                 throw AppError.dataInitializationFailed(error.localizedDescription)
@@ -152,30 +203,7 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
     // MARK: - App Group Methods
     func saveAppGroup(_ group: AppGroup) async throws {
         do {
-            print("💾 DATA PERSISTENCE: Saving app group '\(group.name)'")
-            let persistentGroup = PersistentAppGroup(from: group)
-            
-            // Check if group already exists and update it - load all groups and filter in memory
-            let descriptor = FetchDescriptor<PersistentAppGroup>()
-            let allGroups = try modelContext.fetch(descriptor)
-            let existingGroups = allGroups.filter { $0.id == group.id }
-            
-            if let existingGroup = existingGroups.first {
-                print("🔄 DATA PERSISTENCE: Updating existing group")
-                existingGroup.update(from: group)
-            } else {
-                print("➕ DATA PERSISTENCE: Inserting new group")
-                modelContext.insert(persistentGroup)
-            }
-            
-            try modelContext.save()
-            print("✅ DATA PERSISTENCE: Successfully saved app group to SwiftData")
-            
-            // Verify the save by immediately fetching
-            let verifyDescriptor = FetchDescriptor<PersistentAppGroup>()
-            let savedGroups = try modelContext.fetch(verifyDescriptor)
-            print("🔍 DATA PERSISTENCE: Verification - \(savedGroups.count) groups in storage after save")
-            
+            try await dataActor.saveAppGroup(group)
         } catch {
             print("❌ DATA PERSISTENCE: Failed to save app group: \(error)")
             throw AppError.persistenceError("Failed to save AppGroup \(group.name): \(error.localizedDescription)")
@@ -184,21 +212,7 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
     
     func loadAppGroups() async throws -> [AppGroup] {
         do {
-            print("📖 DATA PERSISTENCE: Loading app groups from SwiftData")
-            let descriptor = FetchDescriptor<PersistentAppGroup>(
-                sortBy: [SortDescriptor(\.name)]
-            )
-            
-            let persistentGroups = try modelContext.fetch(descriptor)
-            print("📊 DATA PERSISTENCE: Found \(persistentGroups.count) persistent groups in storage")
-            
-            let appGroups = persistentGroups.compactMap { $0.toAppGroup() }
-            print("✅ DATA PERSISTENCE: Successfully loaded \(appGroups.count) app groups")
-            for group in appGroups {
-                print("   - \(group.name): \(group.applications.count) apps, \(group.categories.count) categories")
-            }
-            
-            return appGroups
+            return try await dataActor.loadAppGroups()
         } catch {
             print("❌ DATA PERSISTENCE: Failed to load app groups: \(error)")
             throw AppError.persistenceError("Failed to load AppGroups: \(error.localizedDescription)")
@@ -207,25 +221,15 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
     
     func deleteAppGroup(_ id: UUID) async throws {
         do {
-            // Load all groups and filter in memory to avoid predicate issues
-            let descriptor = FetchDescriptor<PersistentAppGroup>()
-            let allGroups = try modelContext.fetch(descriptor)
-            let groups = allGroups.filter { $0.id == id }
-            
-            guard let group = groups.first else {
-                throw AppError.dataNotFound("AppGroup with ID \(id)")
-            }
-            
-            modelContext.delete(group)
-            try modelContext.save()
-        } catch let error as AppError {
-            throw error
+            try await dataActor.deleteAppGroup(id)
         } catch {
-            throw AppError.persistenceError("Failed to delete AppGroup \(id): \(error.localizedDescription)")
+            print("❌ DATA PERSISTENCE: Failed to delete app group: \(error)")
+            throw AppError.persistenceError("Failed to delete AppGroup: \(error.localizedDescription)")
         }
     }
     
     // MARK: - Schedule Settings Methods
+    @MainActor
     func saveScheduleSettings(_ settings: ScheduleSettings) async throws {
         do {
             let persistentSettings = PersistentScheduleSettings(from: settings)
@@ -245,6 +249,7 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         }
     }
     
+    @MainActor
     func loadScheduleSettings() async throws -> ScheduleSettings? {
         do {
             let descriptor = FetchDescriptor<PersistentScheduleSettings>()
@@ -257,6 +262,7 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
     }
     
     // MARK: - Intention Session Methods
+    @MainActor
     func saveIntentionSession(_ session: IntentionSession) async throws {
         do {
             let persistentSession = PersistentIntentionSession(from: session)
@@ -278,6 +284,7 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         }
     }
     
+    @MainActor
     func loadIntentionSessions() async throws -> [IntentionSession] {
         do {
             let descriptor = FetchDescriptor<PersistentIntentionSession>(
@@ -291,6 +298,7 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         }
     }
     
+    @MainActor
     func deleteIntentionSession(_ id: UUID) async throws {
         do {
             // Load all sessions and filter in memory to avoid predicate issues
@@ -311,6 +319,7 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         }
     }
     
+    @MainActor
     func clearExpiredSessions() async throws {
         do {
             // Load all sessions and filter in memory to avoid SwiftData predicate issues

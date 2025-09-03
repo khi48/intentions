@@ -26,7 +26,10 @@ final class ScheduleSettings: Codable, @unchecked Sendable {
     
     // Check if current time falls within active schedule
     var isCurrentlyActive: Bool {
-        guard isEnabled else { return false }
+        guard isEnabled else { 
+            print("📅 SCHEDULE CHECK: Schedule disabled - returning false")
+            return false 
+        }
         
         let now = Date()
         let calendar = Calendar.current
@@ -34,11 +37,26 @@ final class ScheduleSettings: Codable, @unchecked Sendable {
         // Check day of week
         let weekdayComponent = calendar.component(.weekday, from: now)
         let currentWeekday = Weekday.from(calendarWeekday: weekdayComponent)
-        guard activeDays.contains(currentWeekday) else { return false }
+        let dayMatches = activeDays.contains(currentWeekday)
         
         // Check hour
         let hour = calendar.component(.hour, from: now)
-        return activeHours.contains(hour)
+        let hourMatches = activeHours.contains(hour)
+        
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        let timeString = formatter.string(from: now)
+        
+        print("📅 SCHEDULE CHECK at \(timeString):")
+        print("   - Current day: \(currentWeekday.rawValue) (weekday \(weekdayComponent))")
+        print("   - Active days: \(activeDays.map { $0.shortName }.joined(separator: ", "))")
+        print("   - Day matches: \(dayMatches)")
+        print("   - Current hour: \(hour)")
+        print("   - Active hours: \(activeHours)")
+        print("   - Hour matches: \(hourMatches)")
+        print("   - Result: \(dayMatches && hourMatches)")
+        
+        return dayMatches && hourMatches
     }
     
     func isActive(at date: Date) -> Bool {

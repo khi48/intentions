@@ -141,7 +141,7 @@ final class CategoryMappingService: Sendable {
     /// This is called after user selects apps from a single category in FamilyActivityPicker
     func recordCategoryMapping(_ category: AppCategory, selection: FamilyActivitySelection) {
         print("\n" + String(repeating: "=", count: 60))
-        print("📂 CATEGORY MAPPING: Recording \(category.displayName)")
+        // print("📂 CATEGORY MAPPING: Recording \(category.displayName)")
         print(String(repeating: "=", count: 60))
         
         // Extract app tokens from the selection
@@ -173,9 +173,9 @@ final class CategoryMappingService: Sendable {
         // Store category token if available
         if let firstCategoryToken = categoryTokens.first {
             categoryToTokenMapping[category] = firstCategoryToken
-            print("✅ CATEGORY TOKEN: Stored category token for \(category.displayName)")
+            // print("✅ CATEGORY TOKEN: Stored category token for \(category.displayName)")
         } else {
-            print("⚠️ NO CATEGORY TOKEN: No category token found for \(category.displayName)")
+            // print("⚠️ NO CATEGORY TOKEN: No category token found for \(category.displayName)")
         }
         
         // Mark category as completed
@@ -373,7 +373,7 @@ final class CategoryMappingService: Sendable {
             }
         }
         
-        print("🏷️ CATEGORY TOKENS TO BLOCK: \(tokens.count) category tokens found for \(categories.count) categories")
+        // print("🏷️ CATEGORY TOKENS TO BLOCK: \(tokens.count) category tokens found for \(categories.count) categories")
         return tokens
     }
     
@@ -432,7 +432,7 @@ final class CategoryMappingService: Sendable {
             setupProgress = progressData.compactMapKeys { AppCategory(rawValue: $0) }
         }
         
-        print("📱 STORAGE: Loaded category mapping state - Setup completed: \(isSetupCompleted)")
+        // print("📱 STORAGE: Loaded category mapping state - Setup completed: \(isSetupCompleted)")
         
         // LOAD ACTUAL APP MAPPINGS using the same method that worked for app discovery
         if isSetupCompleted {
@@ -480,7 +480,7 @@ final class CategoryMappingService: Sendable {
                     if !validApps.isEmpty {
                         categoryToAppsMapping[category] = validApps
                         totalLoadedApps += validApps.count
-                        print("📱 Loaded \(validApps.count) valid app tokens for \(category.displayName)")
+                        // print("📱 Loaded \(validApps.count) valid app tokens for \(category.displayName)")
                     } else {
                         print("⚠️ All app tokens expired for \(category.displayName)")
                         // Remove corrupted data
@@ -504,7 +504,7 @@ final class CategoryMappingService: Sendable {
                     // ActivityCategoryTokens are the actual tokens - store them directly
                     categoryToTokenMapping[category] = token
                     totalLoadedCategories += 1
-                    print("📱 Loaded valid category token for \(category.displayName)")
+                    // print("📱 Loaded valid category token for \(category.displayName)")
                 } catch {
                     print("❌ Failed to load category token for \(category.displayName): \(error)")
                     // Remove corrupted data

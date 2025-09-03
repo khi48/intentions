@@ -9,6 +9,43 @@ import SwiftUI
 @preconcurrency import FamilyControls
 import ManagedSettings
 
+// MARK: - Settings Navigation Destinations
+
+enum SettingsDestination: Hashable, CaseIterable {
+    case notifications
+    case privacy  
+    case dataManagement
+    case about
+    case categoryMappingSetup
+    case includeEntireCategoryTest
+    case allAppsDiscoveryTest
+    
+    // Better practice: Include presentation metadata in the enum
+    var title: String {
+        switch self {
+        case .notifications: return "Notifications"
+        case .privacy: return "Privacy"
+        case .dataManagement: return "Data Management"
+        case .about: return "About"
+        case .categoryMappingSetup: return "Category Mapping Setup"
+        case .includeEntireCategoryTest: return "Include Category Test"
+        case .allAppsDiscoveryTest: return "All Apps Discovery Test"
+        }
+    }
+    
+    var systemImage: String {
+        switch self {
+        case .notifications: return "bell.fill"
+        case .privacy: return "hand.raised.fill"
+        case .dataManagement: return "externaldrive.fill"
+        case .about: return "info.circle.fill"
+        case .categoryMappingSetup: return "list.bullet.rectangle"
+        case .includeEntireCategoryTest: return "checkmark.circle"
+        case .allAppsDiscoveryTest: return "app.badge"
+        }
+    }
+}
+
 // MARK: - Supporting Views
 
 struct ScheduleDetailsRow: View {
@@ -122,18 +159,22 @@ struct SettingsRow: View {
 struct SettingsView: View {
     @State private var viewModel: SettingsViewModel
     private let onScheduleSettingsChanged: ((ScheduleSettings) async -> Void)?
+    private let onViewModelReady: ((SettingsViewModel) -> Void)?
+    @EnvironmentObject private var navigationManager: NavigationStateManager
     
     init(
         dataService: DataPersisting? = nil,
-        onScheduleSettingsChanged: ((ScheduleSettings) async -> Void)? = nil
+        onScheduleSettingsChanged: ((ScheduleSettings) async -> Void)? = nil,
+        onViewModelReady: ((SettingsViewModel) -> Void)? = nil
     ) {
         let service = dataService ?? MockDataPersistenceService()
         self._viewModel = State(wrappedValue: SettingsViewModel(dataService: service))
         self.onScheduleSettingsChanged = onScheduleSettingsChanged
+        self.onViewModelReady = onViewModelReady
     }
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationManager.settingsPath) {
             if viewModel.isLoading {
                 ProgressView("Loading Settings...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -141,9 +182,6 @@ struct SettingsView: View {
                 List {
                     // Schedule Settings Section
                     scheduleSection
-                    
-                    // App Groups Section
-                    appGroupsSection
                     
                     // Statistics Section
                     statisticsSection
@@ -158,18 +196,44 @@ struct SettingsView: View {
                     aboutSection
                 }
                 .listStyle(.insetGrouped)
+                .navigationDestination(for: SettingsDestination.self) { destination in
+                    switch destination {
+                    case .notifications:
+                        NotificationSettingsView()
+                    case .privacy:
+                        PrivacySettingsView()
+                    case .dataManagement:
+                        DataManagementView()
+                    case .about:
+                        AboutView()
+                    case .categoryMappingSetup:
+                        CategoryMappingSetupView { mappingService in
+                            // Handle completion in navigation context
+                            print("Navigation: Category mapping setup completed")
+                        }
+                    case .includeEntireCategoryTest:
+                        IncludeEntireCategoryTestView()
+                    case .allAppsDiscoveryTest:
+                        AllAppsDiscoveryTestView()
+                    }
+                }
             }
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
-        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+        .toolbarBackground(.visible, for: .tabBar)
+        .alert("Error", isPresented: Binding(
+            get: { 
+                // COMPLETELY DISABLE SettingsView error alerts to prevent presentation conflicts
+                false  // Only delete confirmation alert remains active
+            },
+            set: { _ in viewModel.clearError() }
+        )) {
             Button("OK") {
                 viewModel.clearError()
             }
         } message: {
-            if let errorMessage = viewModel.errorMessage {
-                Text(errorMessage)
-            }
+            Text(viewModel.errorMessage ?? "")
         }
         .alert("Delete App Group", isPresented: $viewModel.showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) {
@@ -185,7 +249,8 @@ struct SettingsView: View {
                 Text("Are you sure you want to delete '\(group.name)'? This action cannot be undone.")
             }
         }
-        .sheet(isPresented: $viewModel.showingScheduleEditor) {
+        // TEMPORARILY DISABLED: Schedule editor sheet to test presentation conflict
+        .sheet(isPresented: .constant(false)) {
             ScheduleSettingsView(
                 settings: viewModel.scheduleSettings,
                 onSave: { settings in
@@ -201,7 +266,8 @@ struct SettingsView: View {
                 }
             )
         }
-        .sheet(isPresented: $viewModel.showingAppGroupEditor) {
+        // TEMPORARILY DISABLED: App group editor sheet to test presentation conflict  
+        .sheet(isPresented: .constant(false)) {
             AppGroupEditorView(
                 onSave: { name, apps in
                     Task {
@@ -216,6 +282,12 @@ struct SettingsView: View {
         }
         .task {
             await viewModel.loadData()
+        }
+        .onAppear {
+            print("🏠 SETTINGS VIEW: onAppear called")
+            print("   - Navigation path count: \(navigationManager.settingsPath.count)")
+            onViewModelReady?(viewModel)
+            print("   ✅ ViewModel ready callback sent")
         }
     }
     
@@ -279,57 +351,10 @@ struct SettingsView: View {
         }
     }
     
-    // MARK: - App Groups Section
-    
-    private var appGroupsSection: some View {
-        Section {
-            // Create New Group Button
-            Button(action: { viewModel.showAppGroupEditor() }) {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(.blue)
-                    
-                    Text("Create App Group")
-                        .foregroundStyle(.blue)
-                    
-                    Spacer()
-                }
-            }
-            
-            // Existing Groups
-            ForEach(viewModel.appGroups) { group in
-                AppGroupRow(
-                    group: group,
-                    onEdit: { 
-                        // TODO: Implement edit functionality
-                    },
-                    onDelete: {
-                        viewModel.confirmDeleteGroup(group)
-                    }
-                )
-            }
-        } header: {
-            HStack {
-                Text("App Groups")
-                Spacer()
-                Text("\(viewModel.appGroups.count)")
-                    .foregroundStyle(.secondary)
-            }
-        } footer: {
-            Text("Create groups of apps for quick session setup. Groups can be selected together when setting intentions.")
-        }
-    }
-    
     // MARK: - Statistics Section
     
     private var statisticsSection: some View {
         Section("Usage Statistics") {
-            StatisticRow(
-                title: "App Groups",
-                value: "\(viewModel.totalAppGroups)",
-                icon: "square.stack.3d.up.fill"
-            )
-            
             StatisticRow(
                 title: "Managed Apps",
                 value: "\(viewModel.totalManagedApps)",
@@ -354,33 +379,27 @@ struct SettingsView: View {
     
     private var generalSection: some View {
         Section("General") {
-            NavigationLink {
-                NotificationSettingsView()
-            } label: {
+            NavigationLink(value: SettingsDestination.notifications) {
                 SettingsRow(
-                    title: "Notifications",
+                    title: SettingsDestination.notifications.title,
                     subtitle: "Session warnings and reminders",
-                    icon: "bell.fill"
+                    icon: SettingsDestination.notifications.systemImage
                 )
             }
             
-            NavigationLink {
-                PrivacySettingsView()
-            } label: {
+            NavigationLink(value: SettingsDestination.privacy) {
                 SettingsRow(
-                    title: "Privacy",
+                    title: SettingsDestination.privacy.title,
                     subtitle: "Data collection and sharing",
-                    icon: "hand.raised.fill"
+                    icon: SettingsDestination.privacy.systemImage
                 )
             }
             
-            NavigationLink {
-                DataManagementView()
-            } label: {
+            NavigationLink(value: SettingsDestination.dataManagement) {
                 SettingsRow(
-                    title: "Data Management",
+                    title: SettingsDestination.dataManagement.title,
                     subtitle: "Export, import, and reset",
-                    icon: "externaldrive.fill"
+                    icon: SettingsDestination.dataManagement.systemImage
                 )
             }
         }
@@ -390,36 +409,27 @@ struct SettingsView: View {
     
     private var debugSection: some View {
         Section {
-            NavigationLink {
-                CategoryMappingSetupView { mappingService in
-                    // Handle completion in debug context
-                    print("Debug: Category mapping setup completed")
-                }
-            } label: {
+            NavigationLink(value: SettingsDestination.categoryMappingSetup) {
                 SettingsRow(
-                    title: "Category Mapping Setup",
+                    title: SettingsDestination.categoryMappingSetup.title,
                     subtitle: "Map apps to categories for smart blocking",
-                    icon: "folder.badge.gearshape"
+                    icon: SettingsDestination.categoryMappingSetup.systemImage
                 )
             }
             
-            NavigationLink {
-                IncludeEntireCategoryTestView()
-            } label: {
+            NavigationLink(value: SettingsDestination.includeEntireCategoryTest) {
                 SettingsRow(
-                    title: "includeEntireCategory MVP Test",
+                    title: SettingsDestination.includeEntireCategoryTest.title,
                     subtitle: "Simple test for category expansion",
-                    icon: "testtube.2"
+                    icon: SettingsDestination.includeEntireCategoryTest.systemImage
                 )
             }
             
-            NavigationLink {
-                AllAppsDiscoveryTestView()
-            } label: {
+            NavigationLink(value: SettingsDestination.allAppsDiscoveryTest) {
                 SettingsRow(
-                    title: "All Apps Discovery Test",
+                    title: SettingsDestination.allAppsDiscoveryTest.title,
                     subtitle: "Test capturing all app tokens",
-                    icon: "magnifyingglass.circle.fill"
+                    icon: SettingsDestination.allAppsDiscoveryTest.systemImage
                 )
             }
         } header: {
@@ -429,13 +439,11 @@ struct SettingsView: View {
     
     private var aboutSection: some View {
         Section {
-            NavigationLink {
-                AboutView()
-            } label: {
+            NavigationLink(value: SettingsDestination.about) {
                 SettingsRow(
-                    title: "About Intentions",
+                    title: SettingsDestination.about.title,
                     subtitle: "Version, support, and feedback",
-                    icon: "info.circle.fill"
+                    icon: SettingsDestination.about.systemImage
                 )
             }
             
@@ -461,25 +469,162 @@ struct ScheduleSettingsView: View {
     let onSave: (ScheduleSettings) -> Void
     let onCancel: () -> Void
     
+    @State private var isEnabled: Bool
+    @State private var startHour: Int
+    @State private var endHour: Int
+    @State private var selectedDays: Set<Weekday>
+    
+    init(settings: ScheduleSettings, onSave: @escaping (ScheduleSettings) -> Void, onCancel: @escaping () -> Void) {
+        self.settings = settings
+        self.onSave = onSave
+        self.onCancel = onCancel
+        self._isEnabled = State(initialValue: settings.isEnabled)
+        self._startHour = State(initialValue: settings.activeHours.lowerBound)
+        self._endHour = State(initialValue: settings.activeHours.upperBound)
+        self._selectedDays = State(initialValue: settings.activeDays)
+    }
+    
     var body: some View {
         NavigationView {
-            VStack {
-                Text("Schedule Settings Editor")
-                    .font(.title2)
-                Text("Coming Soon")
-                    .foregroundStyle(.secondary)
+            List {
+                // Schedule Enable/Disable
+                Section {
+                    Toggle("Enable Schedule", isOn: $isEnabled)
+                } header: {
+                    Text("Schedule Status")
+                } footer: {
+                    Text(isEnabled ? "Intentions will only be active during specified times" : "Intentions will be active 24/7")
+                }
+                
+                if isEnabled {
+                    // Active Hours
+                    Section {
+                        HStack {
+                            Text("Start Time")
+                            Spacer()
+                            Picker("Start Hour", selection: $startHour) {
+                                ForEach(0..<24) { hour in
+                                    Text(hourFormatter.string(from: dateFromHour(hour)))
+                                        .tag(hour)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                        }
+                        
+                        HStack {
+                            Text("End Time")
+                            Spacer()
+                            Picker("End Hour", selection: $endHour) {
+                                ForEach(1..<24) { hour in
+                                    Text(hourFormatter.string(from: dateFromHour(hour)))
+                                        .tag(hour)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                        }
+                    } header: {
+                        Text("Active Hours")
+                    } footer: {
+                        Text("Intentions will be active from \(hourFormatter.string(from: dateFromHour(startHour))) to \(hourFormatter.string(from: dateFromHour(endHour)))")
+                    }
+                    
+                    // Active Days
+                    Section {
+                        ForEach(Weekday.allCases, id: \.self) { day in
+                            HStack {
+                                Text(day.displayName)
+                                Spacer()
+                                if selectedDays.contains(day) {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                toggleDay(day)
+                            }
+                        }
+                        
+                        // Quick Select Options
+                        VStack(spacing: 8) {
+                            HStack {
+                                Button("All Days") {
+                                    selectedDays = Set(Weekday.allCases)
+                                }
+                                .buttonStyle(.bordered)
+                                
+                                Button("Weekdays") {
+                                    selectedDays = [.monday, .tuesday, .wednesday, .thursday, .friday]
+                                }
+                                .buttonStyle(.bordered)
+                                
+                                Button("Weekends") {
+                                    selectedDays = [.saturday, .sunday]
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                            
+                            Button("Clear All") {
+                                selectedDays.removeAll()
+                            }
+                            .buttonStyle(.bordered)
+                            .foregroundColor(.red)
+                        }
+                        .padding(.vertical, 8)
+                    } header: {
+                        Text("Active Days")
+                    } footer: {
+                        Text("Select the days when Intentions should be active. At least one day must be selected.")
+                    }
+                }
             }
-            .navigationTitle("Schedule")
+            .navigationTitle("Schedule Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") { onCancel() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") { onSave(settings) }
+                    Button("Save") { 
+                        saveSettings()
+                    }
+                    .disabled(!isValidConfiguration)
                 }
             }
         }
+    }
+    
+    private var isValidConfiguration: Bool {
+        if !isEnabled { return true }
+        return startHour < endHour && !selectedDays.isEmpty
+    }
+    
+    private func toggleDay(_ day: Weekday) {
+        if selectedDays.contains(day) {
+            selectedDays.remove(day)
+        } else {
+            selectedDays.insert(day)
+        }
+    }
+    
+    private func saveSettings() {
+        let updatedSettings = ScheduleSettings()
+        updatedSettings.isEnabled = isEnabled
+        updatedSettings.activeHours = startHour...endHour
+        updatedSettings.activeDays = selectedDays
+        updatedSettings.timeZone = settings.timeZone
+        
+        onSave(updatedSettings)
+    }
+    
+    private var hourFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter
+    }
+    
+    private func dateFromHour(_ hour: Int) -> Date {
+        Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: Date()) ?? Date()
     }
 }
 
@@ -513,29 +658,84 @@ struct AppGroupEditorView: View {
 
 struct NotificationSettingsView: View {
     var body: some View {
-        Text("Notification Settings")
-            .navigationTitle("Notifications")
+        List {
+            Section {
+                Text("Configure your notification preferences")
+                    .foregroundStyle(.secondary)
+            }
+            
+            Section("Session Reminders") {
+                Toggle("Session warnings", isOn: .constant(true))
+                Toggle("Time remaining alerts", isOn: .constant(true))
+            }
+        }
+        .navigationTitle("Notifications")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(.visible, for: .tabBar)
     }
 }
 
 struct PrivacySettingsView: View {
     var body: some View {
-        Text("Privacy Settings")
-            .navigationTitle("Privacy")
+        List {
+            Section {
+                Text("Manage your privacy and data settings")
+                    .foregroundStyle(.secondary)
+            }
+            
+            Section("Data Usage") {
+                Text("Screen Time access required")
+                Text("Usage data stays on device")
+            }
+        }
+        .navigationTitle("Privacy")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(.visible, for: .tabBar)
     }
 }
 
 struct DataManagementView: View {
     var body: some View {
-        Text("Data Management")
-            .navigationTitle("Data")
+        List {
+            Section {
+                Text("Manage your app data and settings")
+                    .foregroundStyle(.secondary)
+            }
+            
+            Section("Actions") {
+                Button("Export Settings") {}
+                    .foregroundStyle(.primary)
+                Button("Reset All Data", role: .destructive) {}
+            }
+        }
+        .navigationTitle("Data")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(.visible, for: .tabBar)
     }
 }
 
 struct AboutView: View {
     var body: some View {
-        Text("About Intentions")
-            .navigationTitle("About")
+        List {
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Intentions")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    
+                    Text("Promoting mindful phone usage through intentional app access")
+                        .foregroundStyle(.secondary)
+                    
+                    Text("Version 1.0")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.vertical, 8)
+            }
+        }
+        .navigationTitle("About")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(.visible, for: .tabBar)
     }
 }
 
@@ -1010,7 +1210,9 @@ struct IncludeEntireCategoryTestView: View {
     }
 }
 
-#Preview {
-    SettingsView()
-}
+//#Preview {
+//    SettingsView()
+//        .environmentObject(NavigationStateManager())
+//}
+
 
