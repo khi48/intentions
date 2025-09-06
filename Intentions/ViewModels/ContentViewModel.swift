@@ -141,28 +141,11 @@ final class ContentViewModel: Sendable {
         }
     }
     
+    /// Legacy method - now redirects to unified pipeline
     /// Apply blocking based on current schedule status
     private func applyScheduleBasedBlocking() async {
-        do {
-            let currentlyActive = scheduleSettings.isCurrentlyActive
-            
-            if scheduleSettings.isEnabled && currentlyActive {
-                print("🚫 Schedule is enabled and active - applying blocking")
-                try await screenTimeService.blockAllApps()
-                print("✅ Blocking applied successfully")
-            } else {
-                if !scheduleSettings.isEnabled {
-                    print("✅ Schedule is disabled - allowing all apps")
-                } else {
-                    print("✅ Schedule is enabled but inactive - allowing all apps")
-                }
-                try await screenTimeService.allowAllAccess()
-                print("✅ Blocking removed successfully")
-            }
-        } catch {
-            print("❌ Error in applyScheduleBasedBlocking: \(error)")
-            await handleError(error)
-        }
+        print("🔄 LEGACY: applyScheduleBasedBlocking redirecting to unified pipeline")
+        await applyDefaultBlocking()
     }
     
     /// Load any existing active session from persistence
@@ -270,17 +253,15 @@ final class ContentViewModel: Sendable {
     
     // MARK: - Session Management
     
-    /// Start a new intention session
+    /// Start a new intention session using unified blocking pipeline
     func startSession(_ session: IntentionSession) async {
         await withLoading {
             do {
                 // Save session to persistence
                 try await dataService.saveIntentionSession(session)
                 
-                // Apply Screen Time restrictions if apps or categories are specified
-                if !session.requestedApplications.isEmpty || !session.selectedCategories.isEmpty {
-                    try await screenTimeService.allowApps(session.requestedApplications, categories: session.selectedCategories, duration: session.duration)
-                }
+                // Apply session-based blocking using unified pipeline
+                await applySessionBlocking(for: session)
                 
                 // Update local state
                 activeSession = session
@@ -292,7 +273,7 @@ final class ContentViewModel: Sendable {
         }
     }
     
-    /// End the current session
+    /// End the current session using unified blocking pipeline
     func endCurrentSession() async {
         guard let session = activeSession else { return }
         
@@ -305,9 +286,9 @@ final class ContentViewModel: Sendable {
                 // Clear local state
                 activeSession = nil
                 
-                // ATOMIC OPERATION: Clean up old sessions and immediately apply blocking
-                print("🔄 Session ended - performing atomic cleanup and blocking...")
-                await cleanupAndReapplyBlocking()
+                // Apply default blocking state (revert to block-all or allow-all based on schedule)
+                print("🔄 Session ended - reverting to default blocking state...")
+                await applyDefaultBlocking()
                 
             } catch {
                 await handleError(error)
@@ -374,43 +355,99 @@ final class ContentViewModel: Sendable {
         }
     }
     
-    /// Atomic operation: Clean up old sessions and immediately reapply blocking
-    /// This prevents any timing gaps where apps might slip through unblocked
-    private func cleanupAndReapplyBlocking() async {
+    // MARK: - Unified Blocking Pipeline
+    
+    /// Apply session-based blocking - allows only the apps/categories specified in the session
+    /// This is the core method used by both IntentionPrompt and QuickActions
+    private func applySessionBlocking(for session: IntentionSession) async {
         do {
-            let allSessions = try await dataService.loadIntentionSessions()
-            let activeSessions = allSessions.filter { $0.isActive }
+            // Collect all applications and categories for this session
+            var allApplications = session.requestedApplications
+            var allCategories = session.selectedCategories
             
-            // Find stale sessions (active but not current)
-            let staleSessions = activeSessions.filter { session in
-                session.id != activeSession?.id
-            }
-            
-            if !staleSessions.isEmpty {
-                print("🧹 Cleaning up \(staleSessions.count) stale sessions")
-                for staleSession in staleSessions {
-                    staleSession.complete()
-                    try await dataService.saveIntentionSession(staleSession)
+            // If session has appGroups but no individual apps/categories (like QuickActions),
+            // extract tokens from the app groups
+            if !session.requestedAppGroups.isEmpty && allApplications.isEmpty && allCategories.isEmpty {
+                let appGroups = try await dataService.loadAppGroups()
+                for groupId in session.requestedAppGroups {
+                    if let group = appGroups.first(where: { $0.id == groupId }) {
+                        allApplications.formUnion(group.applications)
+                        allCategories.formUnion(group.categories)
+                    }
                 }
+                print("🎯 SESSION BLOCKING: Resolved \(session.requestedAppGroups.count) app groups to \(allApplications.count) apps and \(allCategories.count) categories")
             }
             
-            // Clean up ScreenTime state and reapply blocking
+            // Apply Screen Time restrictions to allow only the specified apps/categories
+            if !allApplications.isEmpty || !allCategories.isEmpty {
+                // First clean up any previous session state
+                await screenTimeService.cleanup()
+                
+                // Then allow only the session apps - this blocks everything else
+                try await screenTimeService.allowApps(allApplications, categories: allCategories, duration: session.duration)
+                print("✅ SESSION BLOCKING: Applied restrictions - allowing \(allApplications.count) apps and \(allCategories.count) categories, blocking all others")
+            } else {
+                print("⚠️ SESSION BLOCKING: No apps or categories found - session may not block effectively")
+                // Fallback to default blocking
+                await applyDefaultBlocking()
+            }
+            
+        } catch {
+            print("❌ SESSION BLOCKING: Failed to apply session blocking: \(error)")
+            // Fallback to default blocking on error
+            await applyDefaultBlocking()
+        }
+    }
+    
+    /// Apply default blocking state based on schedule settings
+    /// Used when no session is active or when session ends
+    private func applyDefaultBlocking() async {
+        do {
+            // Clean up any previous session state first
             await screenTimeService.cleanup()
             
+            // Clean up any stale sessions in the database
+            do {
+                let allSessions = try await dataService.loadIntentionSessions()
+                let staleSessions = allSessions.filter { session in
+                    session.isActive && session.id != activeSession?.id
+                }
+                
+                if !staleSessions.isEmpty {
+                    print("🧹 DEFAULT BLOCKING: Cleaning up \(staleSessions.count) stale sessions")
+                    for staleSession in staleSessions {
+                        staleSession.complete()
+                        try await dataService.saveIntentionSession(staleSession)
+                    }
+                }
+            } catch {
+                print("❌ DEFAULT BLOCKING: Error cleaning stale sessions: \(error)")
+            }
+            
+            // Apply blocking based on schedule
             let currentlyActive = scheduleSettings.isCurrentlyActive
             
             if scheduleSettings.isEnabled && currentlyActive {
+                // Schedule is active - block all apps (default behavior)
                 try await screenTimeService.blockAllApps()
+                print("✅ DEFAULT BLOCKING: Applied block-all (schedule is active)")
             } else {
+                // Schedule is inactive - allow all access
                 try await screenTimeService.allowAllAccess()
+                print("✅ DEFAULT BLOCKING: Applied allow-all (schedule is inactive)")
             }
             
-            print("✅ Session cleanup and blocking completed")
-            
         } catch {
-            print("❌ Error during atomic cleanup and blocking: \(error)")
-            await handleError(error)
+            print("❌ DEFAULT BLOCKING: Failed to apply default blocking: \(error)")
         }
+    }
+    
+    /// Legacy method - now redirects to unified pipeline
+    /// Atomic operation: Clean up old sessions and immediately reapply blocking
+    /// This prevents any timing gaps where apps might slip through unblocked
+    private func cleanupAndReapplyBlocking() async {
+        print("🔄 LEGACY: cleanupAndReapplyBlocking redirecting to unified pipeline")
+        await applyDefaultBlocking()
     }
     
     // MARK: - Category Mapping Setup
@@ -482,6 +519,7 @@ final class ContentViewModel: Sendable {
 enum AppTab: String, CaseIterable, Identifiable {
     case home = "Home"
     case groups = "Groups"
+    case quickActions = "Quick Actions"
     case settings = "Settings"
     
     var id: String { rawValue }
@@ -490,6 +528,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         switch self {
         case .home: return "house.fill"
         case .groups: return "square.stack.3d.up.fill"
+        case .quickActions: return "bolt.fill"
         case .settings: return "gear"
         }
     }

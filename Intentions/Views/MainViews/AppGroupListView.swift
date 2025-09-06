@@ -29,7 +29,7 @@ struct AppGroupListView: View {
                 } else if viewModel.appGroups.isEmpty {
                     emptyStateView
                 } else {
-                    appGroupsList
+                    groupsList
                 }
             }
             .navigationTitle("App Groups")
@@ -157,38 +157,26 @@ struct AppGroupListView: View {
         .padding()
     }
     
-    // MARK: - App Groups List
+    // MARK: - Groups List
     
-    private var appGroupsList: some View {
-        VStack(spacing: 0) {
-            // Statistics header
-            statisticsHeader
-            
-            // Instructions for tap/swipe gestures
-            if !viewModel.appGroups.isEmpty {
-                instructionsHeader
-            }
-            
-            // Groups list
-            List {
+    private var groupsList: some View {
+        List {
                 ForEach(filteredAppGroups) { group in
                     AppGroupRowView(
                         group: group,
                         onEdit: { viewModel.showEditGroupEditor(for: group) },
                         onDelete: { viewModel.confirmDeleteGroup(group) }
                     )
-                    .contentShape(Rectangle()) // Make entire row tappable
-                    .onTapGesture {
-                        // Tap anywhere on the row to edit
-                        print("📝 ROW TAP: Opening editor for \(group.name)")
-                        viewModel.showEditGroupEditor(for: group)
-                    }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button("Delete", role: .destructive) {
-                            print("🗑️ SWIPE DELETE: Confirming delete for \(group.name)")
                             viewModel.confirmDeleteGroup(group)
                         }
                         .tint(.red)
+                        
+                        Button("Edit") {
+                            viewModel.showEditGroupEditor(for: group)
+                        }
+                        .tint(.blue)
                     }
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .listRowSeparator(.hidden)
@@ -196,32 +184,8 @@ struct AppGroupListView: View {
                 }
             }
             .listStyle(PlainListStyle())
-        }
     }
     
-    // MARK: - Statistics Header
-    
-    private var statisticsHeader: some View {
-        HStack(spacing: 12) {
-            StatisticCard(
-                title: "Total Groups",
-                value: "\(max(0, viewModel.totalAppGroups))",
-                icon: "square.stack.3d.up.fill",
-                color: .blue
-            )
-            .frame(maxWidth: .infinity)
-            
-            StatisticCard(
-                title: "Managed Apps",
-                value: "\(max(0, viewModel.totalManagedApps))",
-                icon: "app.badge",
-                color: .green
-            )
-            .frame(maxWidth: .infinity)
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 12)
-    }
     
     // MARK: - Create Group Button
     
@@ -265,35 +229,6 @@ struct AppGroupListView: View {
         }
     }
     
-    // MARK: - Instructions Header
-    
-    private var instructionsHeader: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 8) {
-                Image(systemName: "hand.tap")
-                    .font(.caption)
-                    .foregroundColor(.blue)
-                Text("Tap to edit")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                Image(systemName: "hand.point.left")
-                    .font(.caption)
-                    .foregroundColor(.red)
-                Text("Swipe left to delete")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 8)
-            
-            Divider()
-                .padding(.horizontal)
-        }
-        .background(.regularMaterial.opacity(0.5))
-    }
     
     // MARK: - Computed Properties
     
@@ -341,12 +276,6 @@ private struct AppGroupRowView: View {
                 }
                 
                 Spacer()
-                
-                // Visual indicator for tap/swipe actions
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .opacity(0.6)
             }
             
             // App icons preview
@@ -440,14 +369,11 @@ private struct AppIconsPreview: View {
     let group: AppGroup
     
     private let maxPreviewIcons = 3
-    private var applicationTokens: [ApplicationToken] {
-        Array(group.applications.prefix(maxPreviewIcons))
-    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Show app count only - no actual icons on main list to prevent Label hierarchy errors
-            if !applicationTokens.isEmpty {
+            // Show app icons with count indicator
+            if !group.applications.isEmpty {
                 HStack(spacing: 8) {
                     Text("Apps")
                         .font(.caption)
@@ -456,38 +382,28 @@ private struct AppIconsPreview: View {
                     
                     Spacer()
                     
-                    // Show app count with real app icons
-                    HStack(spacing: 8) {
-                        // Real app icons using FamilyControls Labels
-                        HStack(spacing: -2) {
-                            ForEach(Array(applicationTokens.prefix(3)).enumerated().map { $0 }, id: \.offset) { index, token in
-                                Label(token)
-                                    .labelStyle(.iconOnly)
-                                    .frame(width: 20, height: 20)
-                                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .stroke(Color.white, lineWidth: 1)
-                                    )
-                                    .zIndex(Double(3 - index))
-                                    .id("group_app_\(token.hashValue)")
-                            }
-                            
-                            // Show total count
-                            if applicationTokens.count > 3 {
-                                Text("+\(applicationTokens.count - 3)")
-                                    .font(.caption2)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.white)
-                                    .frame(width: 20, height: 20)
-                                    .background(.blue)
-                                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                            }
+                    // Show app icons with overflow indicator
+                    HStack(spacing: -2) {
+                        ForEach(Array(group.applications.prefix(maxPreviewIcons)).enumerated().map { $0 }, id: \.offset) { index, token in
+                            Label(token)
+                                .labelStyle(.iconOnly)
+                                .frame(width: 20, height: 20)
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(Color.white, lineWidth: 1)
+                                )
+                                .zIndex(Double(maxPreviewIcons - index))
+                                .id("group_app_\(token.hashValue)")
                         }
                         
-                        Text("\(applicationTokens.count) app\(applicationTokens.count == 1 ? "" : "s")")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        // Show remaining count if more than 3 apps
+                        if group.applications.count > maxPreviewIcons {
+                            Text("+\(group.applications.count - maxPreviewIcons)")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
             }

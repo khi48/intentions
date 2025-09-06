@@ -1,0 +1,776 @@
+{
+  "source": "/Users/kieranhitchcock/programming/app/Intentions/Intentions/Views/Settings/SettingsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld apps",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 86
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 94
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 98
+        }
+      },
+      {
+        "comment": "",
+        "key": "Settings",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 222
+        }
+      },
+      {
+        "comment": "",
+        "key": "Error",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 225
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete App Group",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 238
+        }
+      },
+      {
+        "comment": "",
+        "key": "Loading Settings...",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 179
+        }
+      },
+      {
+        "comment": "",
+        "key": "Usage Statistics",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 357
+        }
+      },
+      {
+        "comment": "",
+        "key": "General",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 381
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 232
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 239
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 242
+        }
+      },
+      {
+        "comment": "",
+        "key": "Are you sure you want to delete '%@'? This action cannot be undone.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 249
+        }
+      },
+      {
+        "comment": "",
+        "key": "Active Schedule",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 301
+        }
+      },
+      {
+        "comment": "",
+        "key": "Control when Intentions is active",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 304
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 312
+        }
+      },
+      {
+        "comment": "",
+        "key": "Schedule Settings",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 344
+        }
+      },
+      {
+        "comment": "",
+        "key": "Intentions will only be active during the specified times and days. Outside these hours, all apps remain accessible.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 347
+        }
+      },
+      {
+        "comment": "",
+        "key": "Schedule is disabled. Intentions is active 24/7.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 349
+        }
+      },
+      {
+        "comment": "",
+        "key": "Debug & Testing",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 436
+        }
+      },
+      {
+        "comment": "",
+        "key": "Intentions is designed to promote mindful phone usage through intentional app access.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 458
+        }
+      },
+      {
+        "comment": "",
+        "key": "Schedule Settings",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 581
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enable Schedule",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 492
+        }
+      },
+      {
+        "comment": "",
+        "key": "Schedule Status",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 494
+        }
+      },
+      {
+        "comment": "",
+        "key": "Intentions will only be active during specified times",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 496
+        }
+      },
+      {
+        "comment": "",
+        "key": "Intentions will be active 24/7",
+        "location": {
+          "startingColumn": 96,
+          "startingLine": 496
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Time",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 503
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Hour",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 505
+        }
+      },
+      {
+        "comment": "",
+        "key": "End Time",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 515
+        }
+      },
+      {
+        "comment": "",
+        "key": "End Hour",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 517
+        }
+      },
+      {
+        "comment": "",
+        "key": "Active Hours",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 526
+        }
+      },
+      {
+        "comment": "",
+        "key": "Intentions will be active from %@ to %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 528
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear All",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 567
+        }
+      },
+      {
+        "comment": "",
+        "key": "All Days",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 551
+        }
+      },
+      {
+        "comment": "",
+        "key": "Weekdays",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 556
+        }
+      },
+      {
+        "comment": "",
+        "key": "Weekends",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 561
+        }
+      },
+      {
+        "comment": "",
+        "key": "Active Days",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 575
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select the days when Intentions should be active. At least one day must be selected.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 577
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 585
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 588
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Group",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 643
+        }
+      },
+      {
+        "comment": "",
+        "key": "App Group Editor",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 638
+        }
+      },
+      {
+        "comment": "",
+        "key": "Coming Soon",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 640
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 647
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 650
+        }
+      },
+      {
+        "comment": "",
+        "key": "Notifications",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 672
+        }
+      },
+      {
+        "comment": "",
+        "key": "Session Reminders",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 667
+        }
+      },
+      {
+        "comment": "",
+        "key": "Configure your notification preferences",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 663
+        }
+      },
+      {
+        "comment": "",
+        "key": "Session warnings",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 668
+        }
+      },
+      {
+        "comment": "",
+        "key": "Time remaining alerts",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 669
+        }
+      },
+      {
+        "comment": "",
+        "key": "Privacy",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 691
+        }
+      },
+      {
+        "comment": "",
+        "key": "Data Usage",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 686
+        }
+      },
+      {
+        "comment": "",
+        "key": "Manage your privacy and data settings",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 682
+        }
+      },
+      {
+        "comment": "",
+        "key": "Screen Time access required",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 687
+        }
+      },
+      {
+        "comment": "",
+        "key": "Usage data stays on device",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 688
+        }
+      },
+      {
+        "comment": "",
+        "key": "Data",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 711
+        }
+      },
+      {
+        "comment": "",
+        "key": "Actions",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 705
+        }
+      },
+      {
+        "comment": "",
+        "key": "Manage your app data and settings",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 701
+        }
+      },
+      {
+        "comment": "",
+        "key": "Export Settings",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 706
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset All Data",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 708
+        }
+      },
+      {
+        "comment": "",
+        "key": "About",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 736
+        }
+      },
+      {
+        "comment": "",
+        "key": "Intentions",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 722
+        }
+      },
+      {
+        "comment": "",
+        "key": "Promoting mindful phone usage through intentional app access",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 726
+        }
+      },
+      {
+        "comment": "",
+        "key": "Version 1.0",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 729
+        }
+      },
+      {
+        "comment": "",
+        "key": "Token Discovery",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 813
+        }
+      },
+      {
+        "comment": "",
+        "key": "All Apps Discovery Test",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 755
+        }
+      },
+      {
+        "comment": "",
+        "key": "This will discover ALL apps and categories on your device",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 759
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ready to Discover",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 773
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tap the button below and SELECT ALL apps and categories in the picker",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 777
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Discovery",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 782
+        }
+      },
+      {
+        "comment": "",
+        "key": "Discovery Complete!",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 797
+        }
+      },
+      {
+        "comment": "",
+        "key": "Discover Again",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 803
+        }
+      },
+      {
+        "comment": "",
+        "key": "Apps: %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 828
+        }
+      },
+      {
+        "comment": "",
+        "key": "Categories: %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 837
+        }
+      },
+      {
+        "comment": "",
+        "key": "Web Domains: %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 846
+        }
+      },
+      {
+        "comment": "",
+        "key": "Valid App Tokens: %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 860
+        }
+      },
+      {
+        "comment": "",
+        "key": "Valid Category Tokens: %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 868
+        }
+      },
+      {
+        "comment": "",
+        "key": "MVP Test",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1058
+        }
+      },
+      {
+        "comment": "",
+        "key": "includeEntireCategory Test",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1014
+        }
+      },
+      {
+        "comment": "",
+        "key": "Test Mode",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 1019
+        }
+      },
+      {
+        "comment": "",
+        "key": "Open Family Activity Picker",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 1043
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select a CATEGORY (not individual apps)",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1029
+        }
+      },
+      {
+        "comment": "",
+        "key": "We want to see if selecting a category populates individual apps when includeEntireCategory: true",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1033
+        }
+      },
+      {
+        "comment": "",
+        "key": "Results for: %@",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1079
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear Selection",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 1152
+        }
+      },
+      {
+        "comment": "",
+        "key": "Individual Apps: %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1089
+        }
+      },
+      {
+        "comment": "",
+        "key": "Categories: %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1096
+        }
+      },
+      {
+        "comment": "",
+        "key": "Valid App Tokens: %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1109
+        }
+      },
+      {
+        "comment": "",
+        "key": "Valid Category Tokens: %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1116
+        }
+      },
+      {
+        "comment": "",
+        "key": "Expected Behavior:",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1124
+        }
+      },
+      {
+        "comment": "",
+        "key": "✅ Selecting 1 category should give you BOTH:",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1129
+        }
+      },
+      {
+        "comment": "",
+        "key": "  • 1 category token",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1132
+        }
+      },
+      {
+        "comment": "",
+        "key": "  • Multiple individual app tokens from that category",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1135
+        }
+      },
+      {
+        "comment": "",
+        "key": "⚠️ Selecting 1 category should give you ONLY:",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1139
+        }
+      },
+      {
+        "comment": "",
+        "key": "  • 1 category token",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1142
+        }
+      },
+      {
+        "comment": "",
+        "key": "  • No individual app tokens",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1145
+        }
+      }
+    ]
+  },
+  "version": 1
+}

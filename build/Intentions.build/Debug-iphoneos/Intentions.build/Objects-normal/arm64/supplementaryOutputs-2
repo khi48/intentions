@@ -1,0 +1,30 @@
+"/Users/kieranhitchcock/programming/app/Intentions/Intentions/Views/Components/IsolatedFamilyActivityPicker.swift":
+  dependencies: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/IsolatedFamilyActivityPicker.d"
+  object: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/IsolatedFamilyActivityPicker.o"
+  const-values: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/IsolatedFamilyActivityPicker.swiftconstvalues"
+  swift-dependencies: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/IsolatedFamilyActivityPicker.swiftdeps"
+  diagnostics: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/IsolatedFamilyActivityPicker.dia"
+"/Users/kieranhitchcock/programming/app/Intentions/Intentions/Views/MainViews/QuickActionsView.swift":
+  diagnostics: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/QuickActionsView.dia"
+  const-values: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/QuickActionsView.swiftconstvalues"
+  object: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/QuickActionsView.o"
+  swift-dependencies: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/QuickActionsView.swiftdeps"
+  dependencies: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/QuickActionsView.d"
+"/Users/kieranhitchcock/programming/app/Intentions/Intentions/App/ContentView.swift":
+  diagnostics: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/ContentView.dia"
+  object: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/ContentView.o"
+  swift-dependencies: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/ContentView.swiftdeps"
+  const-values: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/ContentView.swiftconstvalues"
+  dependencies: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/ContentView.d"
+"/Users/kieranhitchcock/programming/app/Intentions/Intentions/Views/MainViews/QuickActionEditorSheet.swift":
+  const-values: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/QuickActionEditorSheet.swiftconstvalues"
+  dependencies: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/QuickActionEditorSheet.d"
+  swift-dependencies: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/QuickActionEditorSheet.swiftdeps"
+  diagnostics: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/QuickActionEditorSheet.dia"
+  object: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/QuickActionEditorSheet.o"
+"/Users/kieranhitchcock/programming/app/Intentions/Intentions/Models/ScreenTimeStatusInfo.swift":
+  object: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/ScreenTimeStatusInfo.o"
+  dependencies: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/ScreenTimeStatusInfo.d"
+  const-values: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/ScreenTimeStatusInfo.swiftconstvalues"
+  swift-dependencies: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/ScreenTimeStatusInfo.swiftdeps"
+  diagnostics: "/Users/kieranhitchcock/programming/app/Intentions/build/Intentions.build/Debug-iphoneos/Intentions.build/Objects-normal/arm64/ScreenTimeStatusInfo.dia"

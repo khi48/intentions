@@ -1,0 +1,264 @@
+{
+  "source": "/Users/kieranhitchcock/programming/app/Intentions/Intentions/Views/MainViews/AppGroupEditorSheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Error",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 105
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Group",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 67
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create Group",
+        "location": {
+          "startingColumn": 57,
+          "startingLine": 67
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 71
+        }
+      },
+      {
+        "comment": "",
+        "key": "Update",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "Organize apps into collections for quick session setup",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit App Group",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create New App Group",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": "Group Name",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enter group name...",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 143
+        }
+      },
+      {
+        "comment": "",
+        "key": "Name exceeds maximum length of %lld characters",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 154
+        }
+      },
+      {
+        "comment": "",
+        "key": "This name is reserved. Please choose a different name.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 162
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select Apps & Categories",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 178
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add more apps and categories to this group",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 182
+        }
+      },
+      {
+        "comment": "",
+        "key": "Choose the apps and categories that will be included in this group",
+        "location": {
+          "startingColumn": 77,
+          "startingLine": 182
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add More Apps & Categories",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 206
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Apps & Categories",
+        "location": {
+          "startingColumn": 73,
+          "startingLine": 206
+        }
+      },
+      {
+        "comment": "",
+        "key": "New selections will be added to existing ones",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 210
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tap to open app selector",
+        "location": {
+          "startingColumn": 92,
+          "startingLine": 210
+        }
+      },
+      {
+        "comment": "",
+        "key": "Selected Items",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 233
+        }
+      },
+      {
+        "comment": "",
+        "key": "Selected individual apps will be included in this group",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 275
+        }
+      },
+      {
+        "comment": "",
+        "key": "Individual Apps",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 257
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld selected",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 261
+        }
+      },
+      {
+        "comment": "",
+        "key": "All apps in the selected categories will be included in this group",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 308
+        }
+      },
+      {
+        "comment": "",
+        "key": "App Categories",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 287
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld selected",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 291
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Group",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 323
+        }
+      },
+      {
+        "comment": "",
+        "key": "This action cannot be undone. The group will be permanently removed from your collection.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 327
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete \"%@\"",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 345
+        }
+      },
+      {
+        "comment": "",
+        "key": "Category",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 613
+        }
+      }
+    ]
+  },
+  "version": 1
+}

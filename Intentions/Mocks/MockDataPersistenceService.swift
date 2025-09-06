@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import FamilyControls
 
 // MARK: - Mock Data Persistence Service
@@ -27,6 +28,47 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
     var shouldFailSave: Bool {
         get { shouldThrowSaveError }
         set { shouldThrowSaveError = newValue }
+    }
+    
+    // MARK: - Initialization
+    
+    init() {
+        // Set up default quick actions for testing
+        setupDefaultQuickActions()
+    }
+    
+    private func setupDefaultQuickActions() {
+        let defaultQuickActions = [
+            QuickAction(
+                name: "Work Session",
+                subtitle: "Productivity focus",
+                iconName: "laptopcomputer",
+                color: Color.blue,
+                duration: 30 * 60 // 30 minutes
+            ),
+            QuickAction(
+                name: "Study Time", 
+                subtitle: "Deep learning",
+                iconName: "book.fill",
+                color: Color.green,
+                duration: 60 * 60 // 1 hour
+            ),
+            QuickAction(
+                name: "Break Time",
+                subtitle: "Social & entertainment",
+                iconName: "cup.and.saucer.fill", 
+                color: Color.orange,
+                duration: 15 * 60 // 15 minutes
+            )
+        ]
+        
+        // Store as JSON data
+        do {
+            let data = try JSONEncoder().encode(defaultQuickActions)
+            keyValueStore["quickActions"] = data
+        } catch {
+            print("Failed to setup default quick actions: \(error)")
+        }
     }
     
     private let queue = DispatchQueue(label: "MockDataPersistenceService", attributes: .concurrent)

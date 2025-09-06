@@ -9,72 +9,6 @@ import SwiftUI
 @preconcurrency import FamilyControls
 @preconcurrency import ManagedSettings
 
-/// Centralized navigation state manager for controlling navigation across the app
-/// Follows SwiftUI best practices for navigation state management
-@MainActor
-final class NavigationStateManager: ObservableObject {
-    
-    // MARK: - Published Properties
-    
-    /// Navigation path for the Settings tab - type-safe navigation
-    @Published var settingsPath = NavigationPath()
-    
-    // MARK: - Navigation Control Methods
-    
-    /// Reset Settings navigation to root
-    /// - Note: Called when switching away from Settings tab to maintain clean state
-    func resetSettingsNavigation() {
-        guard !settingsPath.isEmpty else { return }
-        print("🔄 NAV MANAGER: Resetting Settings navigation to root")
-        print("   - Old path count: \(settingsPath.count)")
-        settingsPath = NavigationPath()
-        print("   ✅ New path count: \(settingsPath.count)")
-    }
-    
-    /// Reset Settings navigation to root without animation
-    /// - Note: Uses transaction to disable animations for smooth tab transitions
-    func resetSettingsNavigationWithoutAnimation() {
-        guard !settingsPath.isEmpty else { return }
-        print("🔄 NAV MANAGER: Resetting Settings navigation to root (no animation)")
-        print("   - Old path count: \(settingsPath.count)")
-        
-        // Use SwiftUI transaction to disable animations
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        
-        withTransaction(transaction) {
-            settingsPath = NavigationPath()
-        }
-        
-        print("   ✅ New path count: \(settingsPath.count)")
-    }
-    
-    /// Navigate back one level in Settings
-    /// - Returns: true if navigation was popped, false if already at root
-    @discardableResult
-    func popSettingsNavigation() -> Bool {
-        guard !settingsPath.isEmpty else { 
-            print("🔙 NAV MANAGER: Already at root, cannot pop")
-            return false 
-        }
-        print("🔙 NAV MANAGER: Popping Settings navigation (from \(settingsPath.count) to \(settingsPath.count - 1))")
-        settingsPath.removeLast()
-        return true
-    }
-    
-    /// Navigate to a specific Settings destination
-    /// - Parameter destination: The settings page to navigate to
-    func navigateToSettings(destination: SettingsDestination) {
-        print("🧭 NAV MANAGER: Navigating to Settings.\(destination)")
-        settingsPath.append(destination)
-    }
-    
-    /// Check if currently at Settings root
-    var isAtSettingsRoot: Bool {
-        settingsPath.isEmpty
-    }
-}
-
 
 /// Main app content view with navigation and authorization handling
 struct ContentView: View {
@@ -106,13 +40,8 @@ struct ContentView: View {
             await viewModel.initializeApp()
         }
         .alert("Error", isPresented: Binding(
-            get: { 
-                // COMPLETELY DISABLE ContentView alerts when ANY sheet might be showing
-                false  // No alerts from ContentView to prevent all presentation conflicts
-            },
-            set: { _ in 
-                viewModel.clearError() 
-            }
+            get: { viewModel.errorMessage != nil },
+            set: { _ in viewModel.clearError() }
         )) {
             Button("OK") {
                 viewModel.clearError()
@@ -177,6 +106,13 @@ private struct MainTabView: View {
                 }
                 .tag(AppTab.groups)
             
+            // Quick Actions Tab - Quick session management
+            QuickActionsView(dataService: viewModel.dataServiceProvider, contentViewModel: viewModel)
+                .tabItem {
+                    Label(AppTab.quickActions.rawValue, systemImage: AppTab.quickActions.systemImage)
+                }
+                .tag(AppTab.quickActions)
+            
             // Settings Tab
             SettingsView(
                 dataService: viewModel.dataServiceProvider,
@@ -194,9 +130,8 @@ private struct MainTabView: View {
                 .tag(AppTab.settings)
             
         }
-        // TEMPORARILY DISABLED: IntentionPrompt sheet to test presentation conflict
         .sheet(isPresented: Binding(
-            get: { false }, // Disable ContentView sheet
+            get: { viewModel.showingIntentionPrompt },
             set: { viewModel.showingIntentionPrompt = $0 }
         )) {
             IntentionPromptView(

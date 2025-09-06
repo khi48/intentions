@@ -20,9 +20,28 @@ final class NavigationStateManager: ObservableObject {
     
     /// Reset Settings navigation to root
     func resetSettingsNavigation() {
+        guard !settingsPath.isEmpty else { return }
         print("🔄 NAV MANAGER: Resetting Settings navigation to root")
         print("   - Old path count: \(settingsPath.count)")
         settingsPath = NavigationPath()
+        print("   ✅ New path count: \(settingsPath.count)")
+    }
+    
+    /// Reset Settings navigation to root without animation
+    /// - Note: Uses transaction to disable animations for smooth tab transitions
+    func resetSettingsNavigationWithoutAnimation() {
+        guard !settingsPath.isEmpty else { return }
+        print("🔄 NAV MANAGER: Resetting Settings navigation to root (no animation)")
+        print("   - Old path count: \(settingsPath.count)")
+        
+        // Use SwiftUI transaction to disable animations
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        
+        withTransaction(transaction) {
+            settingsPath = NavigationPath()
+        }
+        
         print("   ✅ New path count: \(settingsPath.count)")
     }
     

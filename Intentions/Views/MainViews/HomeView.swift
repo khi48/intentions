@@ -113,53 +113,123 @@ private struct WelcomeCard: View {
 /// Quick actions section
 private struct QuickActionsSection: View {
     let viewModel: ContentViewModel
+    @StateObject private var quickActionsViewModel = QuickActionsViewModel()
+    @State private var availableQuickActions: [QuickAction] = []
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Quick Actions")
-                .font(.headline)
-                .padding(.horizontal)
-            
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 16) {
-                QuickActionCard(
-                    title: "Work Session",
-                    subtitle: "30 min focus",
-                    icon: "laptopcomputer",
-                    color: .blue
-                ) {
-                    // TODO: Start work session
-                }
+            HStack {
+                Text("Quick Actions")
+                    .font(.headline)
                 
-                QuickActionCard(
-                    title: "Break Time",
-                    subtitle: "15 min social",
-                    icon: "cup.and.saucer.fill",
-                    color: .orange
-                ) {
-                    // TODO: Start break session
-                }
+                Spacer()
                 
-                QuickActionCard(
-                    title: "Study Time",
-                    subtitle: "60 min deep work",
-                    icon: "book.fill",
-                    color: .green
-                ) {
-                    // TODO: Start study session
-                }
-                
-                QuickActionCard(
-                    title: "Settings",
-                    subtitle: "Configure app",
-                    icon: "gear",
-                    color: .gray
-                ) {
-                    viewModel.showSettings()
+                if !availableQuickActions.isEmpty {
+                    Button("View All") {
+                        viewModel.navigateToTab(.quickActions)
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(.blue)
                 }
             }
+            .padding(.horizontal)
+            
+            if availableQuickActions.isEmpty {
+                // Show getting started card
+                gettingStartedCard
+            } else {
+                // Show available quick actions (up to 4)
+                LazyVGrid(columns: [
+                    GridItem(.flexible()),
+                    GridItem(.flexible())
+                ], spacing: 16) {
+                    ForEach(Array(availableQuickActions.prefix(4))) { quickAction in
+                        QuickActionCard(
+                            title: quickAction.name,
+                            subtitle: quickAction.subtitle ?? quickAction.formattedDuration,
+                            icon: quickAction.iconName,
+                            color: quickAction.color
+                        ) {
+                            Task {
+                                await startQuickAction(quickAction)
+                            }
+                        }
+                    }
+                    
+                    // Settings card if we have less than 4 quick actions
+                    if availableQuickActions.count < 4 {
+                        QuickActionCard(
+                            title: "Settings",
+                            subtitle: "Configure app",
+                            icon: "gear",
+                            color: .gray
+                        ) {
+                            viewModel.showSettings()
+                        }
+                    }
+                }
+            }
+        }
+        .onAppear {
+            Task {
+                await loadQuickActions()
+            }
+        }
+        .onChange(of: viewModel.appGroupsDidChange) { _, _ in
+            Task {
+                await loadQuickActions()
+            }
+        }
+    }
+    
+    private var gettingStartedCard: some View {
+        VStack(spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("No Quick Actions Yet")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    Text("Create quick actions for instant access to your favorite app groups and session types")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Button("Create") {
+                    viewModel.navigateToTab(.quickActions)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+        }
+        .padding()
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal)
+    }
+    
+    private func loadQuickActions() async {
+        quickActionsViewModel.setDataService(viewModel.dataServiceProvider)
+        await quickActionsViewModel.loadData()
+        availableQuickActions = quickActionsViewModel.getAvailableQuickActions()
+    }
+    
+    private func startQuickAction(_ quickAction: QuickAction) async {
+        do {
+            // Record usage
+            await quickActionsViewModel.recordQuickActionUsage(quickAction)
+            
+            // Create session from quick action
+            let session = try quickAction.createSession(with: quickActionsViewModel.availableAppGroups)
+            
+            // Start the session through ContentViewModel
+            await viewModel.startSession(session)
+            
+        } catch {
+            // Handle error through viewModel
+            await viewModel.handleError(error)
         }
     }
 }

@@ -70,6 +70,11 @@
 		20EB27002E4D5FAA00FC4BE4 /* SessionStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26FF2E4D5FAA00FC4BE4 /* SessionStatusView.swift */; };
 		20EB27032E603C5100FC4BE4 /* AppGroupEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27012E603C5100FC4BE4 /* AppGroupEditorSheet.swift */; };
 		20EB27042E603C5100FC4BE4 /* AppGroupListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27022E603C5100FC4BE4 /* AppGroupListView.swift */; };
+		20EB27062E695DA000FC4BE4 /* QuickAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27052E695DA000FC4BE4 /* QuickAction.swift */; };
+		20EB27092E695DB000FC4BE4 /* QuickActionEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27072E695DB000FC4BE4 /* QuickActionEditorSheet.swift */; };
+		20EB270A2E695DB000FC4BE4 /* QuickActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27082E695DB000FC4BE4 /* QuickActionsView.swift */; };
+		20EB270D2E695DC400FC4BE4 /* NavigationStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB270B2E695DC400FC4BE4 /* NavigationStateManager.swift */; };
+		20EB270E2E695DC400FC4BE4 /* QuickActionsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB270C2E695DC400FC4BE4 /* QuickActionsViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -157,6 +162,11 @@
 		20EB26FF2E4D5FAA00FC4BE4 /* SessionStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStatusView.swift; sourceTree = "<group>"; };
 		20EB27012E603C5100FC4BE4 /* AppGroupEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupEditorSheet.swift; sourceTree = "<group>"; };
 		20EB27022E603C5100FC4BE4 /* AppGroupListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupListView.swift; sourceTree = "<group>"; };
+		20EB27052E695DA000FC4BE4 /* QuickAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAction.swift; sourceTree = "<group>"; };
+		20EB27072E695DB000FC4BE4 /* QuickActionEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionEditorSheet.swift; sourceTree = "<group>"; };
+		20EB27082E695DB000FC4BE4 /* QuickActionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsView.swift; sourceTree = "<group>"; };
+		20EB270B2E695DC400FC4BE4 /* NavigationStateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationStateManager.swift; sourceTree = "<group>"; };
+		20EB270C2E695DC400FC4BE4 /* QuickActionsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -253,6 +263,7 @@
 		2071C4BD2DE6DC9400DF737F /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				20EB27052E695DA000FC4BE4 /* QuickAction.swift */,
 				20EB26502E13228E00FC4BE4 /* PersistentModels.swift */,
 				2085A8FE2DF6D2D40011EB9A /* ScreenTimeStatusInfo.swift */,
 				2085A8E82DF55AA90011EB9A /* AppError.swift */,
@@ -298,6 +309,8 @@
 		2085A8D62DF54F9E0011EB9A /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				20EB270B2E695DC400FC4BE4 /* NavigationStateManager.swift */,
+				20EB270C2E695DC400FC4BE4 /* QuickActionsViewModel.swift */,
 				20EB26A42E32BF9100FC4BE4 /* AppGroupsViewModel.swift */,
 				20EB26A52E32BF9100FC4BE4 /* HomeViewModel.swift */,
 				20EB26A62E32BF9100FC4BE4 /* SessionStatusViewModel.swift */,
@@ -311,6 +324,8 @@
 		2085A8D72DF54FAF0011EB9A /* MainViews */ = {
 			isa = PBXGroup;
 			children = (
+				20EB27072E695DB000FC4BE4 /* QuickActionEditorSheet.swift */,
+				20EB27082E695DB000FC4BE4 /* QuickActionsView.swift */,
 				20EB27012E603C5100FC4BE4 /* AppGroupEditorSheet.swift */,
 				20EB27022E603C5100FC4BE4 /* AppGroupListView.swift */,
 				20EB26602E21A3E900FC4BE4 /* AppGroupsView.swift */,
@@ -616,9 +631,14 @@
 			isa = PBXSourcesBuildPhase;
 			files = (
 				20EB26532E13229900FC4BE4 /* DataPersistingService.swift in Sources */,
+				20EB270D2E695DC400FC4BE4 /* NavigationStateManager.swift in Sources */,
+				20EB270E2E695DC400FC4BE4 /* QuickActionsViewModel.swift in Sources */,
+				20EB27062E695DA000FC4BE4 /* QuickAction.swift in Sources */,
 				20EB265D2E1EF9A800FC4BE4 /* Constants.swift in Sources */,
 				2085A8FF2DF6D2D40011EB9A /* ScreenTimeStatusInfo.swift in Sources */,
 				20EB26B22E389F4900FC4BE4 /* IsolatedFamilyActivityPicker.swift in Sources */,
+				20EB27092E695DB000FC4BE4 /* QuickActionEditorSheet.swift in Sources */,
+				20EB270A2E695DB000FC4BE4 /* QuickActionsView.swift in Sources */,
 				2071C4962DE43AC600DF737F /* ContentView.swift in Sources */,
 				2085A8E72DF55A470011EB9A /* DiscoveredApp.swift in Sources */,
 				2085A9142DFF4B180011EB9A /* ApplicationExtension.swift in Sources */,
