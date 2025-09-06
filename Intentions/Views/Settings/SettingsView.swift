@@ -17,8 +17,6 @@ enum SettingsDestination: Hashable, CaseIterable {
     case dataManagement
     case about
     case categoryMappingSetup
-    case includeEntireCategoryTest
-    case allAppsDiscoveryTest
     
     // Better practice: Include presentation metadata in the enum
     var title: String {
@@ -27,9 +25,7 @@ enum SettingsDestination: Hashable, CaseIterable {
         case .privacy: return "Privacy"
         case .dataManagement: return "Data Management"
         case .about: return "About"
-        case .categoryMappingSetup: return "Category Mapping Setup"
-        case .includeEntireCategoryTest: return "Include Category Test"
-        case .allAppsDiscoveryTest: return "All Apps Discovery Test"
+        case .categoryMappingSetup: return "App Category Mapping"
         }
     }
     
@@ -40,8 +36,6 @@ enum SettingsDestination: Hashable, CaseIterable {
         case .dataManagement: return "externaldrive.fill"
         case .about: return "info.circle.fill"
         case .categoryMappingSetup: return "list.bullet.rectangle"
-        case .includeEntireCategoryTest: return "checkmark.circle"
-        case .allAppsDiscoveryTest: return "app.badge"
         }
     }
 }
@@ -183,14 +177,14 @@ struct SettingsView: View {
                     // Schedule Settings Section
                     scheduleSection
                     
+                    // Category Mapping Section
+                    categoryMappingSection
+                    
                     // Statistics Section
                     statisticsSection
                     
                     // General Settings Section
                     generalSection
-                    
-                    // Debug Section (development only)
-                    debugSection
                     
                     // About Section
                     aboutSection
@@ -211,10 +205,6 @@ struct SettingsView: View {
                             // Handle completion in navigation context
                             print("Navigation: Category mapping setup completed")
                         }
-                    case .includeEntireCategoryTest:
-                        IncludeEntireCategoryTestView()
-                    case .allAppsDiscoveryTest:
-                        AllAppsDiscoveryTestView()
                     }
                 }
             }
@@ -407,33 +397,17 @@ struct SettingsView: View {
     
     // MARK: - About Section
     
-    private var debugSection: some View {
+    private var categoryMappingSection: some View {
         Section {
             NavigationLink(value: SettingsDestination.categoryMappingSetup) {
                 SettingsRow(
                     title: SettingsDestination.categoryMappingSetup.title,
-                    subtitle: "Map apps to categories for smart blocking",
+                    subtitle: "Map apps to categories for intelligent blocking",
                     icon: SettingsDestination.categoryMappingSetup.systemImage
                 )
             }
-            
-            NavigationLink(value: SettingsDestination.includeEntireCategoryTest) {
-                SettingsRow(
-                    title: SettingsDestination.includeEntireCategoryTest.title,
-                    subtitle: "Simple test for category expansion",
-                    icon: SettingsDestination.includeEntireCategoryTest.systemImage
-                )
-            }
-            
-            NavigationLink(value: SettingsDestination.allAppsDiscoveryTest) {
-                SettingsRow(
-                    title: SettingsDestination.allAppsDiscoveryTest.title,
-                    subtitle: "Test capturing all app tokens",
-                    icon: SettingsDestination.allAppsDiscoveryTest.systemImage
-                )
-            }
         } header: {
-            Text("Debug & Testing")
+            Text("Setup")
         }
     }
     

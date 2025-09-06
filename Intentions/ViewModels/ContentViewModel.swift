@@ -131,9 +131,10 @@ final class ContentViewModel: Sendable {
                 scheduleSettings = savedSettings
                 print("📅 Loaded schedule settings - enabled: \(scheduleSettings.isEnabled), currently active: \(scheduleSettings.isCurrentlyActive)")
             } else {
-                // Use default settings if none exist
+                // Use default settings if none exist and save them
                 scheduleSettings = ScheduleSettings()
-                print("📅 Using default schedule settings - enabled: \(scheduleSettings.isEnabled)")
+                try await dataService.saveScheduleSettings(scheduleSettings)
+                print("📅 No saved schedule settings found - created defaults with isEnabled = \(scheduleSettings.isEnabled)")
             }
         } catch {
             print("❌ Failed to load schedule settings, using defaults: \(error)")

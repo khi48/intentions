@@ -59,6 +59,11 @@ final class SettingsViewModel: Sendable {
             // Load schedule settings
             if let savedSettings = try await dataService.loadScheduleSettings() {
                 scheduleSettings = savedSettings
+            } else {
+                // No saved settings exist - use defaults (isEnabled = true) and save them
+                scheduleSettings = ScheduleSettings()
+                try await dataService.saveScheduleSettings(scheduleSettings)
+                print("📅 No saved schedule settings found - created defaults with isEnabled = \(scheduleSettings.isEnabled)")
             }
             
             // Update statistics

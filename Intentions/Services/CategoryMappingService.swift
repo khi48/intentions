@@ -53,7 +53,7 @@ final class CategoryMappingService: Sendable {
         
         var description: String {
             switch self {
-            case .social: return "Social media, messaging, communication"
+            case .social: return "Social media and messaging"
             case .games: return "All types of games and gaming"
             case .entertainment: return "Movies, TV, streaming, videos"
             case .creativity: return "Art, design, photo/video editing"

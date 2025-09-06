@@ -20,9 +20,32 @@ struct CategoryMappingSetupView: View {
     let onComplete: (CategoryMappingService) -> Void
     
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        ScrollView {
                 VStack(spacing: 24) {
+                    
+                    // Authorization Debug Section
+                    if AuthorizationCenter.shared.authorizationStatus != .approved {
+                        VStack(spacing: 20) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(.orange)
+                            
+                            Text("Screen Time Authorization Required")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            
+                            Text("Category mapping requires Screen Time permissions. Please grant access in Settings.")
+                                .multilineTextAlignment(.center)
+                                .foregroundColor(.secondary)
+                            
+                            Text("Status: \(String(describing: AuthorizationCenter.shared.authorizationStatus))")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding()
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(16)
+                    }
                     
                     // Header Section
                     headerSection
@@ -42,8 +65,7 @@ struct CategoryMappingSetupView: View {
                 }
                 .padding()
             }
-        }
-        .navigationTitle("App Category Setup")
+        .navigationTitle("App Category Mapping")
         .navigationBarTitleDisplayMode(.large)
         .background(
             // Use background modifier for FamilyActivityPicker to avoid sheet conflicts
@@ -245,40 +267,46 @@ struct CategorySetupCard: View {
                 ZStack {
                     Circle()
                         .fill(isCompleted ? Color.green.opacity(0.2) : Color.blue.opacity(0.2))
-                        .frame(width: 50, height: 50)
+                        .frame(width: 44, height: 44)
                     
                     if isCompleted {
                         Image(systemName: "checkmark")
-                            .font(.title2)
+                            .font(.title3)
                             .fontWeight(.bold)
                             .foregroundColor(.green)
                     } else {
                         Image(systemName: category.iconName)
-                            .font(.title2)
+                            .font(.title3)
                             .foregroundColor(.blue)
                     }
                 }
                 
                 // Category info
-                VStack(spacing: 4) {
+                VStack(spacing: 6) {
                     Text(category.displayName)
-                        .font(.headline)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                         .multilineTextAlignment(.center)
                         .foregroundColor(.primary)
+                        .lineLimit(2)
                     
                     Text(category.description)
                         .font(.caption)
                         .multilineTextAlignment(.center)
                         .foregroundColor(.secondary)
-                        .lineLimit(2)
+                        .lineLimit(4)
+                        .fixedSize(horizontal: false, vertical: true)
                     
                     if isCompleted && appCount > 0 {
                         Text("\(appCount) apps mapped")
                             .font(.caption2)
                             .fontWeight(.medium)
                             .foregroundColor(.green)
+                            .padding(.top, 2)
                     }
                 }
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
                 
                 Spacer()
                 
@@ -301,9 +329,10 @@ struct CategorySetupCard: View {
                     }
                 }
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
             .frame(maxWidth: .infinity)
-            .frame(height: 160)
+            .frame(minHeight: 180, maxHeight: 200)
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color(.systemBackground))

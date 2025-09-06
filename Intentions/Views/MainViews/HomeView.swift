@@ -156,17 +156,6 @@ private struct QuickActionsSection: View {
                         }
                     }
                     
-                    // Settings card if we have less than 4 quick actions
-                    if availableQuickActions.count < 4 {
-                        QuickActionCard(
-                            title: "Settings",
-                            subtitle: "Configure app",
-                            icon: "gear",
-                            color: .gray
-                        ) {
-                            viewModel.showSettings()
-                        }
-                    }
                 }
             }
         }
