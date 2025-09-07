@@ -38,8 +38,14 @@ final class ContentViewModel: Sendable {
     /// Whether we're showing the category mapping setup
     var showingCategoryMappingSetup: Bool = false
     
+    /// Whether we're showing the unified setup flow
+    var showingSetupFlow: Bool = false
+    
     /// Category mapping service for smart app blocking
     let categoryMappingService = CategoryMappingService()
+    
+    /// Setup coordinator for managing app configuration
+    let setupCoordinator: SetupCoordinator
     
     /// Current selected tab for navigation
     var selectedTab: AppTab = .home
@@ -72,6 +78,12 @@ final class ContentViewModel: Sendable {
             self.dataService = try DataPersistenceService()
             print("✅ CONTENT VM: Successfully initialized real DataPersistenceService")
         }
+        
+        // Initialize setup coordinator
+        self.setupCoordinator = SetupCoordinator(
+            screenTimeService: self.screenTimeService,
+            categoryMappingService: categoryMappingService
+        )
     }
     
     // MARK: - App Lifecycle
@@ -84,15 +96,22 @@ final class ContentViewModel: Sendable {
                 authorizationStatus = await screenTimeService.authorizationStatus()
                 print("🔐 CONTENT VM: Initial authorization status: \(authorizationStatus)")
                 
+                // If status is "Not Determined", double-check after a brief delay
+                // This handles cases where the system needs time to return the correct status
+                if authorizationStatus == .notDetermined {
+                    print("🔄 CONTENT VM: Status is 'Not Determined', rechecking after delay...")
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                    let recheckStatus = await screenTimeService.authorizationStatus()
+                    print("🔐 CONTENT VM: Recheck authorization status: \(recheckStatus)")
+                    
+                    if recheckStatus != .notDetermined {
+                        authorizationStatus = recheckStatus
+                        print("✅ CONTENT VM: Updated authorization status to: \(authorizationStatus)")
+                    }
+                }
+                
                 // Load schedule settings
                 await loadScheduleSettings()
-                
-                // Initialize the Screen Time service - it will handle authorization if needed
-                try await screenTimeService.initialize()
-                
-                // Refresh authorization status after initialization
-                authorizationStatus = await screenTimeService.authorizationStatus()
-                print("🔐 CONTENT VM: Authorization status after initialize(): \(authorizationStatus)")
                 
                 // Load any existing active session
                 await loadActiveSession()
@@ -103,20 +122,23 @@ final class ContentViewModel: Sendable {
                     await cleanupOldSessions()
                 }
                 
-                // Only proceed if authorized after initialization
+                // Only initialize Screen Time service and proceed if already authorized
                 if authorizationStatus == .approved {
-                    print("✅ CONTENT VM: Authorization approved - proceeding with blocking setup")
+                    print("✅ CONTENT VM: Authorization already approved - proceeding with ScreenTime initialization")
+                    // Initialize the Screen Time service now that we're authorized
+                    try await screenTimeService.initialize()
+                    
                     // Configure category mapping service for intelligent blocking
                     await screenTimeService.setCategoryMappingService(categoryMappingService)
                     
                     // Apply blocking only if schedule is currently active (after cleanup)
                     await applyScheduleBasedBlocking()
                 } else {
-                    print("❌ CONTENT VM: Authorization not approved (\(authorizationStatus)) - skipping blocking setup")
+                    print("❌ CONTENT VM: Authorization not approved (\(authorizationStatus)) - deferring ScreenTime initialization to setup flow")
                 }
                 
-                // Check if category mapping setup is needed
-                checkCategoryMappingSetupRequired()
+                // Check if comprehensive setup is needed
+                await checkSetupRequired()
                 
             } catch {
                 await handleError(error)
@@ -454,7 +476,32 @@ final class ContentViewModel: Sendable {
     // MARK: - Category Mapping Setup
     
     /// Check if category mapping setup is required for smart blocking
-    private func checkCategoryMappingSetupRequired() {
+    /// Check if comprehensive setup flow is required
+    private func checkSetupRequired() async {
+        print("🔧 CONTENT VM: Checking setup requirements...")
+        
+        // Validate setup state using the coordinator
+        await setupCoordinator.validateSetupRequirements()
+        
+        // Use the coordinator's shouldShowSetup property which handles all the logic
+        let needsSetup = setupCoordinator.shouldShowSetup &&
+                        !showingIntentionPrompt &&
+                        activeSession == nil
+        
+        let setupState = setupCoordinator.setupState
+        print("🔧 CONTENT VM: Setup state sufficient: \(setupState?.isSetupSufficient == true), coordinator says show setup: \(setupCoordinator.shouldShowSetup), final decision: \(needsSetup)")
+        
+        if needsSetup {
+            showingSetupFlow = true
+            print("✅ CONTENT VM: Will show setup flow")
+        } else {
+            // Fallback to legacy category mapping setup if needed
+            checkLegacyCategoryMappingSetupRequired()
+        }
+    }
+    
+    /// Legacy fallback for category mapping setup (to be removed later)
+    private func checkLegacyCategoryMappingSetupRequired() {
         // Only show setup if:
         // 1. We have Screen Time authorization
         // 2. Category mapping setup is not completed
@@ -467,6 +514,49 @@ final class ContentViewModel: Sendable {
         
         if needsSetup {
             showingCategoryMappingSetup = true
+            print("⚠️ CONTENT VM: Showing legacy category mapping setup")
+        }
+    }
+    
+    /// Handle completion of the unified setup flow
+    func completeSetupFlow() {
+        print("✅ SETUP FLOW: Completed successfully")
+        showingSetupFlow = false
+        
+        // Re-initialize the app with the new authorization status
+        Task {
+            await reinitializeAfterSetup()
+        }
+    }
+    
+    /// Reinitialize app services after setup completion
+    private func reinitializeAfterSetup() async {
+        await withLoading {
+            do {
+                // Refresh authorization status
+                authorizationStatus = await screenTimeService.authorizationStatus()
+                print("🔐 CONTENT VM: Post-setup authorization status: \(authorizationStatus)")
+                
+                // If now authorized, initialize the Screen Time service
+                if authorizationStatus == .approved {
+                    print("✅ CONTENT VM: Now authorized - initializing ScreenTime service")
+                    try await screenTimeService.initialize()
+                    
+                    // Configure category mapping service for intelligent blocking
+                    await screenTimeService.setCategoryMappingService(categoryMappingService)
+                    
+                    // Apply blocking based on current schedule
+                    await applyScheduleBasedBlocking()
+                } else {
+                    print("⚠️ CONTENT VM: Still not authorized after setup")
+                }
+                
+                // Don't re-validate setup after completion - setup is already done
+                print("🎉 CONTENT VM: Setup completed, skipping re-validation")
+                
+            } catch {
+                await handleError(error)
+            }
         }
     }
     

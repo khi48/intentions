@@ -203,6 +203,21 @@ final class CategoryMappingService: Sendable {
         }
     }
     
+    /// Force setup completion even if not all categories are mapped
+    /// Used when user chooses to finish setup with partial mapping
+    func forceSetupCompleted() {
+        let wasCompleted = isSetupCompleted
+        isSetupCompleted = true
+        
+        if !wasCompleted {
+            print("🎉 SETUP FORCED COMPLETE: User chose to finish with partial mapping!")
+            printCompleteMappingSummary()
+        }
+        
+        // Save the forced completion state
+        saveToStorage()
+    }
+    
     /// Print a comprehensive summary of all mappings
     private func printCompleteMappingSummary() {
         print("\n" + String(repeating: "🎊", count: 30))

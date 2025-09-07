@@ -56,7 +56,12 @@ class IsolatedPickerViewController: UIViewController {
     var isPickerPresented: Bool { pickerWindow != nil }
     
     func presentFamilyActivityPicker() {
-        guard pickerWindow == nil else { return }
+        guard pickerWindow == nil else { 
+            print("⚠️ ISOLATED PICKER: Already presenting, ignoring duplicate request")
+            return 
+        }
+        
+        print("🎯 ISOLATED PICKER: Presenting FamilyActivityPicker")
         
         // Create isolated window
         if let windowScene = view.window?.windowScene {
@@ -65,13 +70,19 @@ class IsolatedPickerViewController: UIViewController {
             // Create picker view controller
             let pickerView = IsolatedFamilyPickerView(
                 onFinish: { [weak self] selection in
+                    print("✅ ISOLATED PICKER: User finished with selection")
                     Task { @MainActor in
+                        // Small delay to let the system clean up properly
+                        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
                         self?.coordinator?.pickerDidFinish(with: selection)
                         self?.cleanupWindow()
                     }
                 },
                 onCancel: { [weak self] in
+                    print("❌ ISOLATED PICKER: User cancelled")
                     Task { @MainActor in
+                        // Small delay to let the system clean up properly
+                        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
                         self?.coordinator?.pickerDidCancel()
                         self?.cleanupWindow()
                     }
@@ -88,19 +99,43 @@ class IsolatedPickerViewController: UIViewController {
     }
     
     func dismissFamilyActivityPicker() {
+        print("🔄 ISOLATED PICKER: Dismissing FamilyActivityPicker")
         cleanupWindow()
     }
     
     private func cleanupWindow() {
-        pickerWindow?.isHidden = true
-        pickerWindow = nil
+        print("🧹 ISOLATED PICKER: Cleaning up window")
+        guard let window = pickerWindow else { return }
+        
+        // More thorough cleanup to prevent plugin connection issues
+        Task { @MainActor in
+            // First, hide the window
+            window.isHidden = true
+            window.resignKey()
+            
+            // Give the system time to process the resignation
+            try? await Task.sleep(nanoseconds: 50_000_000) // 0.05 seconds
+            
+            // Then remove the root view controller
+            if let rootVC = window.rootViewController {
+                rootVC.view.removeFromSuperview()
+                window.rootViewController = nil
+            }
+            
+            // Finally clear our reference
+            self.pickerWindow = nil
+            print("✅ ISOLATED PICKER: Window cleanup completed")
+        }
     }
 }
 
 /// Minimal SwiftUI view for the isolated FamilyActivityPicker
 struct IsolatedFamilyPickerView: View {
-    @State private var showingPicker = true
+    @State private var showingPicker = false
     @State private var selection = FamilyActivitySelection(includeEntireCategory: true)
+    @State private var hasInitialized = false
+    @State private var isFinishing = false
+    
     let onFinish: (FamilyActivitySelection) -> Void
     let onCancel: () -> Void
     
@@ -112,18 +147,49 @@ struct IsolatedFamilyPickerView: View {
                 selection: $selection
             )
             .onAppear {
-                showingPicker = true
+                // Delay the picker presentation to allow proper initialization
+                Task {
+                    try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+                    await MainActor.run {
+                        if !hasInitialized {
+                            hasInitialized = true
+                            showingPicker = true
+                            print("📱 ISOLATED PICKER: Showing picker after initialization delay")
+                        }
+                    }
+                }
             }
-            .onChange(of: selection) { _, newSelection in
-                // Auto-finish when user makes a selection
-                if !newSelection.applications.isEmpty || !newSelection.categories.isEmpty {
-                    onFinish(newSelection)
+            .onChange(of: selection) { oldSelection, newSelection in
+                // Only auto-finish if user has made a meaningful selection
+                // and we're not already in the process of finishing
+                guard !isFinishing else { return }
+                
+                let hasNewApps = !newSelection.applications.isEmpty && newSelection.applications != oldSelection.applications
+                let hasNewCategories = !newSelection.categories.isEmpty && newSelection.categories != oldSelection.categories
+                
+                if hasNewApps || hasNewCategories {
+                    print("📱 ISOLATED PICKER: Selection changed, will finish")
+                    isFinishing = true
+                    
+                    // Add a small delay to ensure the picker UI has fully updated
+                    Task {
+                        try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                        await MainActor.run {
+                            onFinish(newSelection)
+                        }
+                    }
                 }
             }
             .onChange(of: showingPicker) { _, isShowing in
                 // Handle cancellation when picker is dismissed
-                if !isShowing {
-                    onCancel()
+                if !isShowing && !isFinishing && hasInitialized {
+                    print("📱 ISOLATED PICKER: Picker dismissed, will cancel")
+                    Task {
+                        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                        await MainActor.run {
+                            onCancel()
+                        }
+                    }
                 }
             }
     }

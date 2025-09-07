@@ -17,6 +17,7 @@ enum SettingsDestination: Hashable, CaseIterable {
     case dataManagement
     case about
     case categoryMappingSetup
+    case setupFlow
     
     // Better practice: Include presentation metadata in the enum
     var title: String {
@@ -26,6 +27,7 @@ enum SettingsDestination: Hashable, CaseIterable {
         case .dataManagement: return "Data Management"
         case .about: return "About"
         case .categoryMappingSetup: return "App Category Mapping"
+        case .setupFlow: return "App Setup"
         }
     }
     
@@ -36,6 +38,7 @@ enum SettingsDestination: Hashable, CaseIterable {
         case .dataManagement: return "externaldrive.fill"
         case .about: return "info.circle.fill"
         case .categoryMappingSetup: return "list.bullet.rectangle"
+        case .setupFlow: return "gear.badge.checkmark"
         }
     }
 }
@@ -154,15 +157,18 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel
     private let onScheduleSettingsChanged: ((ScheduleSettings) async -> Void)?
     private let onViewModelReady: ((SettingsViewModel) -> Void)?
+    private let setupCoordinator: SetupCoordinator?
     @EnvironmentObject private var navigationManager: NavigationStateManager
     
     init(
         dataService: DataPersisting? = nil,
+        setupCoordinator: SetupCoordinator? = nil,
         onScheduleSettingsChanged: ((ScheduleSettings) async -> Void)? = nil,
         onViewModelReady: ((SettingsViewModel) -> Void)? = nil
     ) {
         let service = dataService ?? MockDataPersistenceService()
         self._viewModel = State(wrappedValue: SettingsViewModel(dataService: service))
+        self.setupCoordinator = setupCoordinator
         self.onScheduleSettingsChanged = onScheduleSettingsChanged
         self.onViewModelReady = onViewModelReady
     }
@@ -204,6 +210,17 @@ struct SettingsView: View {
                         CategoryMappingSetupView { mappingService in
                             // Handle completion in navigation context
                             print("Navigation: Category mapping setup completed")
+                        }
+                    case .setupFlow:
+                        if let coordinator = setupCoordinator {
+                            SetupFlowView(setupCoordinator: coordinator) {
+                                // Handle completion in navigation context
+                                print("Navigation: Setup flow completed")
+                                navigationManager.resetSettingsNavigation()
+                            }
+                        } else {
+                            Text("Setup not available")
+                                .foregroundColor(.secondary)
                         }
                     }
                 }
@@ -399,6 +416,14 @@ struct SettingsView: View {
     
     private var categoryMappingSection: some View {
         Section {
+            NavigationLink(value: SettingsDestination.setupFlow) {
+                SettingsRow(
+                    title: SettingsDestination.setupFlow.title,
+                    subtitle: "Configure app permissions and category mappings",
+                    icon: SettingsDestination.setupFlow.systemImage
+                )
+            }
+            
             NavigationLink(value: SettingsDestination.categoryMappingSetup) {
                 SettingsRow(
                     title: SettingsDestination.categoryMappingSetup.title,
