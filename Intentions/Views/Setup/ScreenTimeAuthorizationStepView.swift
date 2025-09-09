@@ -40,9 +40,6 @@ struct ScreenTimeAuthorizationStepView: View {
                 manualInstructionsSection
             }
             
-            // Help Section
-            helpSection
-            
         }
         .padding()
         .task {
@@ -57,10 +54,10 @@ struct ScreenTimeAuthorizationStepView: View {
             ZStack {
                 Circle()
                     .fill(Color.blue.opacity(0.2))
-                    .frame(width: 80, height: 80)
+                    .frame(width: 60, height: 60)
                 
                 Image(systemName: "hourglass.circle.fill")
-                    .font(.system(size: 40))
+                    .font(.system(size: 30))
                     .foregroundColor(.blue)
             }
             
@@ -68,7 +65,7 @@ struct ScreenTimeAuthorizationStepView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("Intentions needs Screen Time permission to manage app access and create focused sessions.")
+            Text("Tap 'Grant Permission' below to allow Intentions to manage app access during focused sessions.")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
@@ -216,22 +213,6 @@ struct ScreenTimeAuthorizationStepView: View {
         }
     }
     
-    // MARK: - Help Section
-    
-    private var helpSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Why is this needed?")
-                .font(.subheadline)
-                .fontWeight(.medium)
-            
-            Text("Screen Time permission allows Intentions to temporarily block distracting apps during your focused sessions, helping you stay on track with your intentions.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(8)
-    }
     
     // MARK: - Actions
     

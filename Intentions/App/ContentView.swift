@@ -32,10 +32,6 @@ struct ContentView: View {
                 ) {
                     viewModel.completeSetupFlow()
                 }
-            } else if viewModel.showingCategoryMappingSetup {
-                CategoryMappingSetupView { mappingService in
-                    viewModel.completeCategoryMappingSetup(mappingService)
-                }
             } else {
                 MainTabView(viewModel: viewModel)
             }

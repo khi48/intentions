@@ -64,18 +64,18 @@ struct SetupState: Codable, Sendable {
     
     /// Whether all critical setup requirements are met
     var isCriticalSetupComplete: Bool {
-        return screenTimeAuthorized && systemHealthValidated
+        return screenTimeAuthorized
     }
     
     /// Whether all recommended setup is complete
     var isFullSetupComplete: Bool {
-        return isCriticalSetupComplete && categoryMappingCompleted
+        return screenTimeAuthorized && categoryMappingCompleted
     }
     
-    /// Whether setup is sufficient to run the app (only critical setup required)
+    /// Whether setup is sufficient to run the app
     var isSetupSufficient: Bool {
-        // Category mapping is optional - only critical setup is required for app to function
-        return isCriticalSetupComplete
+        // Setup is complete when both Screen Time and category mapping are done
+        return screenTimeAuthorized && categoryMappingCompleted
     }
     
     /// Whether category mapping has been addressed (completed or explicitly skipped)
@@ -165,49 +165,49 @@ struct SetupState: Codable, Sendable {
 
 /// Individual setup steps that can be validated
 enum SetupStep: String, CaseIterable, Sendable {
+    case landing = "landing"
     case screenTimeAuthorization = "screen_time_auth"
     case categoryMapping = "category_mapping"
-    case systemHealth = "system_health"
     
     var displayName: String {
         switch self {
+        case .landing:
+            return "Getting Started"
         case .screenTimeAuthorization:
             return "Screen Time Permission"
         case .categoryMapping:
             return "App Category Mapping"
-        case .systemHealth:
-            return "System Health Check"
         }
     }
     
     var description: String {
         switch self {
+        case .landing:
+            return "Introduction to setup process"
         case .screenTimeAuthorization:
             return "Grant permission to manage Screen Time for app blocking"
         case .categoryMapping:
             return "Configure app categories for intelligent blocking"
-        case .systemHealth:
-            return "Verify core app functionality is working"
         }
     }
     
     var isRequired: Bool {
         switch self {
-        case .screenTimeAuthorization, .systemHealth:
+        case .landing:
+            return false // Landing is just informational
+        case .screenTimeAuthorization, .categoryMapping:
             return true
-        case .categoryMapping:
-            return false // Recommended but not required
         }
     }
     
     var iconName: String {
         switch self {
+        case .landing:
+            return "gear.badge.checkmark"
         case .screenTimeAuthorization:
             return "hourglass.circle"
         case .categoryMapping:
             return "square.grid.3x3.topleft.filled"
-        case .systemHealth:
-            return "checkmark.shield"
         }
     }
 }

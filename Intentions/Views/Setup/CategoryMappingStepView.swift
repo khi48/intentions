@@ -34,11 +34,15 @@ struct CategoryMappingStepView: View {
             // Action Button
             actionButton
             
-            // Help Section
-            helpSection
-            
         }
         .padding()
+        .onAppear {
+            print("🔍 CATEGORY MAPPING STEP DEBUG:")
+            print("   - isSetupCompleted: \(categoryMappingService.isSetupCompleted)")
+            print("   - isTrulySetupCompleted: \(categoryMappingService.isTrulySetupCompleted)")
+            print("   - completedCategories count: \(categoryMappingService.completedCategories.count)")
+            print("   - Will show Continue button: \(categoryMappingService.isTrulySetupCompleted)")
+        }
         .fullScreenCover(isPresented: $showingCategoryMapping) {
             CategoryMappingSetupView { completedMappingService in
                 // Update our local service with the completed one
@@ -70,7 +74,7 @@ struct CategoryMappingStepView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("Configure which apps belong to which categories for intelligent blocking during focused sessions.")
+            Text("Configure which apps belong to which categories for intelligent blocking during focused sessions. Category mapping allows Intentions to intelligently prioritize which apps to block first. Without it, all apps are treated equally, but with mapping, the app can focus on blocking the most distracting apps in each category. If you experience issues with certain categories, you can finish setup with partial mapping - the app works fine either way.")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
@@ -113,7 +117,7 @@ struct CategoryMappingStepView: View {
             }
             
             // Completion Status
-            if categoryMappingService.isSetupCompleted {
+            if categoryMappingService.isTrulySetupCompleted {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
@@ -132,7 +136,7 @@ struct CategoryMappingStepView: View {
     
     private var statusBadge: some View {
         Group {
-            if categoryMappingService.isSetupCompleted {
+            if categoryMappingService.isTrulySetupCompleted {
                 Label("Complete", systemImage: "checkmark.circle")
                     .foregroundColor(.green)
             } else if categoryMappingService.completedCategories.isEmpty {
@@ -156,9 +160,10 @@ struct CategoryMappingStepView: View {
     
     private var actionButton: some View {
         Group {
-            if categoryMappingService.isSetupCompleted {
+            if categoryMappingService.isTrulySetupCompleted {
                 VStack(spacing: 12) {
                     Button("Continue") {
+                        print("🔘 BUTTON: Continue button pressed in CategoryMappingStepView")
                         Task {
                             await completeStep()
                         }
@@ -174,6 +179,7 @@ struct CategoryMappingStepView: View {
             } else {
                 VStack(spacing: 12) {
                     Button(categoryMappingService.completedCategories.isEmpty ? "Start Category Mapping" : "Continue Mapping") {
+                        print("🔘 BUTTON: Start/Continue Category Mapping button pressed")
                         showingCategoryMapping = true
                     }
                     .buttonStyle(.borderedProminent)
@@ -182,6 +188,7 @@ struct CategoryMappingStepView: View {
                     // Show "Finish Setup" option if user has made some progress
                     if !categoryMappingService.completedCategories.isEmpty {
                         Button("Finish Setup with Current Mapping") {
+                            print("🔘 BUTTON: Finish Setup with Current Mapping button pressed")
                             Task {
                                 await finishSetupWithPartialMapping()
                             }
@@ -194,31 +201,21 @@ struct CategoryMappingStepView: View {
         }
     }
     
-    // MARK: - Help Section
-    
-    private var helpSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Why is this helpful?")
-                .font(.subheadline)
-                .fontWeight(.medium)
-            
-            Text("Category mapping allows Intentions to intelligently prioritize which apps to block during focused sessions. Without it, all apps are treated equally, but with mapping, the app can focus on blocking the most distracting apps first.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(8)
-    }
     
     // MARK: - Actions
     
     private func completeStep() async {
+        print("🔍 COMPLETING CATEGORY MAPPING STEP:")
+        print("   - isSetupCompleted: \(categoryMappingService.isSetupCompleted)")
+        print("   - isTrulySetupCompleted: \(categoryMappingService.isTrulySetupCompleted)")
+        
         await setupCoordinator.completeSetupStep(.categoryMapping)
+        print("🚪 CATEGORY MAPPING: Calling onComplete() to exit setup flow")
         await onComplete()
     }
     
     private func finishSetupWithPartialMapping() async {
+        print("🔄 PARTIAL MAPPING: Forcing setup completion with partial mapping")
         // Force the category mapping service to consider setup complete
         // even if not all categories have been mapped
         categoryMappingService.forceSetupCompleted()

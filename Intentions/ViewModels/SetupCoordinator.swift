@@ -67,7 +67,7 @@ final class SetupCoordinator: Sendable {
                 actualState = stateManager.createCurrentSetupState(
                     screenTimeAuthorized: currentStatus.screenTimeAuthorized,
                     categoryMappingCompleted: currentStatus.categoryMappingCompleted,
-                    systemHealthValidated: currentStatus.systemHealthValidated
+                    systemHealthValidated: true // Always true since we removed system health validation
                 )
                 // Save the initial state immediately
                 await stateManager.saveSetupState(actualState)
@@ -85,7 +85,7 @@ final class SetupCoordinator: Sendable {
             shouldShowSetup = setupRequired
             
             print("🔍 SETUP VALIDATION: Setup required: \(setupRequired)")
-            print("   📊 Current state: ScreenTime=\(actualState.screenTimeAuthorized), Mapping=\(actualState.categoryMappingCompleted), Health=\(actualState.systemHealthValidated)")
+            print("   📊 Current state: ScreenTime=\(actualState.screenTimeAuthorized), Mapping=\(actualState.categoryMappingCompleted)")
             print("   📊 Setup sufficient: \(actualState.isSetupSufficient)")
         }
     }
@@ -159,12 +159,16 @@ final class SetupCoordinator: Sendable {
         
         let screenTimeAuth = authStatus == .approved
         let categoryMappingComplete = categoryMappingService.isTrulySetupCompleted
-        let systemHealthOK = await validateSystemHealth()
+        
+        print("🔍 SYSTEM STATUS DEBUG:")
+        print("   - Screen Time authorized: \(screenTimeAuth)")
+        print("   - Category mapping isTrulySetupCompleted: \(categoryMappingComplete)")
+        print("   - Category mapping isSetupCompleted: \(categoryMappingService.isSetupCompleted)")
         
         return SystemStatus(
             screenTimeAuthorized: screenTimeAuth,
             categoryMappingCompleted: categoryMappingComplete,
-            systemHealthValidated: systemHealthOK
+            systemHealthValidated: true // Always true since we removed system health validation
         )
     }
     
@@ -183,11 +187,6 @@ final class SetupCoordinator: Sendable {
             return true
         }
         
-        // If system health has degraded
-        if savedState.systemHealthValidated && !currentStatus.systemHealthValidated {
-            print("⚠️ SETUP: System health degraded - setup required")
-            return true
-        }
         
         // If setup was never completed properly
         if !savedState.isSetupSufficient {
@@ -202,35 +201,20 @@ final class SetupCoordinator: Sendable {
     /// Update setup state when a step is completed
     private func updateStateForCompletedStep(_ step: SetupStep, currentState: SetupState) async -> SetupState {
         switch step {
+        case .landing:
+            // Landing step doesn't change state, just allows progression
+            return currentState
+            
         case .screenTimeAuthorization:
             let authorized = await screenTimeService.authorizationStatus() == .approved
             return currentState.withScreenTimeAuthorized(authorized)
             
         case .categoryMapping:
             let completed = categoryMappingService.isTrulySetupCompleted
+            print("🔍 UPDATING CATEGORY MAPPING STATE:")
+            print("   - Service isTrulySetupCompleted: \(completed)")
+            print("   - Service isSetupCompleted: \(categoryMappingService.isSetupCompleted)")
             return currentState.withCategoryMappingCompleted(completed)
-            
-        case .systemHealth:
-            let validated = await validateSystemHealth()
-            return currentState.withSystemHealthValidated(validated)
-        }
-    }
-    
-    /// Validate that core app systems are working
-    private func validateSystemHealth() async -> Bool {
-        do {
-            // Check if Screen Time authorization is available (don't initialize yet)
-            let authStatus = await screenTimeService.authorizationStatus()
-            let hasValidAuth = authStatus != .notDetermined
-            
-            // Check if category mapping service is accessible
-            _ = categoryMappingService.getApps(for: .social)
-            
-            print("✅ SYSTEM HEALTH: Auth status check: \(authStatus), mapping accessible: true")
-            return hasValidAuth
-        } catch {
-            print("❌ SYSTEM HEALTH: Validation failed: \(error)")
-            return false
         }
     }
     
@@ -261,18 +245,25 @@ extension SetupCoordinator {
         
         var pending: [SetupStep] = []
         
-        if !state.screenTimeAuthorized {
-            pending.append(.screenTimeAuthorization)
+        // Always start with landing page if setup is needed
+        if !state.isSetupSufficient {
+            pending.append(.landing)
         }
         
-        if !state.systemHealthValidated {
-            pending.append(.systemHealth)
+        if !state.screenTimeAuthorized {
+            pending.append(.screenTimeAuthorization)
         }
         
         // Always include category mapping if not completed (can be skipped during the step)
         if !state.categoryMappingCompleted {
             pending.append(.categoryMapping)
         }
+        
+        print("🔍 SETUP DEBUG: Pending steps determined")
+        print("   - Setup sufficient: \(state.isSetupSufficient)")
+        print("   - Screen Time authorized: \(state.screenTimeAuthorized)")
+        print("   - Category mapping completed: \(state.categoryMappingCompleted)")
+        print("   - Pending steps: \(pending.map { $0.displayName })")
         
         return pending
     }
@@ -287,10 +278,6 @@ extension SetupCoordinator {
         
         if state.screenTimeAuthorized {
             completed.append(.screenTimeAuthorization)
-        }
-        
-        if state.systemHealthValidated {
-            completed.append(.systemHealth)
         }
         
         if state.categoryMappingCompleted {

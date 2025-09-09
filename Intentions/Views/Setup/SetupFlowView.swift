@@ -7,13 +7,20 @@
 
 import SwiftUI
 
-/// Main setup flow view that guides users through app configuration
-/// Presents a progressive, step-by-step setup experience
+// MARK: - Setup State Machine
+
+enum SetupPage {
+    case landing
+    case screenTimePermission  
+    case categoryMapping
+    case complete
+}
+
+/// Main setup flow view with simple state machine
 struct SetupFlowView: View {
     
+    @State private var currentPage: SetupPage = .landing
     @State private var setupCoordinator: SetupCoordinator
-    @State private var currentStepIndex: Int = 0
-    @State private var isSetupComplete: Bool = false
     
     let onComplete: () -> Void
     
@@ -40,146 +47,148 @@ struct SetupFlowView: View {
                 )
                 .ignoresSafeArea()
                 
-                ScrollView {
-                    VStack(spacing: 24) {
+                // Page Content
+                Group {
+                    switch currentPage {
+                    case .landing:
+                        // No scroll view for landing
+                        VStack(spacing: 24) {
+                            landingPageContent
+                            Spacer(minLength: 50)
+                        }
+                        .padding()
                         
-                        // Header
-                        headerSection
+                    case .screenTimePermission:
+                        ScrollView {
+                            VStack(spacing: 24) {
+                                progressSection(step: 1)
+                                screenTimePermissionContent
+                                Spacer(minLength: 50)
+                            }
+                            .padding()
+                        }
                         
-                        // Progress Indicator
-                        progressSection
+                    case .categoryMapping:
+                        ScrollView {
+                            VStack(spacing: 24) {
+                                progressSection(step: 2)
+                                categoryMappingContent
+                                Spacer(minLength: 50)
+                            }
+                            .padding()
+                        }
                         
-                        // Current Step Content
-                        currentStepContent
-                        
-                        
-                        Spacer(minLength: 50)
+                    case .complete:
+                        VStack(spacing: 24) {
+                            completionContent
+                            Spacer(minLength: 50)
+                        }
+                        .padding()
                     }
-                    .padding()
                 }
             }
         }
         .navigationViewStyle(StackNavigationViewStyle())
         .task {
-            await validateInitialState()
+            await initializeSetup()
         }
     }
     
-    // MARK: - Header Section
-    
-    private var headerSection: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "gear.badge.checkmark")
-                .font(.system(size: 60))
-                .foregroundColor(.blue)
-            
-            Text("Setup Intentions")
-                .font(.title)
-                .fontWeight(.bold)
-            
-            Text("Let's configure your app for mindful phone usage. This only takes a few minutes.")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-        }
-        .padding()
-    }
     
     // MARK: - Progress Section
     
-    private var progressSection: some View {
+    private func progressSection(step: Int) -> some View {
         VStack(spacing: 12) {
-            // Step indicators
             HStack(spacing: 8) {
-                ForEach(Array(pendingSteps.enumerated()), id: \.offset) { index, step in
-                    Circle()
-                        .fill(index <= currentStepIndex ? Color.blue : Color.gray.opacity(0.3))
-                        .frame(width: 12, height: 12)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.blue, lineWidth: index == currentStepIndex ? 2 : 0)
-                        )
-                    
-                    if index < pendingSteps.count - 1 {
-                        Rectangle()
-                            .fill(index < currentStepIndex ? Color.blue : Color.gray.opacity(0.3))
-                            .frame(height: 2)
-                            .frame(maxWidth: 40)
-                    }
-                }
+                // Step 1: Screen Time
+                Circle()
+                    .fill(step >= 1 ? Color.blue : Color.gray.opacity(0.3))
+                    .frame(width: 12, height: 12)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.blue, lineWidth: step == 1 ? 2 : 0)
+                    )
+                
+                Rectangle()
+                    .fill(step >= 2 ? Color.blue : Color.gray.opacity(0.3))
+                    .frame(height: 2)
+                    .frame(maxWidth: 40)
+                
+                // Step 2: Category Mapping
+                Circle()
+                    .fill(step >= 2 ? Color.blue : Color.gray.opacity(0.3))
+                    .frame(width: 12, height: 12)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.blue, lineWidth: step == 2 ? 2 : 0)
+                    )
             }
             .padding(.horizontal)
             
-            // Progress text
-            Text("Step \(currentStepIndex + 1) of \(pendingSteps.count)")
+            Text("Step \(step) of 2")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
     }
     
-    // MARK: - Current Step Content
+    // MARK: - Page Content
     
-    @ViewBuilder
-    private var currentStepContent: some View {
-        if isSetupComplete {
-            SetupCompletionView {
-                onComplete()
-            }
-        } else if currentStepIndex < pendingSteps.count {
-            let currentStep = pendingSteps[currentStepIndex]
-            
-            switch currentStep {
-            case .screenTimeAuthorization:
-                ScreenTimeAuthorizationStepView(
-                    setupCoordinator: setupCoordinator,
-                    onComplete: { await moveToNextStep() }
-                )
-            case .systemHealth:
-                SystemHealthStepView(
-                    setupCoordinator: setupCoordinator,
-                    onComplete: { await moveToNextStep() }
-                )
-            case .categoryMapping:
-                CategoryMappingStepView(
-                    setupCoordinator: setupCoordinator,
-                    onComplete: { await moveToNextStep() }
-                )
-            }
-        } else {
-            // Fallback - shouldn't happen
-            Text("Setup configuration error")
-                .foregroundColor(.red)
+    private var landingPageContent: some View {
+        SetupLandingView {
+            print("📱 STATE: Moving from landing to screenTimePermission")
+            currentPage = .screenTimePermission
         }
     }
     
-    // MARK: - Computed Properties
-    
-    private var pendingSteps: [SetupStep] {
-        setupCoordinator.pendingSetupSteps
+    private var screenTimePermissionContent: some View {
+        ScreenTimeAuthorizationStepView(
+            setupCoordinator: setupCoordinator,
+            onComplete: {
+                print("📱 STATE: Screen Time completed, moving to categoryMapping")
+                await setupCoordinator.completeSetupStep(.screenTimeAuthorization)
+                currentPage = .categoryMapping
+            }
+        )
     }
     
+    private var categoryMappingContent: some View {
+        CategoryMappingStepView(
+            setupCoordinator: setupCoordinator,
+            onComplete: {
+                print("📱 STATE: Category mapping completed, finishing setup")
+                await setupCoordinator.completeSetupStep(.categoryMapping)
+                currentPage = .complete
+            }
+        )
+    }
+    
+    private var completionContent: some View {
+        SetupCompletionView {
+            print("📱 STATE: Setup complete, exiting to main app")
+            onComplete()
+        }
+    }
     
     // MARK: - Actions
     
-    private func validateInitialState() async {
+    private func initializeSetup() async {
+        print("📱 STATE: Initializing setup flow")
         await setupCoordinator.validateSetupRequirements()
         
-        // If setup is already complete, show completion
-        if let state = setupCoordinator.setupState, state.isSetupSufficient {
-            isSetupComplete = true
+        // Check if we should skip to a later page based on current state
+        if let state = setupCoordinator.setupState {
+            if state.isSetupSufficient {
+                print("📱 STATE: Setup already complete")
+                currentPage = .complete
+            } else if state.screenTimeAuthorized {
+                print("📱 STATE: Screen Time already authorized, starting at category mapping")
+                currentPage = .categoryMapping
+            } else {
+                print("📱 STATE: Starting fresh setup")
+                currentPage = .landing
+            }
         }
     }
-    
-    private func moveToNextStep() async {
-        if currentStepIndex < pendingSteps.count - 1 {
-            currentStepIndex += 1
-        } else {
-            // All steps completed
-            isSetupComplete = true
-        }
-    }
-    
 }
 
 // MARK: - Setup Completion View

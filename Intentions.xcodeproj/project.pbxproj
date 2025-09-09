@@ -85,7 +85,7 @@
 		20EB27372E6D06DC00FC4BE4 /* SetupFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27332E6D06DC00FC4BE4 /* SetupFlowView.swift */; };
 		20EB27392E6D070A00FC4BE4 /* SetupStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27382E6D070A00FC4BE4 /* SetupStateManager.swift */; };
 		20EB273B2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB273A2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift */; };
-		20EB273D2E6D3AE300FC4BE4 /* SystemHealthStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB273C2E6D3AE300FC4BE4 /* SystemHealthStepView.swift */; };
+		20EB273F2E6EE46500FC4BE4 /* SetupLandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB273E2E6EE46500FC4BE4 /* SetupLandingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -208,7 +208,7 @@
 		20EB27332E6D06DC00FC4BE4 /* SetupFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupFlowView.swift; sourceTree = "<group>"; };
 		20EB27382E6D070A00FC4BE4 /* SetupStateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupStateManager.swift; sourceTree = "<group>"; };
 		20EB273A2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingStepView.swift; sourceTree = "<group>"; };
-		20EB273C2E6D3AE300FC4BE4 /* SystemHealthStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemHealthStepView.swift; sourceTree = "<group>"; };
+		20EB273E2E6EE46500FC4BE4 /* SetupLandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupLandingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -589,7 +589,7 @@
 		20EB27342E6D06DC00FC4BE4 /* Setup */ = {
 			isa = PBXGroup;
 			children = (
-				20EB273C2E6D3AE300FC4BE4 /* SystemHealthStepView.swift */,
+				20EB273E2E6EE46500FC4BE4 /* SetupLandingView.swift */,
 				20EB273A2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift */,
 				20EB27312E6D06DC00FC4BE4 /* CategoryMappingSetupView.swift */,
 				20EB27322E6D06DC00FC4BE4 /* ScreenTimeAuthorizationStepView.swift */,
@@ -771,7 +771,6 @@
 				20EB27372E6D06DC00FC4BE4 /* SetupFlowView.swift in Sources */,
 				2085A9142DFF4B180011EB9A /* ApplicationExtension.swift in Sources */,
 				2085A8FC2DF6D2BB0011EB9A /* ScreenTimeUIAdaptor.swift in Sources */,
-				20EB273D2E6D3AE300FC4BE4 /* SystemHealthStepView.swift in Sources */,
 				2085A9022DF6D2EB0011EB9A /* MockScreenTimeService.swift in Sources */,
 				2085A8E32DF55A060011EB9A /* IntentionsSession.swift in Sources */,
 				2071C4942DE43AC600DF737F /* IntentionsApp.swift in Sources */,
@@ -783,6 +782,7 @@
 				20EB27302E6D06B500FC4BE4 /* SetupCoordinator.swift in Sources */,
 				20EB265F2E21A34600FC4BE4 /* ContentViewModel.swift in Sources */,
 				20EB268E2E258D5700FC4BE4 /* IntentionPromptViewModel.swift in Sources */,
+				20EB273F2E6EE46500FC4BE4 /* SetupLandingView.swift in Sources */,
 				20EB268F2E258D5700FC4BE4 /* SettingsViewModel.swift in Sources */,
 				2085A8F92DF585A90011EB9A /* ScreenTimeService.swift in Sources */,
 				20EB27002E4D5FAA00FC4BE4 /* SessionStatusView.swift in Sources */,

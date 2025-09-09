@@ -195,10 +195,18 @@ final class CategoryMappingService: Sendable {
     /// Check and update overall setup completion status
     private func updateSetupCompletion() {
         let wasCompleted = isSetupCompleted
-        isSetupCompleted = pendingCategories.isEmpty
+        
+        // Only mark as completed if user has actually mapped a significant number of categories
+        // AND has actually saved app mappings (not just empty selections)
+        let totalMappedApps = categoryToAppsMapping.values.reduce(0) { $0 + $1.count }
+        let minimumCategoriesRequired = 3  // Require at least 3 categories to be mapped
+        let minimumAppsRequired = 10       // Require at least 10 total apps to be mapped
+        
+        isSetupCompleted = completedCategories.count >= minimumCategoriesRequired && 
+                          totalMappedApps >= minimumAppsRequired
         
         if !wasCompleted && isSetupCompleted {
-            print("🎉 SETUP COMPLETE: All categories have been mapped!")
+            print("🎉 SETUP COMPLETE: \(completedCategories.count) categories and \(totalMappedApps) apps mapped!")
             printCompleteMappingSummary()
         }
     }
