@@ -256,19 +256,39 @@ final class SettingsViewModel: Sendable {
         if !scheduleSettings.isEnabled {
             return "Disabled"
         }
-        
+
         if scheduleSettings.isCurrentlyActive {
             return "Active"
         } else {
             return "Inactive"
         }
     }
-    
+
     var scheduleStatusColor: Color {
         if !scheduleSettings.isEnabled {
             return .gray
         }
-        
+
+        return scheduleSettings.isCurrentlyActive ? .green : .orange
+    }
+
+    var intentionsStateText: String {
+        if !scheduleSettings.isEnabled {
+            return "Disabled"
+        }
+
+        if scheduleSettings.isCurrentlyActive {
+            return "Enabled"
+        } else {
+            return "Open Access"
+        }
+    }
+
+    var intentionsStateColor: Color {
+        if !scheduleSettings.isEnabled {
+            return .gray
+        }
+
         return scheduleSettings.isCurrentlyActive ? .green : .orange
     }
     

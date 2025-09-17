@@ -150,7 +150,7 @@ struct SettingsRow: View {
 
 // MARK: - Main Settings View
 
-/// Main settings view with app group management and schedule settings
+/// Main settings view with app group management and Intentions State configuration
 struct SettingsView: View {
     @State private var viewModel: SettingsViewModel
     private let onScheduleSettingsChanged: ((ScheduleSettings) async -> Void)?
@@ -178,7 +178,7 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
-                    // Schedule Settings Section
+                    // Intentions State Section
                     scheduleSection
                     
                     // Category Mapping Section
@@ -299,19 +299,19 @@ struct SettingsView: View {
     
     private var scheduleSection: some View {
         Section {
-            // Schedule Toggle
+            // Intentions State Toggle
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Intentions State")
                         .font(.headline)
-                    
-                    Text("Control when Intentions is active")
+
+                    Text("Control when apps are blocked by default")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 VStack(alignment: .trailing, spacing: 4) {
                     Toggle("", isOn: Binding(
                         get: { viewModel.scheduleSettings.isEnabled },
@@ -323,34 +323,34 @@ struct SettingsView: View {
                             }
                         }
                     ))
-                    
-                    Text(viewModel.scheduleStatusText)
+
+                    Text(viewModel.intentionsStateText)
                         .font(.caption)
-                        .foregroundStyle(viewModel.scheduleStatusColor)
+                        .foregroundStyle(viewModel.intentionsStateColor)
                 }
             }
-            
+
             // Schedule Details (when enabled)
             if viewModel.scheduleSettings.isEnabled {
                 ScheduleDetailsRow(
-                    title: "Active Hours",
+                    title: "Blocking Hours",
                     value: viewModel.formattedActiveHours,
                     action: { viewModel.showScheduleEditor() }
                 )
-                
+
                 ScheduleDetailsRow(
-                    title: "Active Days",
+                    title: "Blocking Days",
                     value: viewModel.activeDaysText,
                     action: { viewModel.showScheduleEditor() }
                 )
             }
         } header: {
-            Text("Schedule Settings")
+            Text("Intentions State")
         } footer: {
             if viewModel.scheduleSettings.isEnabled {
-                Text("Intentions will only be active during the specified times and days. Outside these hours, all apps remain accessible.")
+                Text("Apps are blocked by default during the specified times and days. Outside these hours, all apps remain accessible unless you start a focused session.")
             } else {
-                Text("Schedule is disabled. Intentions is active 24/7.")
+                Text("Scheduled blocking is disabled. Apps remain accessible by default unless you start a focused session.")
             }
         }
     }
@@ -475,13 +475,13 @@ struct ScheduleSettingsView: View {
     var body: some View {
         NavigationView {
             List {
-                // Schedule Enable/Disable
+                // Intentions State Toggle
                 Section {
-                    Toggle("Enable Schedule", isOn: $isEnabled)
+                    Toggle("Enable Scheduled Blocking", isOn: $isEnabled)
                 } header: {
-                    Text("Schedule Status")
+                    Text("Blocking Mode")
                 } footer: {
-                    Text(isEnabled ? "Intentions will only be active during specified times" : "Intentions will be active 24/7")
+                    Text(isEnabled ? "Apps will only be blocked during specified times and days" : "Apps will be blocked by default 24/7")
                 }
                 
                 if isEnabled {
@@ -511,9 +511,9 @@ struct ScheduleSettingsView: View {
                             .pickerStyle(.menu)
                         }
                     } header: {
-                        Text("Active Hours")
+                        Text("Blocking Hours")
                     } footer: {
-                        Text("Intentions will be active from \(hourFormatter.string(from: dateFromHour(startHour))) to \(hourFormatter.string(from: dateFromHour(endHour)))")
+                        Text("Apps will be blocked from \(hourFormatter.string(from: dateFromHour(startHour))) to \(hourFormatter.string(from: dateFromHour(endHour)))")
                     }
                     
                     // Active Days
@@ -560,13 +560,13 @@ struct ScheduleSettingsView: View {
                         }
                         .padding(.vertical, 8)
                     } header: {
-                        Text("Active Days")
+                        Text("Blocking Days")
                     } footer: {
-                        Text("Select the days when Intentions should be active. At least one day must be selected.")
+                        Text("Select the days when apps should be blocked by default. At least one day must be selected.")
                     }
                 }
             }
-            .navigationTitle("Schedule Settings")
+            .navigationTitle("Intentions State")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
