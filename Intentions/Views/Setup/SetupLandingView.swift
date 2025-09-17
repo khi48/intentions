@@ -73,6 +73,13 @@ struct SetupLandingView: View {
                     description: "Configure which apps belong to which categories for intelligent blocking",
                     stepNumber: 2
                 )
+                
+                setupStep(
+                    icon: "widget.large.badge.plus",
+                    title: "Widget Setup",
+                    description: "Add the Intentions widget to see your blocking status at a glance",
+                    stepNumber: 3
+                )
             }
         }
         .padding()

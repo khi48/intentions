@@ -209,6 +209,7 @@
 		20EB27382E6D070A00FC4BE4 /* SetupStateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupStateManager.swift; sourceTree = "<group>"; };
 		20EB273A2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingStepView.swift; sourceTree = "<group>"; };
 		20EB273E2E6EE46500FC4BE4 /* SetupLandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupLandingView.swift; sourceTree = "<group>"; };
+		20EB27422E77427B00FC4BE4 /* IntentionsWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IntentionsWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -262,6 +263,7 @@
 		2071C4872DE43AC600DF737F = {
 			isa = PBXGroup;
 			children = (
+				20EB27422E77427B00FC4BE4 /* IntentionsWidgetExtension.entitlements */,
 				2071C4922DE43AC600DF737F /* Intentions */,
 				2071C4A32DE43AC800DF737F /* IntentionsTests */,
 				2071C4AD2DE43AC800DF737F /* IntentionsUITests */,
@@ -1122,6 +1124,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = IntentionsWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1149,6 +1152,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = IntentionsWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;

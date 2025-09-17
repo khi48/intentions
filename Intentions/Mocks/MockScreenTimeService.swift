@@ -158,6 +158,11 @@ actor MockScreenTimeService: ScreenTimeManaging {
         // Mock implementation - just log it
         print("Mock: Category mapping service configured")
     }
+
+    func setRestoreDefaultStateCallback(_ callback: @escaping @Sendable () async -> Void) async {
+        // Mock implementation - just log it
+        print("Mock: Default state restore callback configured")
+    }
     
     func cleanup() async {
         // Cancel any running session task

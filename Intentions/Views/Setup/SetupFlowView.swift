@@ -13,7 +13,7 @@ enum SetupPage {
     case landing
     case screenTimePermission  
     case categoryMapping
-    case complete
+    case widgetSetup
 }
 
 /// Main setup flow view with simple state machine
@@ -21,66 +21,101 @@ struct SetupFlowView: View {
     
     @State private var currentPage: SetupPage = .landing
     @State private var setupCoordinator: SetupCoordinator
-    
+
     let onComplete: () -> Void
-    
+    let embedInNavigationView: Bool
+    let forceSetup: Bool
+
     // MARK: - Initialization
-    
+
     init(
         setupCoordinator: SetupCoordinator,
         onComplete: @escaping () -> Void
     ) {
         self._setupCoordinator = State(initialValue: setupCoordinator)
+        self.embedInNavigationView = true
+        self.forceSetup = false
+        self.onComplete = onComplete
+    }
+
+    init(
+        setupCoordinator: SetupCoordinator,
+        embedInNavigationView: Bool = true,
+        forceSetup: Bool = false,
+        onComplete: @escaping () -> Void
+    ) {
+        self._setupCoordinator = State(initialValue: setupCoordinator)
+        self.embedInNavigationView = embedInNavigationView
+        self.forceSetup = forceSetup
         self.onComplete = onComplete
     }
     
     // MARK: - Body
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                // Background
-                LinearGradient(
-                    colors: [Color.blue.opacity(0.1), Color.purple.opacity(0.1)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
-                
-                // Page Content
-                Group {
-                    switch currentPage {
-                    case .landing:
-                        // No scroll view for landing
+        Group {
+            if embedInNavigationView {
+                NavigationView {
+                    setupContent
+                }
+            } else {
+                setupContent
+            }
+        }
+        .onAppear {
+            print("📱 SETUP VIEW: onAppear - forceSetup=\(forceSetup), currentPage=\(currentPage)")
+        }
+        .onDisappear {
+            print("📱 SETUP VIEW: onDisappear")
+        }
+    }
+
+    private var setupContent: some View {
+        ZStack {
+            // Background
+            LinearGradient(
+                colors: [Color.blue.opacity(0.1), Color.purple.opacity(0.1)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            // Page Content
+            Group {
+                switch currentPage {
+                case .landing:
+                    // No scroll view for landing
+                    VStack(spacing: 24) {
+                        landingPageContent
+                        Spacer(minLength: 50)
+                    }
+                    .padding()
+
+                case .screenTimePermission:
+                    ScrollView {
                         VStack(spacing: 24) {
-                            landingPageContent
+                            progressSection(step: 1)
+                            screenTimePermissionContent
                             Spacer(minLength: 50)
                         }
                         .padding()
-                        
-                    case .screenTimePermission:
-                        ScrollView {
-                            VStack(spacing: 24) {
-                                progressSection(step: 1)
-                                screenTimePermissionContent
-                                Spacer(minLength: 50)
-                            }
-                            .padding()
-                        }
-                        
-                    case .categoryMapping:
-                        ScrollView {
-                            VStack(spacing: 24) {
-                                progressSection(step: 2)
-                                categoryMappingContent
-                                Spacer(minLength: 50)
-                            }
-                            .padding()
-                        }
-                        
-                    case .complete:
+                    }
+
+                case .categoryMapping:
+                    ScrollView {
                         VStack(spacing: 24) {
-                            completionContent
+                            progressSection(step: 2)
+                            categoryMappingContent
+                            Spacer(minLength: 50)
+                        }
+                        .padding()
+                    }
+
+                case .widgetSetup:
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            progressSection(step: 3)
+                            widgetSetupContent
                             Spacer(minLength: 50)
                         }
                         .padding()
@@ -112,7 +147,7 @@ struct SetupFlowView: View {
                 Rectangle()
                     .fill(step >= 2 ? Color.blue : Color.gray.opacity(0.3))
                     .frame(height: 2)
-                    .frame(maxWidth: 40)
+                    .frame(maxWidth: 30)
                 
                 // Step 2: Category Mapping
                 Circle()
@@ -122,10 +157,24 @@ struct SetupFlowView: View {
                         Circle()
                             .stroke(Color.blue, lineWidth: step == 2 ? 2 : 0)
                     )
+                
+                Rectangle()
+                    .fill(step >= 3 ? Color.blue : Color.gray.opacity(0.3))
+                    .frame(height: 2)
+                    .frame(maxWidth: 30)
+                
+                // Step 3: Widget Setup
+                Circle()
+                    .fill(step >= 3 ? Color.blue : Color.gray.opacity(0.3))
+                    .frame(width: 12, height: 12)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.blue, lineWidth: step == 3 ? 2 : 0)
+                    )
             }
             .padding(.horizontal)
             
-            Text("Step \(step) of 2")
+            Text("Step \(step) of 3")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -155,103 +204,115 @@ struct SetupFlowView: View {
         CategoryMappingStepView(
             setupCoordinator: setupCoordinator,
             onComplete: {
-                print("📱 STATE: Category mapping completed, finishing setup")
+                print("📱 STATE: Category mapping completed, moving to widget setup")
                 await setupCoordinator.completeSetupStep(.categoryMapping)
-                currentPage = .complete
+                currentPage = .widgetSetup
             }
         )
     }
     
-    private var completionContent: some View {
-        SetupCompletionView {
-            print("📱 STATE: Setup complete, exiting to main app")
-            onComplete()
+    private var widgetSetupContent: some View {
+        // Temporary inline widget setup view until WidgetSetupStepView is added to project
+        VStack(spacing: 24) {
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.green.opacity(0.2))
+                        .frame(width: 80, height: 80)
+                    
+                    Image(systemName: "widget.large.badge.plus")
+                        .font(.system(size: 40))
+                        .foregroundColor(.green)
+                }
+                
+                Text("Add Intentions Widget")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                
+                Text("Add the Intentions widget to your lock screen or home screen to quickly see if your apps are currently blocked or accessible.")
+                    .font(.body)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+            }
+            
+            VStack(spacing: 16) {
+                Text("Widget shows:")
+                    .font(.headline)
+                
+                HStack(spacing: 20) {
+                    VStack(spacing: 4) {
+                        Image(systemName: "shield.fill")
+                            .foregroundColor(.red)
+                            .font(.title2)
+                        Text("Blocked")
+                            .font(.caption)
+                    }
+                    
+                    VStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle")
+                            .foregroundColor(.green)
+                            .font(.title2)
+                        Text("Open")
+                            .font(.caption)
+                    }
+                    
+                    VStack(spacing: 4) {
+                        Image(systemName: "questionmark.circle")
+                            .foregroundColor(.orange)
+                            .font(.title2)
+                        Text("Unknown")
+                            .font(.caption)
+                    }
+                }
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+            
+            Button("Start Using Intentions") {
+                print("📱 STATE: Widget setup completed, finishing setup")
+                onComplete()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            
+            Text("You can add the widget later from your device settings")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
+        .padding()
     }
+    
     
     // MARK: - Actions
     
     private func initializeSetup() async {
         print("📱 STATE: Initializing setup flow")
+        print("📱 STATE: forceSetup = \(forceSetup)")
         await setupCoordinator.validateSetupRequirements()
-        
+
         // Check if we should skip to a later page based on current state
         if let state = setupCoordinator.setupState {
-            if state.isSetupSufficient {
-                print("📱 STATE: Setup already complete")
-                currentPage = .complete
-            } else if state.screenTimeAuthorized {
+            print("📱 STATE: Setup state - sufficient: \(state.isSetupSufficient), screenTime: \(state.screenTimeAuthorized)")
+            if state.isSetupSufficient && !forceSetup {
+                print("📱 STATE: Setup already complete, exiting setup")
+                onComplete()
+            } else if state.screenTimeAuthorized && !forceSetup {
                 print("📱 STATE: Screen Time already authorized, starting at category mapping")
                 currentPage = .categoryMapping
             } else {
-                print("📱 STATE: Starting fresh setup")
+                print("📱 STATE: Starting fresh setup (forced: \(forceSetup))")
                 currentPage = .landing
             }
+        } else {
+            print("📱 STATE: No setup state available")
+            currentPage = .landing
         }
     }
 }
 
-// MARK: - Setup Completion View
-
-struct SetupCompletionView: View {
-    
-    let onComplete: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 80))
-                .foregroundColor(.green)
-            
-            Text("Setup Complete!")
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundColor(.green)
-            
-            Text("Intentions is now configured for mindful app usage. You can access additional settings anytime from the Settings tab.")
-                .font(.body)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
-                .padding(.horizontal)
-            
-            VStack(spacing: 12) {
-                HStack(spacing: 12) {
-                    Image(systemName: "hourglass.circle.fill")
-                        .foregroundColor(.green)
-                    Text("Screen Time permissions configured")
-                        .font(.subheadline)
-                    Spacer()
-                }
-                
-                HStack(spacing: 12) {
-                    Image(systemName: "square.grid.3x3.topleft.filled")
-                        .foregroundColor(.green)
-                    Text("App categories mapped")
-                        .font(.subheadline)
-                    Spacer()
-                }
-                
-                HStack(spacing: 12) {
-                    Image(systemName: "checkmark.shield.fill")
-                        .foregroundColor(.green)
-                    Text("System health validated")
-                        .font(.subheadline)
-                    Spacer()
-                }
-            }
-            .padding()
-            .background(Color.green.opacity(0.1))
-            .cornerRadius(12)
-            
-            Button("Start Using Intentions") {
-                onComplete()
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-        }
-        .padding()
-    }
-}
 
 // MARK: - Preview
 

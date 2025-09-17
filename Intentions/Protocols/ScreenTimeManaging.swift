@@ -56,6 +56,10 @@ protocol ScreenTimeManaging: Sendable {
     /// Set the category mapping service for intelligent app blocking
     /// - Parameter service: CategoryMappingService to use for prioritized blocking
     func setCategoryMappingService(_ service: CategoryMappingService) async
+
+    /// Set callback to restore default state when sessions end
+    /// - Parameter callback: Async closure to call when sessions expire or end
+    func setRestoreDefaultStateCallback(_ callback: @escaping @Sendable () async -> Void) async
     
     /// Clean up all resources and reset service state
     /// Cancels running tasks, clears settings, and resets internal state

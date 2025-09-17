@@ -4,6 +4,7 @@
 import Foundation
 @preconcurrency import FamilyControls
 @preconcurrency import ManagedSettings
+import WidgetKit
 
 /// Implementation of Screen Time management using Apple's Family Controls framework
 /// Uses actor isolation for thread safety without blocking the main thread
@@ -25,6 +26,12 @@ actor ScreenTimeService: ScreenTimeManaging {
     
     /// Track initialization state
     private var isInitialized = false
+
+    /// Track the state before a session started (was Intentions blocking or allowing?)
+    private var preSessionBlockingState: Bool?
+
+    /// Callback to restore proper default state when session ends
+    private var restoreDefaultStateCallback: (@Sendable () async -> Void)?
     
     // MARK: - Initialization
     
@@ -161,6 +168,9 @@ actor ScreenTimeService: ScreenTimeManaging {
             print("💡 Users must create focused sessions to access specific apps/categories")
             print("✅ This enforces intentional app usage - the core concept")
             
+            // Update widget with blocking status
+            updateWidgetBlockingStatus(isBlocking: true)
+            
             
         } catch {
             throw AppError.appBlockingFailed("Failed to apply comprehensive restrictions: \(error.localizedDescription)")
@@ -211,6 +221,11 @@ actor ScreenTimeService: ScreenTimeManaging {
         }
         
         do {
+            // Capture current blocking state before starting session
+            // We need this to restore the proper state when the session ends
+            preSessionBlockingState = !currentlyAllowedApps.isEmpty || managedSettingsStore.shield.applications != nil || managedSettingsStore.shield.applicationCategories != nil
+            print("📸 CAPTURED PRE-SESSION STATE: wasBlocking = \(preSessionBlockingState ?? false)")
+
             // SIMPLE SESSION BLOCKING: Block all apps except selected ones
             print("🎯 SESSION BLOCKING: Block all apps except selected ones")
             print("   - Apps to ALLOW: \(tokens.count)")
@@ -262,10 +277,16 @@ actor ScreenTimeService: ScreenTimeManaging {
                     
                     // Check if task was cancelled
                     guard !Task.isCancelled else { return }
-                    
-                    // Automatically re-block all apps
-                    try? await self?.blockAllApps()
-                    print("⏰ SESSION EXPIRED - All apps blocked again")
+
+                    // Restore the original state before the session started
+                    if let callback = await self?.restoreDefaultStateCallback {
+                        await callback()
+                        print("⏰ SESSION EXPIRED - Restored original Intentions state")
+                    } else {
+                        // Fallback to blockAllApps if no callback is set
+                        try? await self?.blockAllApps()
+                        print("⏰ SESSION EXPIRED - Fallback to blocking all apps")
+                    }
                 } catch {
                     // Task.sleep can throw if cancelled
                     return
@@ -300,6 +321,9 @@ actor ScreenTimeService: ScreenTimeManaging {
         do {
             managedSettingsStore.clearAllSettings()
             print("✅ All Screen Time restrictions removed - apps are now accessible")
+            
+            // Update widget with blocking status
+            updateWidgetBlockingStatus(isBlocking: false)
         } catch {
             throw AppError.appBlockingFailed("Failed to clear restrictions: \(error.localizedDescription)")
         }
@@ -357,6 +381,12 @@ actor ScreenTimeService: ScreenTimeManaging {
     func setCategoryMappingService(_ service: CategoryMappingService) async {
         categoryMappingService = service
         print("🗂️ Category mapping service configured")
+    }
+
+    /// Set callback to restore default state when sessions end
+    func setRestoreDefaultStateCallback(_ callback: @escaping @Sendable () async -> Void) async {
+        restoreDefaultStateCallback = callback
+        print("✅ SCREEN TIME: Default state restore callback configured")
     }
     
     /// Remove all system apps (for testing/reset purposes)
@@ -449,6 +479,49 @@ actor ScreenTimeService: ScreenTimeManaging {
         }
         
         print("✅ Smart category blocking applied")
+    }
+    
+    // MARK: - Widget Data Sharing
+    
+    /// Update widget with current blocking status
+    private func updateWidgetBlockingStatus(isBlocking: Bool) {
+        // Use shared UserDefaults for communication with widget extension
+        let appGroupId = "group.oh.Intentions"
+        let sharedDefaults = UserDefaults(suiteName: appGroupId) ?? UserDefaults.standard
+        
+        print("📱 WIDGET DATA: Attempting to update widget status...")
+        print("📱 WIDGET DATA: App Group ID: \(appGroupId)")
+        print("📱 WIDGET DATA: Shared defaults available: \(sharedDefaults != UserDefaults.standard)")
+        
+        // Set the data
+        sharedDefaults.set(isBlocking, forKey: "intentions.widget.blockingStatus")
+        sharedDefaults.set(Date(), forKey: "intentions.widget.lastUpdate")
+        
+        // Force synchronization
+        sharedDefaults.synchronize()
+        
+        // Verify the data was set
+        let verifyStatus = sharedDefaults.bool(forKey: "intentions.widget.blockingStatus")
+        let verifyDate = sharedDefaults.object(forKey: "intentions.widget.lastUpdate") as? Date
+        
+        print("📱 WIDGET DATA: Set blocking status to \(isBlocking)")
+        print("📱 WIDGET DATA: Verification read: status=\(verifyStatus), date=\(verifyDate?.description ?? "nil")")
+        
+        // Also try setting in standard UserDefaults as fallback
+        UserDefaults.standard.set(isBlocking, forKey: "intentions.widget.blockingStatus")
+        UserDefaults.standard.set(Date(), forKey: "intentions.widget.lastUpdate")
+        print("📱 WIDGET DATA: Also set in standard UserDefaults as fallback")
+        
+        // Force widget timeline refresh with multiple strategies
+        print("📱 WIDGET DATA: Forcing widget timeline refresh...")
+        
+        // Strategy 1: Reload all timelines
+        WidgetCenter.shared.reloadAllTimelines()
+        
+        // Strategy 2: Reload specific widget kind
+        WidgetCenter.shared.reloadTimelines(ofKind: "IntentionsWidget")
+        
+        print("📱 WIDGET DATA: Requested aggressive widget timeline reload")
     }
     
 }

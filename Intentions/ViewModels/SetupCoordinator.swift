@@ -95,6 +95,21 @@ final class SetupCoordinator: Sendable {
         shouldShowSetup = true
         print("🔄 SETUP: Forced setup flow requested")
     }
+
+    /// Reset setup state to force a complete re-run (for Settings navigation)
+    func resetSetupStateForRerun() {
+        // Temporarily set the state to indicate setup is not sufficient
+        if let currentState = setupState {
+            let resetState = SetupState(
+                screenTimeAuthorized: false,  // Force re-authorization
+                categoryMappingCompleted: false,  // Force re-mapping
+                setupVersion: currentState.setupVersion
+            )
+            setupState = resetState
+            shouldShowSetup = true
+            print("🔄 SETUP: Reset state for forced re-run")
+        }
+    }
     
     /// Complete a setup step and update state
     func completeSetupStep(_ step: SetupStep) async {

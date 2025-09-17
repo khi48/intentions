@@ -70,18 +70,18 @@ final class CategoryMappingService: Sendable {
         
         var iconName: String {
             switch self {
-            case .social: return "person.2.fill"
+            case .social: return "bubble.left.and.bubble.right.fill"
             case .games: return "gamecontroller.fill"
-            case .entertainment: return "tv.fill"
-            case .creativity: return "paintbrush.fill"
-            case .education: return "graduationcap.fill"
-            case .healthFitness: return "figure.walk"
-            case .informationReading: return "book.fill"
-            case .productivityFinance: return "briefcase.fill"
-            case .shoppingFood: return "cart.fill"
-            case .travel: return "airplane"
-            case .utilities: return "wrench.and.screwdriver.fill"
-            case .other: return "questionmark.folder.fill"
+            case .entertainment: return "play.rectangle.fill"
+            case .creativity: return "paintbrush.pointed.fill"
+            case .education: return "book.closed.fill"
+            case .healthFitness: return "heart.fill"
+            case .informationReading: return "newspaper.fill"
+            case .productivityFinance: return "chart.line.uptrend.xyaxis"
+            case .shoppingFood: return "bag.fill"
+            case .travel: return "car.fill"
+            case .utilities: return "gearshape.fill"
+            case .other: return "folder.fill"
             }
         }
     }
@@ -196,18 +196,20 @@ final class CategoryMappingService: Sendable {
     private func updateSetupCompletion() {
         let wasCompleted = isSetupCompleted
         
-        // Only mark as completed if user has actually mapped a significant number of categories
-        // AND has actually saved app mappings (not just empty selections)
+        // Require ALL categories to be mapped for complete setup
+        let totalCategoriesCount = AppCategory.allCases.count
+        let completedCategoriesCount = completedCategories.count
         let totalMappedApps = categoryToAppsMapping.values.reduce(0) { $0 + $1.count }
-        let minimumCategoriesRequired = 3  // Require at least 3 categories to be mapped
-        let minimumAppsRequired = 10       // Require at least 10 total apps to be mapped
+        let minimumAppsRequired = 5  // Require at least 5 total apps to be mapped (ensures real mapping occurred)
         
-        isSetupCompleted = completedCategories.count >= minimumCategoriesRequired && 
+        isSetupCompleted = completedCategoriesCount == totalCategoriesCount && 
                           totalMappedApps >= minimumAppsRequired
         
         if !wasCompleted && isSetupCompleted {
-            print("🎉 SETUP COMPLETE: \(completedCategories.count) categories and \(totalMappedApps) apps mapped!")
+            print("🎉 SETUP COMPLETE: All \(completedCategoriesCount) categories and \(totalMappedApps) apps mapped!")
             printCompleteMappingSummary()
+        } else if !isSetupCompleted {
+            print("📋 SETUP PROGRESS: \(completedCategoriesCount)/\(totalCategoriesCount) categories completed (\(totalMappedApps) apps)")
         }
     }
     

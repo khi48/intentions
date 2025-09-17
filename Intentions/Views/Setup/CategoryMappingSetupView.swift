@@ -17,7 +17,6 @@ struct CategoryMappingSetupView: View {
     @State private var showingFamilyActivityPicker = false
     @State private var currentSelection = FamilyActivitySelection(includeEntireCategory: true)
     @State private var errorCategories: Set<CategoryMappingService.AppCategory> = []
-    @State private var showingErrorAlert = false
     @State private var isProcessingSelection = false
     
     let onComplete: (CategoryMappingService) -> Void
@@ -92,9 +91,6 @@ struct CategoryMappingSetupView: View {
                                 errorCategories.insert(category)
                                 currentCategory = nil
                                 
-                                if category == .shoppingFood {
-                                    showingErrorAlert = true
-                                }
                             }
                         }
                 }
@@ -102,16 +98,6 @@ struct CategoryMappingSetupView: View {
         )
         .onChange(of: currentSelection) { oldSelection, newSelection in
             handleCategorySelection(newSelection)
-        }
-        .alert("Category Mapping Issue", isPresented: $showingErrorAlert) {
-            Button("Continue Without This Category") { }
-            Button("Try Again") {
-                if let category = errorCategories.first(where: { $0 == .shoppingFood }) {
-                    startCategorySelection(category)
-                }
-            }
-        } message: {
-            Text("The Shopping & Food category experienced technical issues. You can continue without mapping this category or try again. The app will work fine either way.")
         }
     }
     
@@ -127,7 +113,7 @@ struct CategoryMappingSetupView: View {
                 .font(.title)
                 .fontWeight(.bold)
             
-            Text("To provide intelligent app blocking, we need to understand which apps belong to which categories. Please select each category individually when prompted.")
+            Text("To provide intelligent app blocking, we need to understand which apps belong to which categories. You must complete mapping for all categories to proceed. Please select each category individually when prompted.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -355,10 +341,6 @@ struct CategoryMappingSetupView: View {
             currentCategory = nil
             print("🔧 STATE: Cleared currentCategory due to empty selection")
             
-            // Show helpful alert for known problematic categories
-            if category == .shoppingFood {
-                showingErrorAlert = true
-            }
         } else {
             print("🔄 IGNORED: Empty selection - processing=\(isProcessingSelection), pickerShowing=\(showingFamilyActivityPicker)")
         }

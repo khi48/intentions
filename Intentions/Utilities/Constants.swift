@@ -9,6 +9,13 @@ import Foundation
 
 enum AppConstants {
     
+    // MARK: - Widget Sharing
+    enum Widget {
+        /// UserDefaults keys for sharing data with widgets
+        static let blockingStatusKey = "intentions.widget.blockingStatus"
+        static let lastUpdateKey = "intentions.widget.lastUpdate"
+    }
+    
     // MARK: - Session Management
     enum Session {
         /// Default session duration (30 minutes)

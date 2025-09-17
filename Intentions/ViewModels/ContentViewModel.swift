@@ -130,9 +130,17 @@ final class ContentViewModel: Sendable {
                     
                     // Configure category mapping service for intelligent blocking
                     await screenTimeService.setCategoryMappingService(categoryMappingService)
-                    
+
+                    // Configure restore callback for session expiration
+                    await screenTimeService.setRestoreDefaultStateCallback { [weak self] in
+                        await self?.applyDefaultBlocking()
+                    }
+
                     // Apply blocking only if schedule is currently active (after cleanup)
                     await applyScheduleBasedBlocking()
+                    
+                    // Test widget communication immediately
+                    await testWidgetCommunication()
                 } else {
                     print("❌ CONTENT VM: Authorization not approved (\(authorizationStatus)) - deferring ScreenTime initialization to setup flow")
                 }
@@ -544,7 +552,12 @@ final class ContentViewModel: Sendable {
                     
                     // Configure category mapping service for intelligent blocking
                     await screenTimeService.setCategoryMappingService(categoryMappingService)
-                    
+
+                    // Configure restore callback for session expiration
+                    await screenTimeService.setRestoreDefaultStateCallback { [weak self] in
+                        await self?.applyDefaultBlocking()
+                    }
+
                     // Apply blocking based on current schedule
                     await applyScheduleBasedBlocking()
                 } else {
@@ -601,6 +614,37 @@ final class ContentViewModel: Sendable {
     func notifyAppGroupsChanged() {
         appGroupsDidChange = UUID()
         print("📢 CONTENT VM: App groups changed notification sent")
+    }
+    
+    /// Test widget communication by manually writing data
+    private func testWidgetCommunication() async {
+        print("🧪 WIDGET TEST: Starting widget communication test")
+        
+        let appGroupId = "group.oh.Intentions"
+        let sharedDefaults = UserDefaults(suiteName: appGroupId) ?? UserDefaults.standard
+        
+        // Write test data
+        let testStatus = true
+        let testDate = Date()
+        
+        // Try shared UserDefaults
+        sharedDefaults.set(testStatus, forKey: "intentions.widget.blockingStatus")
+        sharedDefaults.set(testDate, forKey: "intentions.widget.lastUpdate")
+        sharedDefaults.synchronize()
+        
+        // Also try standard UserDefaults
+        UserDefaults.standard.set(testStatus, forKey: "intentions.widget.blockingStatus")
+        UserDefaults.standard.set(testDate, forKey: "intentions.widget.lastUpdate")
+        UserDefaults.standard.synchronize()
+        
+        print("🧪 WIDGET TEST: Wrote test data - status: \(testStatus), date: \(testDate)")
+        print("🧪 WIDGET TEST: Shared defaults: \(sharedDefaults != UserDefaults.standard)")
+        
+        // Verify we can read it back
+        let verifyShared = sharedDefaults.bool(forKey: "intentions.widget.blockingStatus")
+        let verifyStandard = UserDefaults.standard.bool(forKey: "intentions.widget.blockingStatus")
+        
+        print("🧪 WIDGET TEST: Verification - shared: \(verifyShared), standard: \(verifyStandard)")
     }
 }
 

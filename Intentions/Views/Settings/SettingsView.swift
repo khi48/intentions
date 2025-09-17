@@ -13,10 +13,9 @@ import ManagedSettings
 
 enum SettingsDestination: Hashable, CaseIterable {
     case notifications
-    case privacy  
+    case privacy
     case dataManagement
     case about
-    case categoryMappingSetup
     case setupFlow
     
     // Better practice: Include presentation metadata in the enum
@@ -26,7 +25,6 @@ enum SettingsDestination: Hashable, CaseIterable {
         case .privacy: return "Privacy"
         case .dataManagement: return "Data Management"
         case .about: return "About"
-        case .categoryMappingSetup: return "App Category Mapping"
         case .setupFlow: return "App Setup"
         }
     }
@@ -37,13 +35,13 @@ enum SettingsDestination: Hashable, CaseIterable {
         case .privacy: return "hand.raised.fill"
         case .dataManagement: return "externaldrive.fill"
         case .about: return "info.circle.fill"
-        case .categoryMappingSetup: return "list.bullet.rectangle"
         case .setupFlow: return "gear.badge.checkmark"
         }
     }
 }
 
 // MARK: - Supporting Views
+
 
 struct ScheduleDetailsRow: View {
     let title: String
@@ -206,14 +204,13 @@ struct SettingsView: View {
                         DataManagementView()
                     case .about:
                         AboutView()
-                    case .categoryMappingSetup:
-                        CategoryMappingSetupView { mappingService in
-                            // Handle completion in navigation context
-                            print("Navigation: Category mapping setup completed")
-                        }
                     case .setupFlow:
                         if let coordinator = setupCoordinator {
-                            SetupFlowView(setupCoordinator: coordinator) {
+                            SetupFlowView(
+                                setupCoordinator: coordinator,
+                                embedInNavigationView: false,
+                                forceSetup: true
+                            ) {
                                 // Handle completion in navigation context
                                 print("Navigation: Setup flow completed")
                                 navigationManager.resetSettingsNavigation()
@@ -305,7 +302,7 @@ struct SettingsView: View {
             // Schedule Toggle
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Active Schedule")
+                    Text("Intentions State")
                         .font(.headline)
                     
                     Text("Control when Intentions is active")
@@ -421,14 +418,6 @@ struct SettingsView: View {
                     title: SettingsDestination.setupFlow.title,
                     subtitle: "Configure app permissions and category mappings",
                     icon: SettingsDestination.setupFlow.systemImage
-                )
-            }
-            
-            NavigationLink(value: SettingsDestination.categoryMappingSetup) {
-                SettingsRow(
-                    title: SettingsDestination.categoryMappingSetup.title,
-                    subtitle: "Map apps to categories for intelligent blocking",
-                    icon: SettingsDestination.categoryMappingSetup.systemImage
                 )
             }
         } header: {
