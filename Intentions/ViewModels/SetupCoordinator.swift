@@ -71,7 +71,6 @@ final class SetupCoordinator: Sendable {
                 )
                 // Save the initial state immediately
                 await stateManager.saveSetupState(actualState)
-                print("✅ SETUP: Created and saved initial setup state")
             }
             
             // Determine if setup is required
@@ -83,17 +82,12 @@ final class SetupCoordinator: Sendable {
             // Update state
             setupState = actualState
             shouldShowSetup = setupRequired
-            
-            print("🔍 SETUP VALIDATION: Setup required: \(setupRequired)")
-            print("   📊 Current state: ScreenTime=\(actualState.screenTimeAuthorized), Mapping=\(actualState.categoryMappingCompleted)")
-            print("   📊 Setup sufficient: \(actualState.isSetupSufficient)")
         }
     }
     
     /// Force setup to be shown (for manual triggers from Settings)
     func forceSetupFlow() {
         shouldShowSetup = true
-        print("🔄 SETUP: Forced setup flow requested")
     }
 
     /// Reset setup state to force a complete re-run (for Settings navigation)
@@ -107,27 +101,22 @@ final class SetupCoordinator: Sendable {
             )
             setupState = resetState
             shouldShowSetup = true
-            print("🔄 SETUP: Reset state for forced re-run")
         }
     }
     
     /// Complete a setup step and update state
     func completeSetupStep(_ step: SetupStep) async {
         guard let currentState = setupState else {
-            print("❌ SETUP: Cannot complete step - no current state")
             return
         }
-        
+
         let updatedState = await updateStateForCompletedStep(step, currentState: currentState)
         setupState = updatedState
         await stateManager.saveSetupState(updatedState)
-        
-        print("✅ SETUP: Completed step \(step.displayName)")
-        
+
         // Check if setup is now complete
         if updatedState.isSetupSufficient {
             shouldShowSetup = false
-            print("🎉 SETUP: Setup is now complete!")
         }
     }
     
@@ -137,7 +126,6 @@ final class SetupCoordinator: Sendable {
         await stateManager.clearSetupState()
         setupState = nil
         shouldShowSetup = true
-        print("🔄 SETUP: Setup state reset")
     }
     
     // MARK: - Private Methods
@@ -151,7 +139,7 @@ final class SetupCoordinator: Sendable {
             return try await operation()
         } catch {
             errorMessage = error.localizedDescription
-            print("❌ SETUP VALIDATION: Error: \(error)")
+            print("SETUP VALIDATION ERROR: \(error)")
             throw error
         }
     }
@@ -163,22 +151,15 @@ final class SetupCoordinator: Sendable {
         // If authorization status is "Not Determined", double-check after a brief delay
         // This handles cases where the system needs time to return the correct status
         if authStatus == .notDetermined {
-            print("🔄 SETUP: Authorization status is 'Not Determined', rechecking...")
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             let recheckStatus = await screenTimeService.authorizationStatus()
             if recheckStatus != .notDetermined {
                 authStatus = recheckStatus
-                print("✅ SETUP: Updated authorization status to: \(authStatus)")
             }
         }
         
         let screenTimeAuth = authStatus == .approved
         let categoryMappingComplete = categoryMappingService.isTrulySetupCompleted
-        
-        print("🔍 SYSTEM STATUS DEBUG:")
-        print("   - Screen Time authorized: \(screenTimeAuth)")
-        print("   - Category mapping isTrulySetupCompleted: \(categoryMappingComplete)")
-        print("   - Category mapping isSetupCompleted: \(categoryMappingService.isSetupCompleted)")
         
         return SystemStatus(
             screenTimeAuthorized: screenTimeAuth,
@@ -192,20 +173,17 @@ final class SetupCoordinator: Sendable {
         
         // If setup version is outdated
         if !savedState.isSetupCurrent {
-            print("🔄 SETUP: Setup version outdated - setup required")
             return true
         }
-        
+
         // If critical requirements have changed
         if savedState.screenTimeAuthorized != currentStatus.screenTimeAuthorized {
-            print("🔐 SETUP: Screen Time authorization changed - setup required")
             return true
         }
-        
-        
+
+
         // If setup was never completed properly
         if !savedState.isSetupSufficient {
-            print("❌ SETUP: Setup never completed - setup required")
             return true
         }
         
@@ -226,9 +204,6 @@ final class SetupCoordinator: Sendable {
             
         case .categoryMapping:
             let completed = categoryMappingService.isTrulySetupCompleted
-            print("🔍 UPDATING CATEGORY MAPPING STATE:")
-            print("   - Service isTrulySetupCompleted: \(completed)")
-            print("   - Service isSetupCompleted: \(categoryMappingService.isSetupCompleted)")
             return currentState.withCategoryMappingCompleted(completed)
         }
     }
@@ -273,12 +248,6 @@ extension SetupCoordinator {
         if !state.categoryMappingCompleted {
             pending.append(.categoryMapping)
         }
-        
-        print("🔍 SETUP DEBUG: Pending steps determined")
-        print("   - Setup sufficient: \(state.isSetupSufficient)")
-        print("   - Screen Time authorized: \(state.screenTimeAuthorized)")
-        print("   - Category mapping completed: \(state.categoryMappingCompleted)")
-        print("   - Pending steps: \(pending.map { $0.displayName })")
         
         return pending
     }

@@ -51,32 +51,28 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// Must be called after creating the service before any other operations
     /// Blocking should be applied separately based on schedule settings
     func initialize() async throws {
-        guard !isInitialized else { 
+        guard !isInitialized else {
             throw AppError.serviceUnavailable("ScreenTimeService already initialized")
         }
-        
+
         // Check current authorization status first
         let currentStatus = await authorizationStatus()
-        print("🔐 Current authorization status: \(currentStatus)")
-        
+
         let authorized: Bool
         if currentStatus == .approved {
             // Already authorized - no need to request again
             authorized = true
-            print("✅ Already authorized - skipping authorization request")
         } else {
             // Need to request authorization
             authorized = await requestAuthorization()
-            print("🔐 Authorization request result: \(authorized)")
         }
-        
+
         guard authorized else {
             throw AppError.screenTimeAuthorizationFailed
         }
-        
+
         // Mark as initialized - blocking will be applied separately by ContentViewModel
         isInitialized = true
-        print("✅ ScreenTimeService initialized - ready for schedule-based blocking")
     }
     
     /// Check if the service has been properly initialized
@@ -122,56 +118,42 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// Users must explicitly select which apps to temporarily allow
     func blockAllApps() async throws {
         try ensureInitialized()
-        
+
         let status = await authorizationStatus()
         guard status == .approved else {
             throw AppError.screenTimeAuthorizationFailed
         }
-        
+
         do {
-            print("🔄 BLOCK ALL APPS: Starting blocking process...")
-            
             // Clear allowed apps tracking - nothing is allowed initially
             currentlyAllowedApps.removeAll()
-            print("   ✅ Cleared allowed apps tracking")
-            
+
             // Cancel any existing session expiration
             sessionExpirationTask?.cancel()
             sessionExpirationTask = nil
-            print("   ✅ Cancelled existing session expiration")
-            
+
             // Clear any existing restrictions to reset state
-            print("   🧹 Clearing all existing settings...")
             managedSettingsStore.clearAllSettings()
-            print("   ✅ All settings cleared")
-            
+
             // Add a small delay to ensure clearAllSettings() completes
             try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-            print("   ⏱️ Wait completed - now applying new restrictions")
-            
+
             // INTENTIONS CORE CONCEPT: Block everything by default
             // Since we can't predetermine all app tokens, we use a different approach:
             // 1. Block all web content by default
             // 2. Use app category blocking for major categories
             // 3. Allow users to create specific exemptions via FamilyActivityPicker
-            
+
             // Block all web content by default - this covers browsers and web-based apps
             managedSettingsStore.webContent.blockedByFilter = .all()
-            print("   🌐 Web content blocking applied")
-            
+
             // Block major distracting app categories by default
             // Users will need to explicitly allow categories they need via FamilyActivityPicker
             managedSettingsStore.shield.applicationCategories = .all()
-            print("   🛡️ Application category shields applied")
-            
-            print("🚫 INTENTIONS: DEFAULT BLOCKING ENABLED")
-            print("💡 Users must create focused sessions to access specific apps/categories")
-            print("✅ This enforces intentional app usage - the core concept")
-            
+
             // Update widget with blocking status
             updateWidgetBlockingStatus(isBlocking: true)
-            
-            
+
         } catch {
             throw AppError.appBlockingFailed("Failed to apply comprehensive restrictions: \(error.localizedDescription)")
         }
@@ -199,51 +181,35 @@ actor ScreenTimeService: ScreenTimeManaging {
     
     func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken> = [], duration: TimeInterval) async throws {
         try ensureInitialized()
-        
+
         let status = await authorizationStatus()
-        print("🔐 AUTHORIZATION CHECK: Status is \(status)")
         guard status == .approved else {
-            print("❌ AUTHORIZATION FAILED: Cannot block apps without permission")
             throw AppError.screenTimeAuthorizationFailed
         }
-        print("✅ AUTHORIZATION OK: Proceeding with blocking")
-        
+
         guard duration >= AppConstants.Session.minimumDuration else {
             throw AppError.validationFailed("duration", reason: "Must be at least \(AppConstants.Session.minimumDuration.formattedMinutesSeconds)")
         }
-        
+
         guard duration <= AppConstants.Session.maximumDuration else {
             throw AppError.validationFailed("duration", reason: "Cannot exceed \(AppConstants.Session.maximumDuration.formattedHoursMinutes)")
         }
-        
+
         guard !tokens.isEmpty || !categories.isEmpty else {
             throw AppError.validationFailed("applications", reason: "At least one application or category must be specified")
         }
-        
+
         do {
             // Capture current blocking state before starting session
             // We need this to restore the proper state when the session ends
             preSessionBlockingState = !currentlyAllowedApps.isEmpty || managedSettingsStore.shield.applications != nil || managedSettingsStore.shield.applicationCategories != nil
-            print("📸 CAPTURED PRE-SESSION STATE: wasBlocking = \(preSessionBlockingState ?? false)")
 
-            // SIMPLE SESSION BLOCKING: Block all apps except selected ones
-            print("🎯 SESSION BLOCKING: Block all apps except selected ones")
-            print("   - Apps to ALLOW: \(tokens.count)")
-            print("   - Categories to ALLOW: \(categories.count)")
-            
-            // Step 1: Clear any existing restrictions to start fresh
-            print("   🧹 Clearing all settings for fresh session start...")
+            // Clear any existing restrictions to start fresh
             managedSettingsStore.clearAllSettings()
-            
+
             // Small delay to ensure clear completes before applying new settings
             try await Task.sleep(nanoseconds: 50_000_000) // 0.05 seconds
-            print("   ✅ Settings cleared, applying session restrictions...")
-            
-            // Step 2: Implement proper "allow selected, block others" logic
-            print("🎯 SMART SESSION BLOCKING:")
-            print("   - Apps to allow: \(tokens.count)")
-            print("   - Categories to allow: \(categories.count)")
-            
+
             if let mappingService = categoryMappingService {
                 // Use sophisticated blocking - determine which categories contain selected apps
                 await applySmartCategoryBlocking(allowedCategoryTokens: categories, allowedAppTokens: tokens, mappingService: mappingService)
@@ -257,42 +223,37 @@ actor ScreenTimeService: ScreenTimeManaging {
                     managedSettingsStore.shield.applications = nil
                 }
             }
-            
+
             // Allow web content during focused session (apps are still restricted by categories)
             managedSettingsStore.webContent.blockedByFilter = nil
-            print("🌐 Web content allowed during session")
-            
-            print("✅ SESSION BLOCKING APPLIED - non-selected apps should now be blocked")
-            
+
             // Update our tracking
             currentlyAllowedApps = tokens
-            
+
             // Cancel any existing expiration task
             sessionExpirationTask?.cancel()
-            
+
             // Schedule automatic re-blocking after duration
             sessionExpirationTask = Task { [weak self] in
                 do {
                     try await Task.sleep(nanoseconds: duration.nanoseconds)
-                    
+
                     // Check if task was cancelled
                     guard !Task.isCancelled else { return }
 
                     // Restore the original state before the session started
                     if let callback = await self?.restoreDefaultStateCallback {
                         await callback()
-                        print("⏰ SESSION EXPIRED - Restored original Intentions state")
                     } else {
                         // Fallback to blockAllApps if no callback is set
                         try? await self?.blockAllApps()
-                        print("⏰ SESSION EXPIRED - Fallback to blocking all apps")
                     }
                 } catch {
                     // Task.sleep can throw if cancelled
                     return
                 }
             }
-            
+
         } catch {
             throw AppError.appBlockingFailed("Failed to allow apps: \(error.localizedDescription)")
         }
@@ -320,8 +281,7 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Actually remove all restrictions (clear managed settings)
         do {
             managedSettingsStore.clearAllSettings()
-            print("✅ All Screen Time restrictions removed - apps are now accessible")
-            
+
             // Update widget with blocking status
             updateWidgetBlockingStatus(isBlocking: false)
         } catch {
@@ -356,8 +316,6 @@ actor ScreenTimeService: ScreenTimeManaging {
         } catch {
             // Delay interrupted - continue
         }
-        
-        print("🧹 ScreenTimeService cleanup completed")
     }
     
     func isAppAllowed(_ token: sending ApplicationToken) async -> Bool {
@@ -380,13 +338,11 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// Set the category mapping service for intelligent app blocking
     func setCategoryMappingService(_ service: CategoryMappingService) async {
         categoryMappingService = service
-        print("🗂️ Category mapping service configured")
     }
 
     /// Set callback to restore default state when sessions end
     func setRestoreDefaultStateCallback(_ callback: @escaping @Sendable () async -> Void) async {
         restoreDefaultStateCallback = callback
-        print("✅ SCREEN TIME: Default state restore callback configured")
     }
     
     /// Remove all system apps (for testing/reset purposes)
@@ -469,7 +425,7 @@ actor ScreenTimeService: ScreenTimeManaging {
                 } else {
                     let prioritizedApps = prioritizeAppsForBlocking(appsToBlock, limit: 50)
                     managedSettingsStore.shield.applications = prioritizedApps
-                    print("⚠️ \(appsToBlock.count - prioritizedApps.count) apps unblocked due to API limit")
+                    // Note: Some apps may remain unblocked due to API limit
                 }
             } else {
                 managedSettingsStore.shield.applications = nil
@@ -477,8 +433,6 @@ actor ScreenTimeService: ScreenTimeManaging {
         } else {
             managedSettingsStore.shield.applications = nil
         }
-        
-        print("✅ Smart category blocking applied")
     }
     
     // MARK: - Widget Data Sharing
@@ -488,40 +442,21 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Use shared UserDefaults for communication with widget extension
         let appGroupId = "group.oh.Intentions"
         let sharedDefaults = UserDefaults(suiteName: appGroupId) ?? UserDefaults.standard
-        
-        print("📱 WIDGET DATA: Attempting to update widget status...")
-        print("📱 WIDGET DATA: App Group ID: \(appGroupId)")
-        print("📱 WIDGET DATA: Shared defaults available: \(sharedDefaults != UserDefaults.standard)")
-        
+
         // Set the data
         sharedDefaults.set(isBlocking, forKey: "intentions.widget.blockingStatus")
         sharedDefaults.set(Date(), forKey: "intentions.widget.lastUpdate")
-        
+
         // Force synchronization
         sharedDefaults.synchronize()
-        
-        // Verify the data was set
-        let verifyStatus = sharedDefaults.bool(forKey: "intentions.widget.blockingStatus")
-        let verifyDate = sharedDefaults.object(forKey: "intentions.widget.lastUpdate") as? Date
-        
-        print("📱 WIDGET DATA: Set blocking status to \(isBlocking)")
-        print("📱 WIDGET DATA: Verification read: status=\(verifyStatus), date=\(verifyDate?.description ?? "nil")")
-        
+
         // Also try setting in standard UserDefaults as fallback
         UserDefaults.standard.set(isBlocking, forKey: "intentions.widget.blockingStatus")
         UserDefaults.standard.set(Date(), forKey: "intentions.widget.lastUpdate")
-        print("📱 WIDGET DATA: Also set in standard UserDefaults as fallback")
-        
+
         // Force widget timeline refresh with multiple strategies
-        print("📱 WIDGET DATA: Forcing widget timeline refresh...")
-        
-        // Strategy 1: Reload all timelines
         WidgetCenter.shared.reloadAllTimelines()
-        
-        // Strategy 2: Reload specific widget kind
         WidgetCenter.shared.reloadTimelines(ofKind: "IntentionsWidget")
-        
-        print("📱 WIDGET DATA: Requested aggressive widget timeline reload")
     }
     
 }

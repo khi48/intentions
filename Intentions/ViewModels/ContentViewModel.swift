@@ -73,10 +73,8 @@ final class ContentViewModel: Sendable {
         
         if let providedService = dataService {
             self.dataService = providedService
-            print("🗄️ CONTENT VM: Using provided data service")
         } else {
             self.dataService = try DataPersistenceService()
-            print("✅ CONTENT VM: Successfully initialized real DataPersistenceService")
         }
         
         // Initialize setup coordinator
@@ -94,19 +92,15 @@ final class ContentViewModel: Sendable {
             do {
                 // Check authorization status
                 authorizationStatus = await screenTimeService.authorizationStatus()
-                print("🔐 CONTENT VM: Initial authorization status: \(authorizationStatus)")
-                
+
                 // If status is "Not Determined", double-check after a brief delay
                 // This handles cases where the system needs time to return the correct status
                 if authorizationStatus == .notDetermined {
-                    print("🔄 CONTENT VM: Status is 'Not Determined', rechecking after delay...")
                     try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                     let recheckStatus = await screenTimeService.authorizationStatus()
-                    print("🔐 CONTENT VM: Recheck authorization status: \(recheckStatus)")
-                    
+
                     if recheckStatus != .notDetermined {
                         authorizationStatus = recheckStatus
-                        print("✅ CONTENT VM: Updated authorization status to: \(authorizationStatus)")
                     }
                 }
                 
@@ -118,16 +112,14 @@ final class ContentViewModel: Sendable {
                 
                 // Clean up any stale sessions from previous app runs FIRST
                 if activeSession == nil {
-                    print("🧹 No active session found - cleaning up any stale sessions from previous runs...")
                     await cleanupOldSessions()
                 }
                 
                 // Only initialize Screen Time service and proceed if already authorized
                 if authorizationStatus == .approved {
-                    print("✅ CONTENT VM: Authorization already approved - proceeding with ScreenTime initialization")
                     // Initialize the Screen Time service now that we're authorized
                     try await screenTimeService.initialize()
-                    
+
                     // Configure category mapping service for intelligent blocking
                     await screenTimeService.setCategoryMappingService(categoryMappingService)
 
@@ -138,11 +130,9 @@ final class ContentViewModel: Sendable {
 
                     // Apply blocking only if schedule is currently active (after cleanup)
                     await applyScheduleBasedBlocking()
-                    
+
                     // Test widget communication immediately
                     await testWidgetCommunication()
-                } else {
-                    print("❌ CONTENT VM: Authorization not approved (\(authorizationStatus)) - deferring ScreenTime initialization to setup flow")
                 }
                 
                 // Check if comprehensive setup is needed
@@ -159,15 +149,13 @@ final class ContentViewModel: Sendable {
         do {
             if let savedSettings = try await dataService.loadScheduleSettings() {
                 scheduleSettings = savedSettings
-                print("📅 Loaded schedule settings - enabled: \(scheduleSettings.isEnabled), currently active: \(scheduleSettings.isCurrentlyActive)")
             } else {
                 // Use default settings if none exist and save them
                 scheduleSettings = ScheduleSettings()
                 try await dataService.saveScheduleSettings(scheduleSettings)
-                print("📅 No saved schedule settings found - created defaults with isEnabled = \(scheduleSettings.isEnabled)")
             }
         } catch {
-            print("❌ Failed to load schedule settings, using defaults: \(error)")
+            print("Failed to load schedule settings, using defaults: \(error)")
             scheduleSettings = ScheduleSettings()
         }
     }
@@ -175,7 +163,6 @@ final class ContentViewModel: Sendable {
     /// Legacy method - now redirects to unified pipeline
     /// Apply blocking based on current schedule status
     private func applyScheduleBasedBlocking() async {
-        print("🔄 LEGACY: applyScheduleBasedBlocking redirecting to unified pipeline")
         await applyDefaultBlocking()
     }
     
@@ -186,14 +173,11 @@ final class ContentViewModel: Sendable {
             let activeSessions = sessions.filter { $0.isActive }
             
             if activeSessions.count > 1 {
-                print("⚠️ Multiple active sessions detected - cleaning up duplicates")
+                print("Multiple active sessions detected - cleaning up duplicates")
             }
-            
+
             // Use the first active session (if any)
             activeSession = activeSessions.first
-            if activeSession != nil {
-                print("✅ Active session loaded")
-            }
         } catch {
             // Non-critical error - just log it
             print("Failed to load active session: \(error)")
@@ -204,24 +188,19 @@ final class ContentViewModel: Sendable {
     
     /// Update schedule settings and apply blocking accordingly
     func updateScheduleSettings(_ newSettings: ScheduleSettings) async {
-        print("🔧 ContentViewModel updating schedule settings - enabled: \(newSettings.isEnabled), currently active: \(newSettings.isCurrentlyActive)")
         scheduleSettings = newSettings
-        
+
         // Save to persistence
         do {
             try await dataService.saveScheduleSettings(newSettings)
-            print("✅ Schedule settings saved successfully")
         } catch {
-            print("❌ Failed to save schedule settings in ContentViewModel: \(error)")
+            print("Failed to save schedule settings: \(error)")
             await handleError(error)
         }
-        
+
         // Apply blocking based on new schedule
         if authorizationStatus == .approved {
-            print("📱 Applying schedule-based blocking...")
             await applyScheduleBasedBlocking()
-        } else {
-            print("⚠️ Screen Time not authorized, skipping blocking update")
         }
     }
     
@@ -248,9 +227,7 @@ final class ContentViewModel: Sendable {
     
     /// Check if app is ready to use (authorized and initialized)
     var isAppReady: Bool {
-        let ready = authorizationStatus == .approved
-        print("🔍 CONTENT VM: isAppReady check - authorizationStatus: \(authorizationStatus), ready: \(ready)")
-        return ready
+        return authorizationStatus == .approved
     }
     
     // MARK: - Navigation Actions
@@ -316,9 +293,8 @@ final class ContentViewModel: Sendable {
                 
                 // Clear local state
                 activeSession = nil
-                
+
                 // Apply default blocking state (revert to block-all or allow-all based on schedule)
-                print("🔄 Session ended - reverting to default blocking state...")
                 await applyDefaultBlocking()
                 
             } catch {
@@ -340,9 +316,6 @@ final class ContentViewModel: Sendable {
                 // Update local state
                 activeSession = session
                 
-                print("⏰ Session extended by \(extensionTime.formattedMinutesSeconds)")
-                print("📱 New total duration: \(session.duration.formattedMinutesSeconds)")
-                
             } catch {
                 await handleError(error)
             }
@@ -352,36 +325,26 @@ final class ContentViewModel: Sendable {
     /// Clean up any old/stale sessions that might still be running
     private func cleanupOldSessions() async {
         do {
-            print("🔍 Loading all sessions to check for stale active sessions...")
             let allSessions = try await dataService.loadIntentionSessions()
-            
+
             // Find any sessions that are marked as active but shouldn't be
             let staleSessions = allSessions.filter { session in
                 session.isActive && session.id != activeSession?.id
             }
-            
+
             if !staleSessions.isEmpty {
-                print("⚠️ Found \(staleSessions.count) stale active sessions - cleaning up...")
-                
                 // Complete all stale sessions
                 for staleSession in staleSessions {
-                    print("   🧹 Completing stale session: \(staleSession.id)")
                     staleSession.complete()
                     try await dataService.saveIntentionSession(staleSession)
                 }
-                
-                print("✅ All stale sessions cleaned up")
-            } else {
-                print("✅ No stale sessions found - clean state")
             }
-            
+
             // Also ensure ScreenTimeService has no lingering session tasks
-            print("🔧 Ensuring ScreenTimeService session cleanup...")
             await screenTimeService.cleanup()
-            print("✅ ScreenTimeService session cleanup complete")
-            
+
         } catch {
-            print("❌ Error during session cleanup: \(error)")
+            print("Error during session cleanup: \(error)")
             // Don't throw - this is cleanup, shouldn't block the main flow
         }
     }
@@ -406,7 +369,6 @@ final class ContentViewModel: Sendable {
                         allCategories.formUnion(group.categories)
                     }
                 }
-                print("🎯 SESSION BLOCKING: Resolved \(session.requestedAppGroups.count) app groups to \(allApplications.count) apps and \(allCategories.count) categories")
             }
             
             // Apply Screen Time restrictions to allow only the specified apps/categories
@@ -416,15 +378,13 @@ final class ContentViewModel: Sendable {
                 
                 // Then allow only the session apps - this blocks everything else
                 try await screenTimeService.allowApps(allApplications, categories: allCategories, duration: session.duration)
-                print("✅ SESSION BLOCKING: Applied restrictions - allowing \(allApplications.count) apps and \(allCategories.count) categories, blocking all others")
             } else {
-                print("⚠️ SESSION BLOCKING: No apps or categories found - session may not block effectively")
                 // Fallback to default blocking
                 await applyDefaultBlocking()
             }
             
         } catch {
-            print("❌ SESSION BLOCKING: Failed to apply session blocking: \(error)")
+            print("Failed to apply session blocking: \(error)")
             // Fallback to default blocking on error
             await applyDefaultBlocking()
         }
@@ -445,14 +405,13 @@ final class ContentViewModel: Sendable {
                 }
                 
                 if !staleSessions.isEmpty {
-                    print("🧹 DEFAULT BLOCKING: Cleaning up \(staleSessions.count) stale sessions")
                     for staleSession in staleSessions {
                         staleSession.complete()
                         try await dataService.saveIntentionSession(staleSession)
                     }
                 }
             } catch {
-                print("❌ DEFAULT BLOCKING: Error cleaning stale sessions: \(error)")
+                print("Error cleaning stale sessions: \(error)")
             }
             
             // Apply blocking based on schedule
@@ -461,15 +420,13 @@ final class ContentViewModel: Sendable {
             if scheduleSettings.isEnabled && currentlyActive {
                 // Schedule is active - block all apps (default behavior)
                 try await screenTimeService.blockAllApps()
-                print("✅ DEFAULT BLOCKING: Applied block-all (schedule is active)")
             } else {
                 // Schedule is inactive - allow all access
                 try await screenTimeService.allowAllAccess()
-                print("✅ DEFAULT BLOCKING: Applied allow-all (schedule is inactive)")
             }
             
         } catch {
-            print("❌ DEFAULT BLOCKING: Failed to apply default blocking: \(error)")
+            print("Failed to apply default blocking: \(error)")
         }
     }
     
@@ -477,7 +434,6 @@ final class ContentViewModel: Sendable {
     /// Atomic operation: Clean up old sessions and immediately reapply blocking
     /// This prevents any timing gaps where apps might slip through unblocked
     private func cleanupAndReapplyBlocking() async {
-        print("🔄 LEGACY: cleanupAndReapplyBlocking redirecting to unified pipeline")
         await applyDefaultBlocking()
     }
     
@@ -486,22 +442,16 @@ final class ContentViewModel: Sendable {
     /// Check if category mapping setup is required for smart blocking
     /// Check if comprehensive setup flow is required
     private func checkSetupRequired() async {
-        print("🔧 CONTENT VM: Checking setup requirements...")
-        
         // Validate setup state using the coordinator
         await setupCoordinator.validateSetupRequirements()
-        
+
         // Use the coordinator's shouldShowSetup property which handles all the logic
         let needsSetup = setupCoordinator.shouldShowSetup &&
                         !showingIntentionPrompt &&
                         activeSession == nil
-        
-        let setupState = setupCoordinator.setupState
-        print("🔧 CONTENT VM: Setup state sufficient: \(setupState?.isSetupSufficient == true), coordinator says show setup: \(setupCoordinator.shouldShowSetup), final decision: \(needsSetup)")
-        
+
         if needsSetup {
             showingSetupFlow = true
-            print("✅ CONTENT VM: Will show setup flow")
         } else {
             // Fallback to legacy category mapping setup if needed
             checkLegacyCategoryMappingSetupRequired()
@@ -522,15 +472,13 @@ final class ContentViewModel: Sendable {
         
         if needsSetup {
             showingCategoryMappingSetup = true
-            print("⚠️ CONTENT VM: Showing legacy category mapping setup")
         }
     }
     
     /// Handle completion of the unified setup flow
     func completeSetupFlow() {
-        print("✅ SETUP FLOW: Completed successfully")
         showingSetupFlow = false
-        
+
         // Re-initialize the app with the new authorization status
         Task {
             await reinitializeAfterSetup()
@@ -543,13 +491,11 @@ final class ContentViewModel: Sendable {
             do {
                 // Refresh authorization status
                 authorizationStatus = await screenTimeService.authorizationStatus()
-                print("🔐 CONTENT VM: Post-setup authorization status: \(authorizationStatus)")
-                
+
                 // If now authorized, initialize the Screen Time service
                 if authorizationStatus == .approved {
-                    print("✅ CONTENT VM: Now authorized - initializing ScreenTime service")
                     try await screenTimeService.initialize()
-                    
+
                     // Configure category mapping service for intelligent blocking
                     await screenTimeService.setCategoryMappingService(categoryMappingService)
 
@@ -560,12 +506,7 @@ final class ContentViewModel: Sendable {
 
                     // Apply blocking based on current schedule
                     await applyScheduleBasedBlocking()
-                } else {
-                    print("⚠️ CONTENT VM: Still not authorized after setup")
                 }
-                
-                // Don't re-validate setup after completion - setup is already done
-                print("🎉 CONTENT VM: Setup completed, skipping re-validation")
                 
             } catch {
                 await handleError(error)
@@ -575,9 +516,8 @@ final class ContentViewModel: Sendable {
     
     /// Handle completion of category mapping setup
     func completeCategoryMappingSetup(_ mappingService: CategoryMappingService) {
-        print("✅ CATEGORY MAPPING SETUP: Completed successfully")
         showingCategoryMappingSetup = false
-        
+
         // The mapping service is already shared, so smart blocking is now available
         // Future session starts will use the category-based prioritization
     }
@@ -613,38 +553,26 @@ final class ContentViewModel: Sendable {
     /// Notify that app groups have been modified
     func notifyAppGroupsChanged() {
         appGroupsDidChange = UUID()
-        print("📢 CONTENT VM: App groups changed notification sent")
     }
     
     /// Test widget communication by manually writing data
     private func testWidgetCommunication() async {
-        print("🧪 WIDGET TEST: Starting widget communication test")
-        
         let appGroupId = "group.oh.Intentions"
         let sharedDefaults = UserDefaults(suiteName: appGroupId) ?? UserDefaults.standard
-        
+
         // Write test data
         let testStatus = true
         let testDate = Date()
-        
+
         // Try shared UserDefaults
         sharedDefaults.set(testStatus, forKey: "intentions.widget.blockingStatus")
         sharedDefaults.set(testDate, forKey: "intentions.widget.lastUpdate")
         sharedDefaults.synchronize()
-        
+
         // Also try standard UserDefaults
         UserDefaults.standard.set(testStatus, forKey: "intentions.widget.blockingStatus")
         UserDefaults.standard.set(testDate, forKey: "intentions.widget.lastUpdate")
         UserDefaults.standard.synchronize()
-        
-        print("🧪 WIDGET TEST: Wrote test data - status: \(testStatus), date: \(testDate)")
-        print("🧪 WIDGET TEST: Shared defaults: \(sharedDefaults != UserDefaults.standard)")
-        
-        // Verify we can read it back
-        let verifyShared = sharedDefaults.bool(forKey: "intentions.widget.blockingStatus")
-        let verifyStandard = UserDefaults.standard.bool(forKey: "intentions.widget.blockingStatus")
-        
-        print("🧪 WIDGET TEST: Verification - shared: \(verifyShared), standard: \(verifyStandard)")
     }
 }
 

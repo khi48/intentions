@@ -75,22 +75,11 @@ struct CategoryMappingSetupView: View {
                 if showingFamilyActivityPicker {
                     Color.clear
                         .familyActivityPicker(isPresented: $showingFamilyActivityPicker, selection: $currentSelection)
-                        .onAppear {
-                            print("🎛️ PICKER APPEARED: FamilyActivityPicker is now visible")
-                            print("   - Authorization Status: \(AuthorizationCenter.shared.authorizationStatus)")
-                        }
                         .onDisappear {
-                            print("🎛️ PICKER DISAPPEARED: FamilyActivityPicker was dismissed")
-                            print("   - showingFamilyActivityPicker: \(showingFamilyActivityPicker)")
-                            print("   - currentCategory: \(currentCategory?.displayName ?? "nil")")
-                            print("   - isProcessingSelection: \(isProcessingSelection)")
-                            
                             // If picker disappeared without processing selection, mark as failed
                             if let category = currentCategory, !isProcessingSelection {
-                                print("🚫 PICKER DISMISSED: Category mapping failed for \(category.displayName)")
                                 errorCategories.insert(category)
                                 currentCategory = nil
-                                
                             }
                         }
                 }
@@ -243,106 +232,50 @@ struct CategoryMappingSetupView: View {
     // MARK: - Actions
     
     private func startCategorySelection(_ category: CategoryMappingService.AppCategory) {
-        print("\n🚀 STARTING CATEGORY SELECTION: \(category.displayName)")
-        print("📋 Instructions: Please select ONLY the \(category.displayName) category")
-        print("🔍 The picker will open with includeEntireCategory: true")
-        print("✅ This should populate individual app tokens for this category")
-        
-        print("🔧 STATE BEFORE START:")
-        print("   - currentCategory: \(currentCategory?.displayName ?? "nil")")
-        print("   - isProcessingSelection: \(isProcessingSelection)")
-        print("   - showingFamilyActivityPicker: \(showingFamilyActivityPicker)")
-        print("   - currentSelection apps: \(currentSelection.applications.count)")
-        print("   - currentSelection categories: \(currentSelection.categories.count)")
-        
         // Reset state for new selection
         currentCategory = category
         isProcessingSelection = false
         errorCategories.remove(category) // Clear any previous error state
-        
+
         // Clear the old selection and show picker
         currentSelection = FamilyActivitySelection(includeEntireCategory: true)
         showingFamilyActivityPicker = true
-        
-        print("🔧 STATE AFTER START:")
-        print("   - currentCategory: \(currentCategory?.displayName ?? "nil")")
-        print("   - isProcessingSelection: \(isProcessingSelection)")
-        print("   - showingFamilyActivityPicker: \(showingFamilyActivityPicker)")
     }
     
     private func handleCategorySelection(_ selection: FamilyActivitySelection) {
-        print("\n📱 HANDLE CATEGORY SELECTION CALLED")
-        print("🔧 SELECTION STATE:")
-        print("   - Selection apps: \(selection.applications.count)")
-        print("   - Selection categories: \(selection.categories.count)")
-        print("   - currentCategory: \(currentCategory?.displayName ?? "nil")")
-        print("   - isProcessingSelection: \(isProcessingSelection)")
-        print("   - showingFamilyActivityPicker: \(showingFamilyActivityPicker)")
-        
         // Prevent multiple processing of the same selection
         guard !isProcessingSelection else {
-            print("🔄 SELECTION: Already processing, ignoring duplicate")
             return
         }
-        
+
         guard let category = currentCategory else {
-            print("❌ ERROR: No current category set for selection")
-            print("🔧 DEBUG: This suggests currentCategory was cleared unexpectedly")
+            print("ERROR: No current category set for selection")
             return
         }
-        
-        // Allow processing even if picker is closing, but prevent duplicate processing
-        // The picker might set showingFamilyActivityPicker to false naturally when user completes
-        
+
         // Only process if we have meaningful selection
         let hasApps = !selection.applications.isEmpty
         let hasCategories = !selection.categories.isEmpty
-        
-        print("🔧 PROCESSING DECISION:")
-        print("   - hasApps: \(hasApps)")
-        print("   - hasCategories: \(hasCategories)")
-        print("   - Will process: \(hasApps || hasCategories)")
-        print("   - showingFamilyActivityPicker: \(showingFamilyActivityPicker)")
-        
+
         if hasApps || hasCategories {
-            print("📥 PROCESSING SELECTION for \(category.displayName)")
             isProcessingSelection = true
-            
-            // Cancel any retry timers since we got a successful selection
-            
+
             mappingService.recordCategoryMapping(category, selection: selection)
-            
+
             // Clear the current category after a short delay to allow picker to fully close
             // This prevents the onChange from firing again with no current category
-            print("⏰ SCHEDULING state clear in 0.5 seconds for \(category.displayName)")
             Task {
                 try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                 await MainActor.run {
-                    print("🧹 CLEARING STATE after delay for \(category.displayName)")
-                    print("   - About to clear currentCategory: \(currentCategory?.displayName ?? "nil")")
                     currentCategory = nil
                     isProcessingSelection = false
-                    print("✅ COMPLETED: \(category.displayName) mapping finished and state cleared")
                 }
             }
-            
-            print("✅ PROCESSING COMPLETE: \(category.displayName) mapping saved")
         } else if !isProcessingSelection && !showingFamilyActivityPicker {
             // Only handle empty selection if we haven't already processed a successful selection
             // and if the picker is not currently showing (user actually cancelled/failed)
-            print("⚠️ EMPTY SELECTION for \(category.displayName) - user may have cancelled or encountered error")
-            print("🔧 EMPTY SELECTION DEBUG:")
-            print("   - isProcessingSelection: \(isProcessingSelection)")
-            print("   - showingFamilyActivityPicker: \(showingFamilyActivityPicker)")
-            print("   - currentCategory before clear: \(currentCategory?.displayName ?? "nil")")
-            
-            // Track categories that consistently fail
             errorCategories.insert(category)
             currentCategory = nil
-            print("🔧 STATE: Cleared currentCategory due to empty selection")
-            
-        } else {
-            print("🔄 IGNORED: Empty selection - processing=\(isProcessingSelection), pickerShowing=\(showingFamilyActivityPicker)")
         }
     }
 }
@@ -466,7 +399,7 @@ struct CategorySetupCard: View {
 // MARK: - Preview
 
 #Preview {
-    CategoryMappingSetupView { mappingService in
-        print("Setup completed with mapping service: \(mappingService)")
+    CategoryMappingSetupView { _ in
+        // Preview completion handler
     }
 }

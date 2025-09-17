@@ -25,53 +25,38 @@ private struct WidgetDataManager {
     
     // Get the current blocking status for widgets
     static func getBlockingStatus() -> Bool {
-        print("🏷️ WIDGET DATA: Attempting to read blocking status...")
-        print("🏷️ WIDGET DATA: App Group ID: \(Constants.appGroupId)")
-        print("🏷️ WIDGET DATA: Shared defaults available: \(sharedUserDefaults != UserDefaults.standard)")
-        
         // Try shared UserDefaults first
         let sharedStatus = sharedUserDefaults.bool(forKey: Constants.blockingStatusKey)
-        print("🏷️ WIDGET DATA: Shared UserDefaults status = \(sharedStatus)")
-        
+
         // Try standard UserDefaults as fallback
         let standardStatus = UserDefaults.standard.bool(forKey: Constants.blockingStatusKey)
-        print("🏷️ WIDGET DATA: Standard UserDefaults status = \(standardStatus)")
-        
+
         // Use shared if available, fallback to standard
         let finalStatus = sharedUserDefaults == UserDefaults.standard ? standardStatus : sharedStatus
-        print("🏷️ WIDGET DATA: Final status = \(finalStatus)")
-        
+
         return finalStatus
     }
     
     // Get the last update time
     static func getLastUpdateTime() -> Date? {
-        print("🏷️ WIDGET DATA: Attempting to read last update time...")
-        
         // Try shared UserDefaults first
         let sharedTimestamp = sharedUserDefaults.object(forKey: Constants.lastUpdateKey) as? Date
-        print("🏷️ WIDGET DATA: Shared UserDefaults timestamp = \(sharedTimestamp?.description ?? "nil")")
-        
+
         // Try standard UserDefaults as fallback
         let standardTimestamp = UserDefaults.standard.object(forKey: Constants.lastUpdateKey) as? Date
-        print("🏷️ WIDGET DATA: Standard UserDefaults timestamp = \(standardTimestamp?.description ?? "nil")")
-        
+
         // Use shared if available, fallback to standard
         let finalTimestamp = sharedUserDefaults == UserDefaults.standard ? standardTimestamp : sharedTimestamp
-        print("🏷️ WIDGET DATA: Final timestamp = \(finalTimestamp?.description ?? "nil")")
-        
+
         return finalTimestamp
     }
     
     // Check if blocking status data is stale (older than 1 hour)
     static func isDataStale() -> Bool {
-        guard let lastUpdate = getLastUpdateTime() else { 
-            print("🏷️ WIDGET DATA: isDataStale() = true (no lastUpdate)")
-            return true 
+        guard let lastUpdate = getLastUpdateTime() else {
+            return true
         }
         let isStale = Date().timeIntervalSince(lastUpdate) > 3600 // 1 hour
-        let ageInMinutes = Date().timeIntervalSince(lastUpdate) / 60
-        print("🏷️ WIDGET DATA: isDataStale() = \(isStale) (age: \(String(format: "%.1f", ageInMinutes)) minutes)")
         return isStale
     }
 }
@@ -82,31 +67,26 @@ struct IntentionsProvider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (IntentionsEntry) -> ()) {
-        print("📱 WIDGET PROVIDER: getSnapshot called at \(Date())")
         let isBlocking = WidgetDataManager.getBlockingStatus()
         let isDataStale = WidgetDataManager.isDataStale()
         let entry = IntentionsEntry(date: Date(), isBlocking: isBlocking, isDataStale: isDataStale)
-        print("📱 WIDGET PROVIDER: Created snapshot entry - isBlocking: \(isBlocking), isDataStale: \(isDataStale)")
         completion(entry)
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
-        print("📱 WIDGET PROVIDER: getTimeline called at \(Date())")
         let isBlocking = WidgetDataManager.getBlockingStatus()
         let isDataStale = WidgetDataManager.isDataStale()
-        print("📱 WIDGET PROVIDER: Created timeline entry - isBlocking: \(isBlocking), isDataStale: \(isDataStale)")
-        
+
         // Create multiple entries to ensure widget updates
         let currentDate = Date()
         let entries = [
             IntentionsEntry(date: currentDate, isBlocking: isBlocking, isDataStale: isDataStale),
             IntentionsEntry(date: currentDate.addingTimeInterval(1), isBlocking: isBlocking, isDataStale: isDataStale)
         ]
-        
+
         // Update more frequently during active changes
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 5, to: Date()) ?? Date()
         let timeline = Timeline(entries: entries, policy: .after(nextUpdate))
-        print("📱 WIDGET PROVIDER: Timeline created with \(entries.count) entries, next update: \(nextUpdate)")
         completion(timeline)
     }
 }
@@ -122,9 +102,7 @@ struct IntentionsWidgetEntryView: View {
     @Environment(\.widgetFamily) var family
 
     var body: some View {
-        print("🎨 WIDGET VIEW: Rendering at \(Date()) - isBlocking: \(entry.isBlocking), isDataStale: \(entry.isDataStale), family: \(family)")
-        
-        return Group {
+        Group {
             switch family {
             case .accessoryCircular:
                 circularView
@@ -199,39 +177,33 @@ struct IntentionsWidgetEntryView: View {
     // MARK: - Status Properties
     
     private var blockingIcon: String {
-        let icon = if entry.isDataStale {
+        if entry.isDataStale {
             "questionmark.circle"
         } else if entry.isBlocking {
             "shield.fill"
         } else {
             "checkmark.circle"
         }
-        print("🎨 WIDGET ICON: \(icon) (isBlocking: \(entry.isBlocking), isDataStale: \(entry.isDataStale))")
-        return icon
     }
     
     private var blockingColor: Color {
-        let color = if entry.isDataStale {
+        if entry.isDataStale {
             Color.orange
         } else if entry.isBlocking {
             Color.red
         } else {
             Color.green
         }
-        print("🎨 WIDGET COLOR: \(color) (isBlocking: \(entry.isBlocking), isDataStale: \(entry.isDataStale))")
-        return color
     }
     
     private var blockingText: String {
-        let text = if entry.isDataStale {
+        if entry.isDataStale {
             "Status"
         } else if entry.isBlocking {
             "Blocked"
         } else {
             "Open"
         }
-        print("🎨 WIDGET TEXT: \(text) (isBlocking: \(entry.isBlocking), isDataStale: \(entry.isDataStale))")
-        return text
     }
     
     private var blockingStatusText: String {
