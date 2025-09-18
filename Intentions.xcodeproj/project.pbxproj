@@ -36,7 +36,6 @@
 		2085A90C2DFACD350011EB9A /* MockScreenTimeServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A90B2DFACD350011EB9A /* MockScreenTimeServiceTests.swift */; };
 		2085A9142DFF4B180011EB9A /* ApplicationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A9132DFF4B160011EB9A /* ApplicationExtension.swift */; };
 		2092FF062DF1921C0055A01D /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2092FF052DF1921C0055A01D /* FamilyControls.framework */; };
-		20D0E4FC2E7BF72000C8BB70 /* CategoryMappingSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D0E4FB2E7BF72000C8BB70 /* CategoryMappingSetupView.swift */; };
 		20D0E4FE2E7BF73900C8BB70 /* CategoryMappingSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D0E4FD2E7BF73900C8BB70 /* CategoryMappingSetupView.swift */; };
 		20D0E5002E7BF74700C8BB70 /* DisableBlockingConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D0E4FF2E7BF74700C8BB70 /* DisableBlockingConfirmationView.swift */; };
 		20EB26512E13228E00FC4BE4 /* PersistentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26502E13228E00FC4BE4 /* PersistentModels.swift */; };
@@ -159,7 +158,6 @@
 		2085A9132DFF4B160011EB9A /* ApplicationExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationExtension.swift; sourceTree = "<group>"; };
 		2092FF032DF191010055A01D /* Intentions.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Intentions.entitlements; sourceTree = "<group>"; };
 		2092FF052DF1921C0055A01D /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
-		20D0E4FB2E7BF72000C8BB70 /* CategoryMappingSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingSetupView.swift; sourceTree = "<group>"; };
 		20D0E4FD2E7BF73900C8BB70 /* CategoryMappingSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingSetupView.swift; sourceTree = "<group>"; };
 		20D0E4FF2E7BF74700C8BB70 /* DisableBlockingConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisableBlockingConfirmationView.swift; sourceTree = "<group>"; };
 		20EB26502E13228E00FC4BE4 /* PersistentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentModels.swift; sourceTree = "<group>"; };
@@ -587,7 +585,6 @@
 			children = (
 				20EB273E2E6EE46500FC4BE4 /* SetupLandingView.swift */,
 				20EB273A2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift */,
-				20D0E4FB2E7BF72000C8BB70 /* CategoryMappingSetupView.swift */,
 				20D0E4FD2E7BF73900C8BB70 /* CategoryMappingSetupView.swift */,
 				20EB27322E6D06DC00FC4BE4 /* ScreenTimeAuthorizationStepView.swift */,
 				20EB27332E6D06DC00FC4BE4 /* SetupFlowView.swift */,
@@ -767,7 +764,6 @@
 				20EB27372E6D06DC00FC4BE4 /* SetupFlowView.swift in Sources */,
 				2085A9142DFF4B180011EB9A /* ApplicationExtension.swift in Sources */,
 				2085A8FC2DF6D2BB0011EB9A /* ScreenTimeUIAdaptor.swift in Sources */,
-				20D0E4FC2E7BF72000C8BB70 /* CategoryMappingSetupView.swift in Sources */,
 				20D0E4FE2E7BF73900C8BB70 /* CategoryMappingSetupView.swift in Sources */,
 				2085A9022DF6D2EB0011EB9A /* MockScreenTimeService.swift in Sources */,
 				2085A8E32DF55A060011EB9A /* IntentionsSession.swift in Sources */,
