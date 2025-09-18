@@ -153,6 +153,7 @@ struct SettingsRow: View {
 /// Main settings view with app group management and Intentions State configuration
 struct SettingsView: View {
     @State private var viewModel: SettingsViewModel
+    @State private var showingDisableConfirmation = false
     private let onScheduleSettingsChanged: ((ScheduleSettings) async -> Void)?
     private let onViewModelReady: ((SettingsViewModel) -> Void)?
     private let setupCoordinator: SetupCoordinator?
@@ -270,7 +271,7 @@ struct SettingsView: View {
                 }
             )
         }
-        // TEMPORARILY DISABLED: App group editor sheet to test presentation conflict  
+        // TEMPORARILY DISABLED: App group editor sheet to test presentation conflict
         .sheet(isPresented: .constant(false)) {
             AppGroupEditorView(
                 onSave: { name, apps in
@@ -281,6 +282,21 @@ struct SettingsView: View {
                 },
                 onCancel: {
                     viewModel.hideAppGroupEditor()
+                }
+            )
+        }
+        .sheet(isPresented: $showingDisableConfirmation) {
+            DisableBlockingConfirmationView(
+                onConfirm: {
+                    showingDisableConfirmation = false
+                    Task {
+                        await viewModel.toggleScheduleEnabled()
+                        // Notify ContentViewModel of schedule change
+                        await onScheduleSettingsChanged?(viewModel.scheduleSettings)
+                    }
+                },
+                onCancel: {
+                    showingDisableConfirmation = false
                 }
             )
         }
@@ -315,11 +331,17 @@ struct SettingsView: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Toggle("", isOn: Binding(
                         get: { viewModel.scheduleSettings.isEnabled },
-                        set: { _ in
-                            Task {
-                                await viewModel.toggleScheduleEnabled()
-                                // Notify ContentViewModel of schedule change
-                                await onScheduleSettingsChanged?(viewModel.scheduleSettings)
+                        set: { newValue in
+                            if newValue {
+                                // Enabling - allow immediately
+                                Task {
+                                    await viewModel.toggleScheduleEnabled()
+                                    // Notify ContentViewModel of schedule change
+                                    await onScheduleSettingsChanged?(viewModel.scheduleSettings)
+                                }
+                            } else {
+                                // Disabling - show confirmation with friction
+                                showingDisableConfirmation = true
                             }
                         }
                     ))

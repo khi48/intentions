@@ -36,6 +36,9 @@
 		2085A90C2DFACD350011EB9A /* MockScreenTimeServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A90B2DFACD350011EB9A /* MockScreenTimeServiceTests.swift */; };
 		2085A9142DFF4B180011EB9A /* ApplicationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A9132DFF4B160011EB9A /* ApplicationExtension.swift */; };
 		2092FF062DF1921C0055A01D /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2092FF052DF1921C0055A01D /* FamilyControls.framework */; };
+		20D0E4FC2E7BF72000C8BB70 /* CategoryMappingSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D0E4FB2E7BF72000C8BB70 /* CategoryMappingSetupView.swift */; };
+		20D0E4FE2E7BF73900C8BB70 /* CategoryMappingSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D0E4FD2E7BF73900C8BB70 /* CategoryMappingSetupView.swift */; };
+		20D0E5002E7BF74700C8BB70 /* DisableBlockingConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D0E4FF2E7BF74700C8BB70 /* DisableBlockingConfirmationView.swift */; };
 		20EB26512E13228E00FC4BE4 /* PersistentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26502E13228E00FC4BE4 /* PersistentModels.swift */; };
 		20EB26532E13229900FC4BE4 /* DataPersistingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26522E13229900FC4BE4 /* DataPersistingService.swift */; };
 		20EB26552E1322A400FC4BE4 /* MockDataPersistenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26542E1322A400FC4BE4 /* MockDataPersistenceService.swift */; };
@@ -66,7 +69,6 @@
 		20EB26AF2E32BF9D00FC4BE4 /* AppGroupsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26AA2E32BF9D00FC4BE4 /* AppGroupsViewModelTests.swift */; };
 		20EB26B22E389F4900FC4BE4 /* IsolatedFamilyActivityPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26B02E389F4900FC4BE4 /* IsolatedFamilyActivityPicker.swift */; };
 		20EB26F42E488A1400FC4BE4 /* CategoryMappingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26F32E488A1400FC4BE4 /* CategoryMappingService.swift */; };
-		20EB26F72E488A5A00FC4BE4 /* CategoryMappingSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26F52E488A5A00FC4BE4 /* CategoryMappingSetupView.swift */; };
 		20EB27002E4D5FAA00FC4BE4 /* SessionStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26FF2E4D5FAA00FC4BE4 /* SessionStatusView.swift */; };
 		20EB27032E603C5100FC4BE4 /* AppGroupEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27012E603C5100FC4BE4 /* AppGroupEditorSheet.swift */; };
 		20EB27042E603C5100FC4BE4 /* AppGroupListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27022E603C5100FC4BE4 /* AppGroupListView.swift */; };
@@ -81,7 +83,6 @@
 		20EB272E2E6D066100FC4BE4 /* SetupState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB272D2E6D066100FC4BE4 /* SetupState.swift */; };
 		20EB27302E6D06B500FC4BE4 /* SetupCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB272F2E6D06B500FC4BE4 /* SetupCoordinator.swift */; };
 		20EB27352E6D06DC00FC4BE4 /* ScreenTimeAuthorizationStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27322E6D06DC00FC4BE4 /* ScreenTimeAuthorizationStepView.swift */; };
-		20EB27362E6D06DC00FC4BE4 /* CategoryMappingSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27312E6D06DC00FC4BE4 /* CategoryMappingSetupView.swift */; };
 		20EB27372E6D06DC00FC4BE4 /* SetupFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27332E6D06DC00FC4BE4 /* SetupFlowView.swift */; };
 		20EB27392E6D070A00FC4BE4 /* SetupStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27382E6D070A00FC4BE4 /* SetupStateManager.swift */; };
 		20EB273B2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB273A2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift */; };
@@ -158,6 +159,9 @@
 		2085A9132DFF4B160011EB9A /* ApplicationExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationExtension.swift; sourceTree = "<group>"; };
 		2092FF032DF191010055A01D /* Intentions.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Intentions.entitlements; sourceTree = "<group>"; };
 		2092FF052DF1921C0055A01D /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
+		20D0E4FB2E7BF72000C8BB70 /* CategoryMappingSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingSetupView.swift; sourceTree = "<group>"; };
+		20D0E4FD2E7BF73900C8BB70 /* CategoryMappingSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingSetupView.swift; sourceTree = "<group>"; };
+		20D0E4FF2E7BF74700C8BB70 /* DisableBlockingConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisableBlockingConfirmationView.swift; sourceTree = "<group>"; };
 		20EB26502E13228E00FC4BE4 /* PersistentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentModels.swift; sourceTree = "<group>"; };
 		20EB26522E13229900FC4BE4 /* DataPersistingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataPersistingService.swift; sourceTree = "<group>"; };
 		20EB26542E1322A400FC4BE4 /* MockDataPersistenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataPersistenceService.swift; sourceTree = "<group>"; };
@@ -188,7 +192,6 @@
 		20EB26AC2E32BF9D00FC4BE4 /* SessionStatusViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStatusViewModelTests.swift; sourceTree = "<group>"; };
 		20EB26B02E389F4900FC4BE4 /* IsolatedFamilyActivityPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsolatedFamilyActivityPicker.swift; sourceTree = "<group>"; };
 		20EB26F32E488A1400FC4BE4 /* CategoryMappingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingService.swift; sourceTree = "<group>"; };
-		20EB26F52E488A5A00FC4BE4 /* CategoryMappingSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingSetupView.swift; sourceTree = "<group>"; };
 		20EB26FF2E4D5FAA00FC4BE4 /* SessionStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStatusView.swift; sourceTree = "<group>"; };
 		20EB27012E603C5100FC4BE4 /* AppGroupEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupEditorSheet.swift; sourceTree = "<group>"; };
 		20EB27022E603C5100FC4BE4 /* AppGroupListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupListView.swift; sourceTree = "<group>"; };
@@ -203,7 +206,6 @@
 		20EB272C2E6C09B200FC4BE4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		20EB272D2E6D066100FC4BE4 /* SetupState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupState.swift; sourceTree = "<group>"; };
 		20EB272F2E6D06B500FC4BE4 /* SetupCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupCoordinator.swift; sourceTree = "<group>"; };
-		20EB27312E6D06DC00FC4BE4 /* CategoryMappingSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingSetupView.swift; sourceTree = "<group>"; };
 		20EB27322E6D06DC00FC4BE4 /* ScreenTimeAuthorizationStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeAuthorizationStepView.swift; sourceTree = "<group>"; };
 		20EB27332E6D06DC00FC4BE4 /* SetupFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupFlowView.swift; sourceTree = "<group>"; };
 		20EB27382E6D070A00FC4BE4 /* SetupStateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupStateManager.swift; sourceTree = "<group>"; };
@@ -356,7 +358,6 @@
 			children = (
 				20EB27342E6D06DC00FC4BE4 /* Setup */,
 				20EB26F92E488A6500FC4BE4 /* TestViews */,
-				20EB26F62E488A5A00FC4BE4 /* Setup */,
 				20EB26B12E389F4900FC4BE4 /* Components */,
 				2085A8DA2DF54FC50011EB9A /* Statistics */,
 				2085A8D92DF54FBD0011EB9A /* Onboarding */,
@@ -416,6 +417,7 @@
 		2085A8D82DF54FB30011EB9A /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				20D0E4FF2E7BF74700C8BB70 /* DisableBlockingConfirmationView.swift */,
 				20EB26662E21A3F300FC4BE4 /* SettingsView.swift */,
 			);
 			path = Settings;
@@ -573,14 +575,6 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
-		20EB26F62E488A5A00FC4BE4 /* Setup */ = {
-			isa = PBXGroup;
-			children = (
-				20EB26F52E488A5A00FC4BE4 /* CategoryMappingSetupView.swift */,
-			);
-			path = Setup;
-			sourceTree = "<group>";
-		};
 		20EB26F92E488A6500FC4BE4 /* TestViews */ = {
 			isa = PBXGroup;
 			children = (
@@ -593,7 +587,8 @@
 			children = (
 				20EB273E2E6EE46500FC4BE4 /* SetupLandingView.swift */,
 				20EB273A2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift */,
-				20EB27312E6D06DC00FC4BE4 /* CategoryMappingSetupView.swift */,
+				20D0E4FB2E7BF72000C8BB70 /* CategoryMappingSetupView.swift */,
+				20D0E4FD2E7BF73900C8BB70 /* CategoryMappingSetupView.swift */,
 				20EB27322E6D06DC00FC4BE4 /* ScreenTimeAuthorizationStepView.swift */,
 				20EB27332E6D06DC00FC4BE4 /* SetupFlowView.swift */,
 			);
@@ -769,10 +764,11 @@
 				2071C4962DE43AC600DF737F /* ContentView.swift in Sources */,
 				2085A8E72DF55A470011EB9A /* DiscoveredApp.swift in Sources */,
 				20EB27352E6D06DC00FC4BE4 /* ScreenTimeAuthorizationStepView.swift in Sources */,
-				20EB27362E6D06DC00FC4BE4 /* CategoryMappingSetupView.swift in Sources */,
 				20EB27372E6D06DC00FC4BE4 /* SetupFlowView.swift in Sources */,
 				2085A9142DFF4B180011EB9A /* ApplicationExtension.swift in Sources */,
 				2085A8FC2DF6D2BB0011EB9A /* ScreenTimeUIAdaptor.swift in Sources */,
+				20D0E4FC2E7BF72000C8BB70 /* CategoryMappingSetupView.swift in Sources */,
+				20D0E4FE2E7BF73900C8BB70 /* CategoryMappingSetupView.swift in Sources */,
 				2085A9022DF6D2EB0011EB9A /* MockScreenTimeService.swift in Sources */,
 				2085A8E32DF55A060011EB9A /* IntentionsSession.swift in Sources */,
 				2071C4942DE43AC600DF737F /* IntentionsApp.swift in Sources */,
@@ -789,9 +785,9 @@
 				2085A8F92DF585A90011EB9A /* ScreenTimeService.swift in Sources */,
 				20EB27002E4D5FAA00FC4BE4 /* SessionStatusView.swift in Sources */,
 				2085A8E12DF559940011EB9A /* AppGroup.swift in Sources */,
-				20EB26F72E488A5A00FC4BE4 /* CategoryMappingSetupView.swift in Sources */,
 				2085A8E92DF55AA90011EB9A /* AppError.swift in Sources */,
 				20EB27032E603C5100FC4BE4 /* AppGroupEditorSheet.swift in Sources */,
+				20D0E5002E7BF74700C8BB70 /* DisableBlockingConfirmationView.swift in Sources */,
 				20EB27042E603C5100FC4BE4 /* AppGroupListView.swift in Sources */,
 				20EB26A72E32BF9100FC4BE4 /* AppGroupsViewModel.swift in Sources */,
 				20EB26A82E32BF9100FC4BE4 /* SessionStatusViewModel.swift in Sources */,
