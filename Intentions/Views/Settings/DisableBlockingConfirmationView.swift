@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 /// Confirmation modal that adds friction when disabling Intentions blocking
 /// Requires user to provide intention statement and wait through 10-second delay
@@ -14,9 +15,9 @@ struct DisableBlockingConfirmationView: View {
     let onCancel: () -> Void
 
     @State private var intentionText: String = ""
-    @State private var countdownSeconds: Int = 10
+    @State private var countdownSecondsRemaining: Double = 10.0
     @State private var isCountdownActive: Bool = false
-    @State private var countdownTimer: Timer?
+    @State private var countdownCancellable: AnyCancellable?
     @FocusState private var isTextFieldFocused: Bool
 
     private let minimumCharacters = 15
@@ -51,8 +52,8 @@ struct DisableBlockingConfirmationView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {
-                        countdownTimer?.invalidate()
-                        countdownTimer = nil
+                        countdownCancellable?.cancel()
+                        countdownCancellable = nil
                         onCancel()
                     }
                 }
@@ -62,8 +63,8 @@ struct DisableBlockingConfirmationView: View {
             isTextFieldFocused = false
         }
         .onDisappear {
-            countdownTimer?.invalidate()
-            countdownTimer = nil
+            countdownCancellable?.cancel()
+            countdownCancellable = nil
         }
     }
 
@@ -139,10 +140,9 @@ struct DisableBlockingConfirmationView: View {
                     .stroke(Color.orange, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                     .frame(width: 120, height: 120)
                     .rotationEffect(.degrees(-90))
-                    .animation(.easeInOut(duration: 1), value: circleProgress)
 
                 VStack(spacing: 4) {
-                    Text("\(max(0, countdownSeconds))")
+                    Text("\(Int(ceil(max(0, countdownSecondsRemaining))))")
                         .font(.title)
                         .fontWeight(.bold)
                         .foregroundColor(.orange)
@@ -154,7 +154,7 @@ struct DisableBlockingConfirmationView: View {
             }
             .frame(width: 120, height: 120)
 
-            Text("Please wait \(max(0, countdownSeconds)) more seconds to confirm")
+            Text("Please wait \(Int(ceil(max(0, countdownSecondsRemaining)))) more seconds to confirm")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -176,8 +176,8 @@ struct DisableBlockingConfirmationView: View {
             .tint(.orange)
 
             Button("Cancel") {
-                countdownTimer?.invalidate()
-                countdownTimer = nil
+                countdownCancellable?.cancel()
+                countdownCancellable = nil
                 onCancel()
             }
             .buttonStyle(.bordered)
@@ -188,12 +188,13 @@ struct DisableBlockingConfirmationView: View {
     // MARK: - Computed Properties
 
     private var isConfirmEnabled: Bool {
-        intentionText.count >= minimumCharacters && countdownSeconds <= 0
+        intentionText.count >= minimumCharacters && countdownSecondsRemaining <= 0
     }
 
     private var circleProgress: CGFloat {
         guard isCountdownActive else { return 0 }
-        return countdownSeconds <= 0 ? 1.0 : CGFloat(10 - countdownSeconds) / 10.0
+        let progress = (10.0 - countdownSecondsRemaining) / 10.0
+        return CGFloat(max(0, min(1, progress)))
     }
 
     private var isIntentionValid: Bool {
@@ -219,19 +220,20 @@ struct DisableBlockingConfirmationView: View {
         guard isIntentionValid else { return }
 
         isCountdownActive = true
-        countdownSeconds = 10
+        countdownSecondsRemaining = 10.0
 
-        // Start discrete timer for second updates
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            DispatchQueue.main.async {
-                if countdownSeconds > 0 {
-                    countdownSeconds -= 1
-                } else {
-                    countdownTimer?.invalidate()
-                    countdownTimer = nil
+        // Use Timer.publish for ultra-smooth countdown at 60fps
+        countdownCancellable = Timer.publish(every: 1.0/60.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { _ in
+                countdownSecondsRemaining = max(0, countdownSecondsRemaining - (1.0/60.0))
+
+                // Stop when countdown reaches zero
+                if countdownSecondsRemaining <= 0 {
+                    countdownCancellable?.cancel()
+                    countdownCancellable = nil
                 }
             }
-        }
     }
 }
 

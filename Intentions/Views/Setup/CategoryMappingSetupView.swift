@@ -16,7 +16,6 @@ struct CategoryMappingSetupView: View {
     @State private var currentCategory: CategoryMappingService.AppCategory?
     @State private var showingFamilyActivityPicker = false
     @State private var currentSelection = FamilyActivitySelection(includeEntireCategory: true)
-    @State private var errorCategories: Set<CategoryMappingService.AppCategory> = []
     @State private var isProcessingSelection = false
     
     let onComplete: (CategoryMappingService) -> Void
@@ -25,21 +24,21 @@ struct CategoryMappingSetupView: View {
         ScrollView {
                 VStack(spacing: 24) {
                     
-                    // Authorization Debug Section
+                    // Authorization and Simulator Warning Section
                     if AuthorizationCenter.shared.authorizationStatus != .approved {
                         VStack(spacing: 20) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 60))
                                 .foregroundColor(.orange)
-                            
+
                             Text("Screen Time Authorization Required")
                                 .font(.title2)
                                 .fontWeight(.semibold)
-                            
+
                             Text("Category mapping requires Screen Time permissions. Please grant access in Settings.")
                                 .multilineTextAlignment(.center)
                                 .foregroundColor(.secondary)
-                            
+
                             Text("Status: \(String(describing: AuthorizationCenter.shared.authorizationStatus))")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -48,6 +47,7 @@ struct CategoryMappingSetupView: View {
                         .background(Color.orange.opacity(0.1))
                         .cornerRadius(16)
                     }
+
                     
                     // Header Section
                     headerSection
@@ -69,23 +69,12 @@ struct CategoryMappingSetupView: View {
             }
         .navigationTitle("App Category Mapping")
         .navigationBarTitleDisplayMode(.large)
-        .background(
-            // Use background modifier for FamilyActivityPicker to avoid sheet conflicts
-            Group {
-                if showingFamilyActivityPicker {
-                    Color.clear
-                        .familyActivityPicker(isPresented: $showingFamilyActivityPicker, selection: $currentSelection)
-                        .onDisappear {
-                            // If picker disappeared without processing selection, mark as failed
-                            if let category = currentCategory, !isProcessingSelection {
-                                errorCategories.insert(category)
-                                currentCategory = nil
-                            }
-                        }
-                }
-            }
-        )
+        .familyActivityPicker(isPresented: $showingFamilyActivityPicker, selection: $currentSelection)
+        .onChange(of: showingFamilyActivityPicker) { oldValue, newValue in
+            print("🎯 FamilyActivityPicker showing state changed: \(oldValue) → \(newValue)")
+        }
         .onChange(of: currentSelection) { oldSelection, newSelection in
+            print("🎯 FamilyActivityPicker selection changed: \(newSelection.applications.count) apps, \(newSelection.categories.count) categories")
             handleCategorySelection(newSelection)
         }
     }
@@ -159,7 +148,6 @@ struct CategoryMappingSetupView: View {
                     CategorySetupCard(
                         category: category,
                         isCompleted: mappingService.setupProgress[category, default: false],
-                        hasError: errorCategories.contains(category),
                         appCount: mappingService.getApps(for: category).count,
                         onTap: {
                             startCategorySelection(category)
@@ -228,16 +216,27 @@ struct CategoryMappingSetupView: View {
         .background(Color.green.opacity(0.1))
         .cornerRadius(16)
     }
-    
+
+
     // MARK: - Actions
     
     private func startCategorySelection(_ category: CategoryMappingService.AppCategory) {
+        print("🎯 Starting category selection for: \(category.displayName)")
+
+        // Check authorization status before opening picker
+        let authStatus = AuthorizationCenter.shared.authorizationStatus
+        print("📋 Current authorization status: \(authStatus)")
+
+        if authStatus != .approved {
+            print("❌ Authorization not approved, cannot open picker")
+            return
+        }
+
         // Reset state for new selection
         currentCategory = category
         isProcessingSelection = false
-        errorCategories.remove(category) // Clear any previous error state
 
-        // Clear the old selection and show picker
+        // Clear the old selection and open picker
         currentSelection = FamilyActivitySelection(includeEntireCategory: true)
         showingFamilyActivityPicker = true
     }
@@ -245,6 +244,7 @@ struct CategoryMappingSetupView: View {
     private func handleCategorySelection(_ selection: FamilyActivitySelection) {
         // Prevent multiple processing of the same selection
         guard !isProcessingSelection else {
+            print("⚠️ Already processing selection, ignoring")
             return
         }
 
@@ -260,24 +260,24 @@ struct CategoryMappingSetupView: View {
         if hasApps || hasCategories {
             isProcessingSelection = true
 
+            print("✅ Processing selection for \(category.displayName): \(selection.applications.count) apps, \(selection.categories.count) categories")
+
+            // Record the mapping
             mappingService.recordCategoryMapping(category, selection: selection)
 
             // Clear the current category after a short delay to allow picker to fully close
-            // This prevents the onChange from firing again with no current category
-            Task {
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-                await MainActor.run {
-                    currentCategory = nil
-                    isProcessingSelection = false
-                }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                currentCategory = nil
+                isProcessingSelection = false
+                print("🔄 Reset state after successful mapping")
             }
         } else if !isProcessingSelection && !showingFamilyActivityPicker {
-            // Only handle empty selection if we haven't already processed a successful selection
-            // and if the picker is not currently showing (user actually cancelled/failed)
-            errorCategories.insert(category)
+            // Empty selection - user cancelled
+            print("❌ Empty selection for \(category.displayName) - user cancelled")
             currentCategory = nil
         }
     }
+
 }
 
 // MARK: - Category Setup Card
@@ -285,7 +285,6 @@ struct CategoryMappingSetupView: View {
 struct CategorySetupCard: View {
     let category: CategoryMappingService.AppCategory
     let isCompleted: Bool
-    let hasError: Bool
     let appCount: Int
     let onTap: () -> Void
     
@@ -295,21 +294,14 @@ struct CategorySetupCard: View {
                 // Icon and status
                 ZStack {
                     Circle()
-                        .fill(isCompleted ? Color.green.opacity(0.2) : 
-                              hasError ? Color.red.opacity(0.2) : 
-                              Color.blue.opacity(0.2))
+                        .fill(isCompleted ? Color.green.opacity(0.2) : Color.blue.opacity(0.2))
                         .frame(width: 44, height: 44)
-                    
+
                     if isCompleted {
                         Image(systemName: "checkmark")
                             .font(.title3)
                             .fontWeight(.bold)
                             .foregroundColor(.green)
-                    } else if hasError {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundColor(.red)
                     } else {
                         Image(systemName: category.iconName)
                             .font(.title3)
@@ -339,12 +331,6 @@ struct CategorySetupCard: View {
                             .fontWeight(.medium)
                             .foregroundColor(.green)
                             .padding(.top, 2)
-                    } else if hasError {
-                        Text("Mapping failed")
-                            .font(.caption2)
-                            .fontWeight(.medium)
-                            .foregroundColor(.red)
-                            .padding(.top, 2)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -361,13 +347,6 @@ struct CategorySetupCard: View {
                         Text("Redo")
                             .font(.caption2)
                             .foregroundColor(.secondary)
-                    } else if hasError {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                        Text("Retry")
-                            .font(.caption2)
-                            .foregroundColor(.red)
                     } else {
                         Image(systemName: "hand.tap.fill")
                             .font(.caption)

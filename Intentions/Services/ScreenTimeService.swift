@@ -441,7 +441,30 @@ actor ScreenTimeService: ScreenTimeManaging {
     private func updateWidgetBlockingStatus(isBlocking: Bool) {
         // Use shared UserDefaults for communication with widget extension
         let appGroupId = "group.oh.Intentions"
-        let sharedDefaults = UserDefaults(suiteName: appGroupId) ?? UserDefaults.standard
+
+        // Debug: Check current user context in main app
+        let currentUser = getuid()
+        let effectiveUser = geteuid()
+        print("🔍 Main App User Context - UID: \(currentUser), EUID: \(effectiveUser)")
+
+        // Debug: Check if we're in a sandbox
+        let isSandboxed = getenv("APP_SANDBOX_CONTAINER_ID") != nil
+        print("🔍 Main App Sandbox Status: \(isSandboxed ? "Sandboxed" : "Not Sandboxed")")
+
+        // Force CFPreferences synchronization before creating UserDefaults
+        CFPreferencesSynchronize(appGroupId as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupId) else {
+            print("⚠️ ScreenTimeService: Failed to access App Group \(appGroupId), using standard UserDefaults")
+            // Fallback to standard UserDefaults only
+            UserDefaults.standard.set(isBlocking, forKey: "intentions.widget.blockingStatus")
+            UserDefaults.standard.set(Date(), forKey: "intentions.widget.lastUpdate")
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
+
+        // Debug: Check UserDefaults access (avoid dictionaryRepresentation which triggers kCFPreferencesAnyUser)
+        print("🔍 Main App UserDefaults Suite: Access successful")
 
         // Set the data
         sharedDefaults.set(isBlocking, forKey: "intentions.widget.blockingStatus")

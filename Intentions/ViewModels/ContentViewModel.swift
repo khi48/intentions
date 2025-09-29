@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 @preconcurrency import FamilyControls
+import WidgetKit
 
 /// Main app state coordinator and navigation controller
 /// Manages global app state, authorization status, and navigation flow
@@ -131,10 +132,21 @@ final class ContentViewModel: Sendable {
                     // Apply blocking only if schedule is currently active (after cleanup)
                     await applyScheduleBasedBlocking()
 
-                    // Test widget communication immediately
+                    // Test widget communication after a brief delay to avoid App Group cache issues
+                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
                     await testWidgetCommunication()
                 }
                 
+                // Retry category mapping validation after initialization delay
+                // This addresses the iOS ApplicationToken loading issue
+                Task {
+                    try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay
+                    categoryMappingService.retrySetupValidation()
+
+                    // Re-check setup requirements after retry
+                    await checkSetupRequired()
+                }
+
                 // Check if comprehensive setup is needed
                 await checkSetupRequired()
                 
@@ -392,18 +404,27 @@ final class ContentViewModel: Sendable {
     
     /// Apply default blocking state based on schedule settings
     /// Used when no session is active or when session ends
+    /// IMPORTANT: If a session is active, preserves session blocking regardless of schedule settings
     private func applyDefaultBlocking() async {
         do {
+            // CRITICAL: If there's an active session, preserve its blocking state
+            // This prevents users from bypassing active sessions by disabling Intentions
+            if let activeSession = activeSession, activeSession.isActive {
+                print("🔒 Active session detected - preserving session blocking despite schedule change")
+                await applySessionBlocking(for: activeSession)
+                return
+            }
+
             // Clean up any previous session state first
             await screenTimeService.cleanup()
-            
+
             // Clean up any stale sessions in the database
             do {
                 let allSessions = try await dataService.loadIntentionSessions()
                 let staleSessions = allSessions.filter { session in
                     session.isActive && session.id != activeSession?.id
                 }
-                
+
                 if !staleSessions.isEmpty {
                     for staleSession in staleSessions {
                         staleSession.complete()
@@ -413,10 +434,10 @@ final class ContentViewModel: Sendable {
             } catch {
                 print("Error cleaning stale sessions: \(error)")
             }
-            
-            // Apply blocking based on schedule
+
+            // Apply blocking based on schedule only when no session is active
             let currentlyActive = scheduleSettings.isCurrentlyActive
-            
+
             if scheduleSettings.isEnabled && currentlyActive {
                 // Schedule is active - block all apps (default behavior)
                 try await screenTimeService.blockAllApps()
@@ -424,7 +445,7 @@ final class ContentViewModel: Sendable {
                 // Schedule is inactive - allow all access
                 try await screenTimeService.allowAllAccess()
             }
-            
+
         } catch {
             print("Failed to apply default blocking: \(error)")
         }
@@ -558,7 +579,18 @@ final class ContentViewModel: Sendable {
     /// Test widget communication by manually writing data
     private func testWidgetCommunication() async {
         let appGroupId = "group.oh.Intentions"
-        let sharedDefaults = UserDefaults(suiteName: appGroupId) ?? UserDefaults.standard
+
+        // Force CFPreferences synchronization before creating UserDefaults
+        CFPreferencesSynchronize(appGroupId as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupId) else {
+            print("⚠️ ContentViewModel: Failed to access App Group \(appGroupId), using standard UserDefaults for test")
+            // Fallback to standard UserDefaults only
+            UserDefaults.standard.set(true, forKey: "intentions.widget.blockingStatus")
+            UserDefaults.standard.set(Date(), forKey: "intentions.widget.lastUpdate")
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
 
         // Write test data
         let testStatus = true

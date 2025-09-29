@@ -227,6 +227,36 @@ final class CategoryMappingService: Sendable {
         // Save the forced completion state
         saveToStorage()
     }
+
+    /// Retry validation of setup completion after app initialization delay
+    /// This addresses the iOS ApplicationToken loading delay issue
+    func retrySetupValidation() {
+        guard isSetupCompleted else { return }
+
+        print("🔄 RETRY: Validating category mapping setup after initialization delay...")
+        loadCategoryMappings()
+
+        let totalMappedApps = categoryToAppsMapping.values.reduce(0) { $0 + $1.count }
+        if totalMappedApps == 0 {
+            print("🚨 RETRY FAILED: Still no app mappings after delay - forcing setup reset")
+            print("🔄 This indicates actual ApplicationToken expiration, not just loading delay")
+
+            // Now reset setup completion since retry failed
+            isSetupCompleted = false
+            setupProgress.removeAll()
+
+            // Update storage
+            UserDefaults.standard.set(false, forKey: "category_mapping_setup_completed")
+            UserDefaults.standard.removeObject(forKey: "category_mapping_setup_progress")
+
+            // Clear any corrupted mapping data
+            clearStoredMappings()
+
+            print("❌ FORCED RESET: User will need to complete category mapping again")
+        } else {
+            print("✅ RETRY SUCCESS: Category mappings validated - \(totalMappedApps) apps found")
+        }
+    }
     
     /// Print a comprehensive summary of all mappings
     private func printCompleteMappingSummary() {
@@ -465,22 +495,13 @@ final class CategoryMappingService: Sendable {
             
             let totalMappedApps = categoryToAppsMapping.values.reduce(0) { $0 + $1.count }
             if totalMappedApps == 0 {
-                print("🚨 CRITICAL BUG DETECTED: Setup marked complete but no app mappings could be loaded!")
-                print("🔄 This is likely due to iOS ApplicationToken expiration")
-                print("🔄 Resetting setup completion to force re-mapping")
-                
-                // Reset setup completion to force user through setup again
-                isSetupCompleted = false
-                setupProgress.removeAll()
-                
-                // Update storage
-                UserDefaults.standard.set(false, forKey: "category_mapping_setup_completed")
-                UserDefaults.standard.removeObject(forKey: "category_mapping_setup_progress")
-                
-                // Clear any corrupted mapping data
-                clearStoredMappings()
-                
-                print("✅ Setup completion reset - user will need to go through category mapping again")
+                print("⚠️ TRANSIENT ISSUE: Setup marked complete but no app mappings loaded yet")
+                print("🔄 This is likely due to iOS ApplicationToken loading delay on startup")
+                print("🔄 NOT resetting setup - will retry validation later")
+
+                // Don't immediately reset setup completion - this might be a transient issue
+                // The app should retry loading mappings before forcing user through setup again
+                print("📱 DEFERRED: Setup validation will be retried when app is fully initialized")
             } else {
                 print("✅ App mappings loaded successfully - \(totalMappedApps) apps found across categories")
             }
