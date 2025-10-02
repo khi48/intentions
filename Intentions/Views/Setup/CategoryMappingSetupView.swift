@@ -407,10 +407,9 @@ struct CategorySetupCard: View {
                             .fontWeight(.bold)
                             .foregroundColor(.green)
                     } else {
-                        // Use SF Symbol that visually matches Apple's category icons
-                        Image(systemName: category.iconName)
-                            .font(.title3)
-                            .foregroundStyle(category.iconColor)
+                        // Try to use FamilyActivityIconView if we have a category token,
+                        // otherwise fall back to styled SF Symbol
+                        CategoryIconView(category: category)
                     }
                 }
                 
@@ -478,6 +477,21 @@ struct CategorySetupCard: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Category Icon View
+
+struct CategoryIconView: View {
+    let category: CategoryMappingService.AppCategory
+
+    var body: some View {
+        // Apple doesn't allow direct access to system category tokens
+        // They can only be obtained through user selection in FamilyActivityPicker
+        // Therefore, we use styled SF Symbols that visually match Apple's design
+        Image(systemName: category.iconName)
+            .font(.title3)
+            .foregroundStyle(category.iconColor)
     }
 }
 
