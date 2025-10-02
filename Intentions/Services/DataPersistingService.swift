@@ -78,6 +78,30 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
     // UserDefaults for simple key-value storage
     private let userDefaults = UserDefaults.standard
     
+    // MARK: - Private Methods
+
+    /// Get the App Group container URL for shared data storage
+    /// Creates the directory if it doesn't exist
+    private static func getAppGroupContainerURL() -> URL {
+        let appGroupID = "group.oh.Intentions"
+
+        // Try to get App Group container URL
+        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+            // Return the container URL directly - SwiftData will handle its own subdirectories
+            print("✅ DATA PERSISTENCE: App Group container ready at \(containerURL.path)")
+            return containerURL
+        } else {
+            print("⚠️ DATA PERSISTENCE: App Group container not available")
+            print("🔄 DATA PERSISTENCE: Falling back to Documents directory")
+        }
+
+        // Fallback to Documents directory
+        let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+
+        print("✅ DATA PERSISTENCE: Fallback container ready at \(documentsURL.path)")
+        return documentsURL
+    }
+
     // MARK: - Initialization
     init(container: ModelContainer? = nil) throws {
         print("🚀 DATA PERSISTENCE: Initializing DataPersistenceService")
@@ -88,16 +112,35 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
             PersistentScheduleSettings.self
         ])
         
+        // Get App Group container URL for shared data access
+        let appGroupURL = Self.getAppGroupContainerURL()
+
+        // Create the Library/Application Support directory that SwiftData expects
+        let libraryURL = appGroupURL.appendingPathComponent("Library").appendingPathComponent("Application Support")
+        do {
+            try FileManager.default.createDirectory(at: libraryURL, withIntermediateDirectories: true, attributes: nil)
+            print("✅ DATA PERSISTENCE: Library/Application Support directory created at \(libraryURL.path)")
+
+            // List what's in the directory after creation
+            let contents = try FileManager.default.contentsOfDirectory(at: libraryURL, includingPropertiesForKeys: nil)
+            print("📁 DATA PERSISTENCE: Directory contents: \(contents.map { $0.lastPathComponent })")
+        } catch {
+            print("⚠️ DATA PERSISTENCE: Failed to create Library/Application Support directory: \(error)")
+        }
+
+        // Use SwiftData's default configuration with App Group container
+        // This will create "default.store" which SwiftData expects
         let modelConfiguration = ModelConfiguration(
             schema: schema,
-            isStoredInMemoryOnly: false
+            isStoredInMemoryOnly: false,
+            groupContainer: .identifier("group.oh.Intentions")
             // Temporarily disable CloudKit to isolate the issue
             // cloudKitDatabase: .private("IntentionsAppDatabase")
         )
-        
+
         print("🔧 DATA PERSISTENCE: Schema configured with \(schema.entities.count) entities")
         print("💾 DATA PERSISTENCE: Using persistent storage (CloudKit temporarily disabled)")
-        
+
         if let container = container {
             // Use provided test container
             print("🧪 DATA PERSISTENCE: Using provided test container")
@@ -115,6 +158,22 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
                 self.dataActor = DataModelActor(modelContainer: modelContainer)
                 self.modelContext = ModelContext(modelContainer)
                 print("✅ DATA PERSISTENCE: Successfully initialized with ModelActor")
+
+                // Check if the database file was created
+                let expectedDatabasePath = libraryURL.appendingPathComponent("default.store")
+                if FileManager.default.fileExists(atPath: expectedDatabasePath.path) {
+                    print("✅ DATA PERSISTENCE: Database file created at \(expectedDatabasePath.path)")
+                } else {
+                    print("⚠️ DATA PERSISTENCE: Database file not found at expected location: \(expectedDatabasePath.path)")
+
+                    // Check what files were actually created
+                    do {
+                        let contents = try FileManager.default.contentsOfDirectory(at: libraryURL, includingPropertiesForKeys: nil)
+                        print("📁 DATA PERSISTENCE: Actual directory contents after init: \(contents.map { $0.lastPathComponent })")
+                    } catch {
+                        print("❌ DATA PERSISTENCE: Failed to list directory contents: \(error)")
+                    }
+                }
             } catch {
                 print("❌ DATA PERSISTENCE: Failed to initialize: \(error)")
                 throw AppError.dataInitializationFailed(error.localizedDescription)

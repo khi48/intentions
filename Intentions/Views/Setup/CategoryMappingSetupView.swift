@@ -17,6 +17,9 @@ struct CategoryMappingSetupView: View {
     @State private var showingFamilyActivityPicker = false
     @State private var currentSelection = FamilyActivitySelection(includeEntireCategory: true)
     @State private var isProcessingSelection = false
+    @State private var hasLaunchServicesError = false
+    @State private var errorDetectionTimer: Timer?
+    @State private var pickerDidAppear = false
     
     let onComplete: (CategoryMappingService) -> Void
     
@@ -48,6 +51,25 @@ struct CategoryMappingSetupView: View {
                         .cornerRadius(16)
                     }
 
+                    // System compatibility notice
+                    VStack(spacing: 12) {
+                        HStack {
+                            Image(systemName: "info.circle.fill")
+                                .foregroundColor(.blue)
+                            Text("Note")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                        }
+
+                        Text("If the app picker doesn't appear or shows errors, this is typically due to iOS system limitations. Try restarting the app or testing on a physical device for best results.")
+                            .font(.caption)
+                            .multilineTextAlignment(.center)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(12)
+
                     
                     // Header Section
                     headerSection
@@ -72,9 +94,57 @@ struct CategoryMappingSetupView: View {
         .familyActivityPicker(isPresented: $showingFamilyActivityPicker, selection: $currentSelection)
         .onChange(of: showingFamilyActivityPicker) { oldValue, newValue in
             print("🎯 FamilyActivityPicker showing state changed: \(oldValue) → \(newValue)")
+
+            // Track when picker actually appears
+            if !oldValue && newValue {
+                print("✅ FamilyActivityPicker appeared - ready to accept selections")
+                pickerDidAppear = true
+            }
+
+            // If picker was dismissed, handle cleanup
+            if oldValue && !newValue {
+                print("🔄 FamilyActivityPicker dismissed")
+
+                // Clear the error detection timer when picker is dismissed
+                errorDetectionTimer?.invalidate()
+
+                // Reset picker appearance tracking
+                pickerDidAppear = false
+
+                // Only check for abandoned selections if we have an active category
+                if currentCategory != nil {
+                    // Give a short delay to let selection processing complete
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        if !isProcessingSelection {
+                            print("❌ No selection processed, resetting state")
+                            currentCategory = nil
+                        }
+                    }
+                }
+            }
         }
         .onChange(of: currentSelection) { oldSelection, newSelection in
             print("🎯 FamilyActivityPicker selection changed: \(newSelection.applications.count) apps, \(newSelection.categories.count) categories")
+
+            // Only process selections when:
+            // 1. We have an active category selection in progress
+            // 2. The picker has actually appeared (not just spurious selection events)
+            // 3. The selection has actually changed from the previous one
+            guard currentCategory != nil else {
+                print("⚠️ Ignoring selection change - no active category selection")
+                return
+            }
+
+            guard pickerDidAppear else {
+                print("⚠️ Ignoring selection change - picker hasn't properly appeared yet")
+                return
+            }
+
+            guard oldSelection != newSelection else {
+                print("⚠️ Ignoring selection change - no actual change detected")
+                return
+            }
+
             handleCategorySelection(newSelection)
         }
     }
@@ -156,6 +226,10 @@ struct CategoryMappingSetupView: View {
                 }
             }
         }
+        .onDisappear {
+            // Clean up timer when view disappears
+            errorDetectionTimer?.invalidate()
+        }
     }
     
     // MARK: - Completion Section
@@ -235,10 +309,30 @@ struct CategoryMappingSetupView: View {
         // Reset state for new selection
         currentCategory = category
         isProcessingSelection = false
+        pickerDidAppear = false
 
         // Clear the old selection and open picker
         currentSelection = FamilyActivitySelection(includeEntireCategory: true)
-        showingFamilyActivityPicker = true
+
+        // Reset error state before showing picker
+        hasLaunchServicesError = false
+
+        // Start error detection timer - if LaunchServices errors occur, they happen immediately
+        errorDetectionTimer?.invalidate()
+        errorDetectionTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
+            Task { @MainActor in
+                // If picker dismissed quickly without user interaction, likely a system error
+                if !showingFamilyActivityPicker && !isProcessingSelection {
+                    hasLaunchServicesError = true
+                    print("🚨 SYSTEM ERROR: Detected likely LaunchServices failure - picker dismissed immediately")
+                }
+            }
+        }
+
+        // Add a small delay to ensure proper state reset before showing picker
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            showingFamilyActivityPicker = true
+        }
     }
     
     private func handleCategorySelection(_ selection: FamilyActivitySelection) {
@@ -269,12 +363,22 @@ struct CategoryMappingSetupView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 currentCategory = nil
                 isProcessingSelection = false
+                pickerDidAppear = false
+                errorDetectionTimer?.invalidate()
                 print("🔄 Reset state after successful mapping")
             }
         } else if !isProcessingSelection && !showingFamilyActivityPicker {
-            // Empty selection - user cancelled
-            print("❌ Empty selection for \(category.displayName) - user cancelled")
-            currentCategory = nil
+            // Empty selection - check if it's due to system error or user cancellation
+            if hasLaunchServicesError {
+                print("🚨 Empty selection for \(category.displayName) due to LaunchServices system error - not retrying")
+                currentCategory = nil
+                // Clear error state
+                hasLaunchServicesError = false
+            } else {
+                print("❌ Empty selection for \(category.displayName) - user cancelled")
+                currentCategory = nil
+            }
+            errorDetectionTimer?.invalidate()
         }
     }
 
