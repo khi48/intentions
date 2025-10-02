@@ -442,13 +442,13 @@ struct CategorySetupCard: View {
 
                     // Debug info for ActivityCategoryToken availability
                     if categoryToken != nil {
-                        Text("🟢 Has Token")
+                        Text("🟢 Has Apple Token")
                             .font(.caption2)
                             .foregroundColor(.green)
                     } else {
-                        Text("🔴 No Token")
+                        Text("🔴 No Apple Token (Normal)")
                             .font(.caption2)
-                            .foregroundColor(.red)
+                            .foregroundColor(.orange)
                     }
                     
                     if isCompleted && appCount > 0 {
