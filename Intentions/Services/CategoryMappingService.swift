@@ -70,17 +70,17 @@ final class CategoryMappingService: Sendable {
         
         var iconName: String {
             switch self {
-            case .social: return "person.2.fill"
+            case .social: return "bubble.left.and.bubble.right.fill"
             case .games: return "gamecontroller.fill"
-            case .entertainment: return "tv.fill"
-            case .creativity: return "paintbrush.fill"
-            case .education: return "book.fill"
-            case .healthFitness: return "heart.fill"
-            case .informationReading: return "doc.text.fill"
-            case .productivityFinance: return "briefcase.fill"
+            case .entertainment: return "popcorn.fill"
+            case .creativity: return "paintbrush.pointed.fill"
+            case .education: return "graduationcap.fill"
+            case .healthFitness: return "figure.run"
+            case .informationReading: return "book.fill"
+            case .productivityFinance: return "airplane"
             case .shoppingFood: return "bag.fill"
             case .travel: return "car.fill"
-            case .utilities: return "wrench.and.screwdriver.fill"
+            case .utilities: return "gearshape.fill"
             case .other: return "ellipsis.circle.fill"
             }
         }
