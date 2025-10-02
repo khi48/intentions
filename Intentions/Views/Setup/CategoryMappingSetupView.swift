@@ -7,7 +7,6 @@
 
 import SwiftUI
 @preconcurrency import FamilyControls
-import ManagedSettings
 
 /// Extended setup view that maps apps to categories through individual category selection
 /// Users select each category one by one to build comprehensive app-to-category mappings
@@ -220,7 +219,6 @@ struct CategoryMappingSetupView: View {
                         category: category,
                         isCompleted: mappingService.setupProgress[category, default: false],
                         appCount: mappingService.getApps(for: category).count,
-                        categoryToken: mappingService.getCategoryToken(for: category),
                         onTap: {
                             startCategorySelection(category)
                         }
@@ -392,7 +390,6 @@ struct CategorySetupCard: View {
     let category: CategoryMappingService.AppCategory
     let isCompleted: Bool
     let appCount: Int
-    let categoryToken: ActivityCategoryToken?
     let onTap: () -> Void
     
     var body: some View {
@@ -410,17 +407,10 @@ struct CategorySetupCard: View {
                             .fontWeight(.bold)
                             .foregroundColor(.green)
                     } else {
-                        // Use Apple's system category icon if available, otherwise show blank for debugging
-                        if let categoryToken = categoryToken {
-                            Label(categoryToken)
-                                .labelStyle(.iconOnly)
-                                .font(.title3)
-                        } else {
-                            // Show blank circle for debugging when no ActivityCategoryToken
-                            Circle()
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                                .frame(width: 24, height: 24)
-                        }
+                        // Use SF Symbol that visually matches Apple's category icons
+                        Image(systemName: category.iconName)
+                            .font(.title3)
+                            .foregroundStyle(category.iconColor)
                     }
                 }
                 
@@ -440,16 +430,6 @@ struct CategorySetupCard: View {
                         .lineLimit(4)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    // Debug info for ActivityCategoryToken availability
-                    if categoryToken != nil {
-                        Text("🟢 Has Apple Token")
-                            .font(.caption2)
-                            .foregroundColor(.green)
-                    } else {
-                        Text("🔴 No Apple Token (Normal)")
-                            .font(.caption2)
-                            .foregroundColor(.orange)
-                    }
                     
                     if isCompleted && appCount > 0 {
                         Text("\(appCount) apps mapped")

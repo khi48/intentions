@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 import ManagedSettings
 @preconcurrency import FamilyControls
 
@@ -84,6 +85,23 @@ final class CategoryMappingService: Sendable {
             case .other: return "ellipsis.circle.fill"
             }
         }
+
+        var iconColor: Color {
+            switch self {
+            case .social: return .pink
+            case .games: return .blue
+            case .entertainment: return .orange
+            case .creativity: return .yellow
+            case .education: return .green
+            case .healthFitness: return .cyan
+            case .informationReading: return .blue
+            case .productivityFinance: return .blue
+            case .shoppingFood: return .orange
+            case .travel: return .blue
+            case .utilities: return .gray
+            case .other: return .gray
+            }
+        }
     }
     
     // MARK: - Storage
@@ -146,25 +164,13 @@ final class CategoryMappingService: Sendable {
         
         // Extract app tokens from the selection
         let appTokens = Set(selection.applications.compactMap { $0.token })
-        let categoryTokens = Array(selection.categoryTokens)  // Direct access to categoryTokens set
-        
+        let categoryTokens = selection.categories.compactMap { $0.token }
+
         print("📊 SELECTION ANALYSIS:")
         print("   - Category: \(category.displayName)")
         print("   - Individual apps found: \(appTokens.count)")
         print("   - Category tokens found: \(categoryTokens.count)")
         print("   - includeEntireCategory was: \(selection.includeEntireCategory)")
-        print("   - Direct categoryTokens: \(selection.categoryTokens.count)")
-        print("   - Applications count: \(selection.applications.count)")
-        print("   - Categories count: \(selection.categories.count)")
-
-        // Debug what types of selections we're actually getting
-        if !selection.categoryTokens.isEmpty {
-            print("🎯 FOUND CATEGORY TOKENS: User selected entire categories")
-        } else if !selection.applications.isEmpty {
-            print("🎯 FOUND INDIVIDUAL APPS: User selected specific apps (no category tokens)")
-        } else {
-            print("🎯 EMPTY SELECTION: Nothing was selected")
-        }
         
         // Store the app mapping
         if !appTokens.isEmpty {
