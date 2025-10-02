@@ -410,15 +410,16 @@ struct CategorySetupCard: View {
                             .fontWeight(.bold)
                             .foregroundColor(.green)
                     } else {
-                        // Use Apple's system category icon if available, otherwise fall back to custom SF Symbol
+                        // Use Apple's system category icon if available, otherwise show blank for debugging
                         if let categoryToken = categoryToken {
                             Label(categoryToken)
                                 .labelStyle(.iconOnly)
                                 .font(.title3)
                         } else {
-                            Image(systemName: category.iconName)
-                                .font(.title3)
-                                .foregroundColor(.blue)
+                            // Show blank circle for debugging when no ActivityCategoryToken
+                            Circle()
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                .frame(width: 24, height: 24)
                         }
                     }
                 }
@@ -438,6 +439,17 @@ struct CategorySetupCard: View {
                         .foregroundColor(.secondary)
                         .lineLimit(4)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    // Debug info for ActivityCategoryToken availability
+                    if categoryToken != nil {
+                        Text("🟢 Has Token")
+                            .font(.caption2)
+                            .foregroundColor(.green)
+                    } else {
+                        Text("🔴 No Token")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                    }
                     
                     if isCompleted && appCount > 0 {
                         Text("\(appCount) apps mapped")

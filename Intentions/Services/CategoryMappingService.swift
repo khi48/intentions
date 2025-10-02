@@ -173,9 +173,9 @@ final class CategoryMappingService: Sendable {
         // Store category token if available
         if let firstCategoryToken = categoryTokens.first {
             categoryToTokenMapping[category] = firstCategoryToken
-            // print("✅ CATEGORY TOKEN: Stored category token for \(category.displayName)")
+            print("✅ CATEGORY TOKEN: Stored category token for \(category.displayName)")
         } else {
-            // print("⚠️ NO CATEGORY TOKEN: No category token found for \(category.displayName)")
+            print("⚠️ NO CATEGORY TOKEN: No category token found for \(category.displayName)")
         }
         
         // Mark category as completed
@@ -295,7 +295,9 @@ final class CategoryMappingService: Sendable {
     
     /// Get the category token for a specific category (if available)
     func getCategoryToken(for category: AppCategory) -> ActivityCategoryToken? {
-        return categoryToTokenMapping[category]
+        let token = categoryToTokenMapping[category]
+        print("🔍 GET TOKEN: \(category.displayName) - Has token: \(token != nil)")
+        return token
     }
     
     /// Get apps prioritized by blocking priority (most distracting first)
@@ -550,7 +552,7 @@ final class CategoryMappingService: Sendable {
                     // ActivityCategoryTokens are the actual tokens - store them directly
                     categoryToTokenMapping[category] = token
                     totalLoadedCategories += 1
-                    // print("📱 Loaded valid category token for \(category.displayName)")
+                    print("📱 Loaded valid category token for \(category.displayName)")
                 } catch {
                     print("❌ Failed to load category token for \(category.displayName): \(error)")
                     // Remove corrupted data
