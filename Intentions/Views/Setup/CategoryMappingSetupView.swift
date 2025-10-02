@@ -7,6 +7,7 @@
 
 import SwiftUI
 @preconcurrency import FamilyControls
+import ManagedSettings
 
 /// Extended setup view that maps apps to categories through individual category selection
 /// Users select each category one by one to build comprehensive app-to-category mappings
@@ -219,6 +220,7 @@ struct CategoryMappingSetupView: View {
                         category: category,
                         isCompleted: mappingService.setupProgress[category, default: false],
                         appCount: mappingService.getApps(for: category).count,
+                        categoryToken: mappingService.getCategoryToken(for: category),
                         onTap: {
                             startCategorySelection(category)
                         }
@@ -390,6 +392,7 @@ struct CategorySetupCard: View {
     let category: CategoryMappingService.AppCategory
     let isCompleted: Bool
     let appCount: Int
+    let categoryToken: ActivityCategoryToken?
     let onTap: () -> Void
     
     var body: some View {
@@ -407,9 +410,16 @@ struct CategorySetupCard: View {
                             .fontWeight(.bold)
                             .foregroundColor(.green)
                     } else {
-                        Image(systemName: category.iconName)
-                            .font(.title3)
-                            .foregroundColor(.blue)
+                        // Use Apple's system category icon if available, otherwise fall back to custom SF Symbol
+                        if let categoryToken = categoryToken {
+                            Label(categoryToken)
+                                .labelStyle(.iconOnly)
+                                .font(.title3)
+                        } else {
+                            Image(systemName: category.iconName)
+                                .font(.title3)
+                                .foregroundColor(.blue)
+                        }
                     }
                 }
                 
