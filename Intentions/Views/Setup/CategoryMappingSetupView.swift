@@ -486,7 +486,10 @@ struct CategoryIconView: View {
     let category: CategoryMappingService.AppCategory
 
     var body: some View {
-        if let customImageName = category.customImageName {
+        if category == .other {
+            // Custom grey square with darker grey dots for "other" category
+            OtherCategoryIcon()
+        } else if let customImageName = category.customImageName {
             // Use extracted Apple FamilyActivityPicker icon if available
             Image(customImageName)
                 .resizable()
@@ -496,6 +499,26 @@ struct CategoryIconView: View {
             Image(systemName: category.iconName)
                 .font(.title)
                 .foregroundStyle(category.iconColor)
+        }
+    }
+}
+
+struct OtherCategoryIcon: View {
+    var body: some View {
+        ZStack {
+            // Grey square background
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(red: 0.8, green: 0.8, blue: 0.8))
+
+            // Grid of darker grey dots
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 3), spacing: 4) {
+                ForEach(0..<9, id: \.self) { _ in
+                    Circle()
+                        .fill(Color(red: 0.5, green: 0.5, blue: 0.5))
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .padding(8)
         }
     }
 }
