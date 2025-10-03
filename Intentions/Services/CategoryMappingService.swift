@@ -102,6 +102,25 @@ final class CategoryMappingService: Sendable {
             case .other: return Color(red: 0.5, green: 0.5, blue: 0.5)          // Gray
             }
         }
+
+        /// Custom image asset name for extracted Apple FamilyActivityPicker icons
+        /// Return nil to use SF Symbol fallback
+        var customImageName: String? {
+            switch self {
+            case .social: return "apple-social-icon"           // Pink heart from Apple
+            case .games: return "apple-games-icon"             // Blue rocket from Apple
+            case .entertainment: return "apple-entertainment-icon" // Orange popcorn from Apple
+            case .creativity: return "apple-creativity-icon"   // Yellow paintbrush from Apple
+            case .productivityFinance: return "apple-productivity-icon" // Blue airplane from Apple
+            case .education: return "apple-education-icon"     // Green globe from Apple
+            case .informationReading: return "apple-reading-icon" // Blue book from Apple
+            case .healthFitness: return "apple-health-icon"    // Blue figure from Apple
+            case .utilities: return "apple-utilities-icon"     // Gray tools from Apple
+            case .shoppingFood: return "apple-shopping-icon"   // Orange bag from Apple
+            case .travel: return nil                           // Use SF Symbol fallback
+            case .other: return nil                            // Use SF Symbol fallback
+            }
+        }
     }
     
     // MARK: - Storage

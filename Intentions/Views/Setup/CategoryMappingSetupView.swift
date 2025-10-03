@@ -486,12 +486,17 @@ struct CategoryIconView: View {
     let category: CategoryMappingService.AppCategory
 
     var body: some View {
-        // Apple doesn't allow direct access to system category tokens
-        // They can only be obtained through user selection in FamilyActivityPicker
-        // Therefore, we use styled SF Symbols that visually match Apple's design
-        Image(systemName: category.iconName)
-            .font(.title3)
-            .foregroundStyle(category.iconColor)
+        if let customImageName = category.customImageName {
+            // Use extracted Apple FamilyActivityPicker icon if available
+            Image(customImageName)
+                .resizable()
+                .frame(width: 24, height: 24)
+        } else {
+            // Fallback to SF Symbol that matches Apple's design
+            Image(systemName: category.iconName)
+                .font(.title3)
+                .foregroundStyle(category.iconColor)
+        }
     }
 }
 
