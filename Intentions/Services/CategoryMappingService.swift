@@ -117,7 +117,7 @@ final class CategoryMappingService: Sendable {
             case .healthFitness: return "apple-health-icon"    // Blue figure from Apple
             case .utilities: return "apple-utilities-icon"     // Gray tools from Apple
             case .shoppingFood: return "apple-shopping-icon"   // Orange bag from Apple
-            case .travel: return nil                           // Use SF Symbol fallback
+            case .travel: return "apple-travel-icon"           // Blue car/travel from Apple
             case .other: return nil                            // Use SF Symbol fallback
             }
         }
