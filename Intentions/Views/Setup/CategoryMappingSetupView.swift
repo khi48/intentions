@@ -510,15 +510,14 @@ struct OtherCategoryIcon: View {
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color(red: 0.8, green: 0.8, blue: 0.8))
 
-            // Grid of darker grey dots
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 3), spacing: 4) {
-                ForEach(0..<9, id: \.self) { _ in
+            // Three darker grey dots in a row
+            HStack(spacing: 6) {
+                ForEach(0..<3, id: \.self) { _ in
                     Circle()
                         .fill(Color(red: 0.5, green: 0.5, blue: 0.5))
                         .frame(width: 6, height: 6)
                 }
             }
-            .padding(8)
         }
     }
 }
