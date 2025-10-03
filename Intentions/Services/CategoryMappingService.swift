@@ -71,35 +71,35 @@ final class CategoryMappingService: Sendable {
         
         var iconName: String {
             switch self {
-            case .social: return "bubble.left.and.bubble.right.fill"
-            case .games: return "gamecontroller.fill"
-            case .entertainment: return "popcorn.fill"
-            case .creativity: return "paintbrush.pointed.fill"
-            case .education: return "graduationcap.fill"
-            case .healthFitness: return "figure.run"
-            case .informationReading: return "book.fill"
-            case .productivityFinance: return "airplane"
-            case .shoppingFood: return "bag.fill"
+            case .social: return "heart.fill"                    // Pink heart like Apple's Social
+            case .games: return "rocket.fill"                   // Blue rocket like Apple's Games
+            case .entertainment: return "popcorn.fill"          // Red/orange popcorn like Apple's Entertainment
+            case .creativity: return "paintbrush.fill"          // Yellow/orange paintbrush like Apple's Creativity
+            case .productivityFinance: return "airplane"        // Blue airplane like Apple's Productivity & Finance
+            case .education: return "globe"                     // Green/blue globe like Apple's Education
+            case .informationReading: return "book.fill"        // Blue book like Apple's Information & Reading
+            case .healthFitness: return "figure.run"           // Blue figure like Apple's Health & Fitness
+            case .utilities: return "hammer.fill"               // Gray hammer like Apple's Utilities
+            case .shoppingFood: return "bag.fill"              // Orange bag like Apple's Shopping & Food
             case .travel: return "car.fill"
-            case .utilities: return "gearshape.fill"
             case .other: return "ellipsis.circle.fill"
             }
         }
 
         var iconColor: Color {
             switch self {
-            case .social: return .pink
-            case .games: return .blue
-            case .entertainment: return .orange
-            case .creativity: return .yellow
-            case .education: return .green
-            case .healthFitness: return .cyan
-            case .informationReading: return .blue
-            case .productivityFinance: return .blue
-            case .shoppingFood: return .orange
-            case .travel: return .blue
-            case .utilities: return .gray
-            case .other: return .gray
+            case .social: return Color(red: 1.0, green: 0.4, blue: 0.6)        // Apple's pink
+            case .games: return Color(red: 0.0, green: 0.5, blue: 1.0)         // Apple's blue rocket
+            case .entertainment: return Color(red: 1.0, green: 0.3, blue: 0.0)  // Apple's red-orange
+            case .creativity: return Color(red: 1.0, green: 0.8, blue: 0.0)     // Apple's yellow-orange
+            case .productivityFinance: return Color(red: 0.0, green: 0.5, blue: 1.0) // Apple's blue
+            case .education: return Color(red: 0.0, green: 0.7, blue: 0.4)      // Apple's green
+            case .informationReading: return Color(red: 0.0, green: 0.5, blue: 1.0) // Apple's blue
+            case .healthFitness: return Color(red: 0.0, green: 0.7, blue: 1.0)  // Apple's cyan-blue
+            case .utilities: return Color(red: 0.5, green: 0.5, blue: 0.5)      // Apple's gray
+            case .shoppingFood: return Color(red: 1.0, green: 0.5, blue: 0.0)   // Apple's orange
+            case .travel: return Color(red: 0.0, green: 0.5, blue: 1.0)         // Blue
+            case .other: return Color(red: 0.5, green: 0.5, blue: 0.5)          // Gray
             }
         }
     }
