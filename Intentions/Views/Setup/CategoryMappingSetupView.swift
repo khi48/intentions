@@ -396,21 +396,21 @@ struct CategorySetupCard: View {
         Button(action: onTap) {
             VStack(spacing: 12) {
                 // Icon and status
-                ZStack {
-                    Circle()
-                        .fill(isCompleted ? Color.green.opacity(0.2) : Color.blue.opacity(0.2))
-                        .frame(width: 44, height: 44)
+                if isCompleted {
+                    ZStack {
+                        Circle()
+                            .fill(Color.green.opacity(0.2))
+                            .frame(width: 44, height: 44)
 
-                    if isCompleted {
                         Image(systemName: "checkmark")
                             .font(.title3)
                             .fontWeight(.bold)
                             .foregroundColor(.green)
-                    } else {
-                        // Try to use FamilyActivityIconView if we have a category token,
-                        // otherwise fall back to styled SF Symbol
-                        CategoryIconView(category: category)
                     }
+                } else {
+                    // Apple icons without background circle, larger size
+                    CategoryIconView(category: category)
+                        .frame(width: 44, height: 44)
                 }
                 
                 // Category info
@@ -490,11 +490,11 @@ struct CategoryIconView: View {
             // Use extracted Apple FamilyActivityPicker icon if available
             Image(customImageName)
                 .resizable()
-                .frame(width: 24, height: 24)
+                .aspectRatio(contentMode: .fit)
         } else {
             // Fallback to SF Symbol that matches Apple's design
             Image(systemName: category.iconName)
-                .font(.title3)
+                .font(.title)
                 .foregroundStyle(category.iconColor)
         }
     }
