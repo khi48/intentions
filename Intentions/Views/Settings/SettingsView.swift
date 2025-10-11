@@ -47,23 +47,34 @@ struct ScheduleDetailsRow: View {
     let title: String
     let value: String
     let action: () -> Void
-    
+    let isDisabled: Bool
+
+    init(title: String, value: String, action: @escaping () -> Void, isDisabled: Bool = false) {
+        self.title = title
+        self.value = value
+        self.action = action
+        self.isDisabled = isDisabled
+    }
+
     var body: some View {
-        Button(action: action) {
+        Button(action: isDisabled ? {} : action) {
             HStack {
                 Text(title)
-                    .foregroundStyle(.primary)
-                
+                    .foregroundColor(isDisabled ? AppConstants.Colors.disabled : AppConstants.Colors.text)
+
                 Spacer()
-                
+
                 Text(value)
-                    .foregroundStyle(.secondary)
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundColor(isDisabled ? AppConstants.Colors.disabled : AppConstants.Colors.textSecondary)
+
+                if !isDisabled {
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(AppConstants.Colors.disabled)
+                }
             }
         }
+        .disabled(isDisabled)
     }
 }
 
@@ -77,10 +88,11 @@ struct AppGroupRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(group.name)
                     .font(.headline)
+                    .foregroundColor(AppConstants.Colors.text)
                 
                 Text("\(group.applications.count) apps")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
             }
             
             Spacer()
@@ -95,7 +107,7 @@ struct AppGroupRow: View {
                 }
             } label: {
                 Image(systemName: "ellipsis.circle")
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
             }
         }
     }
@@ -109,16 +121,17 @@ struct StatisticRow: View {
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .foregroundStyle(.blue)
+                .foregroundColor(AppConstants.Colors.accent)
                 .frame(width: 20)
-            
+
             Text(title)
+                .foregroundColor(AppConstants.Colors.text)
             
             Spacer()
             
             Text(value)
                 .fontWeight(.medium)
-                .foregroundStyle(.secondary)
+                .foregroundColor(AppConstants.Colors.textSecondary)
         }
     }
 }
@@ -131,16 +144,17 @@ struct SettingsRow: View {
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .foregroundStyle(.blue)
+                .foregroundColor(AppConstants.Colors.accent)
                 .frame(width: 20)
-            
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.headline)
-                
+                    .foregroundColor(AppConstants.Colors.text)
+
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
             }
             
             Spacer()
@@ -157,17 +171,20 @@ struct SettingsView: View {
     private let onScheduleSettingsChanged: ((ScheduleSettings) async -> Void)?
     private let onViewModelReady: ((SettingsViewModel) -> Void)?
     private let setupCoordinator: SetupCoordinator?
+    private let hasActiveSession: Bool
     @EnvironmentObject private var navigationManager: NavigationStateManager
-    
+
     init(
         dataService: DataPersisting? = nil,
         setupCoordinator: SetupCoordinator? = nil,
+        hasActiveSession: Bool = false,
         onScheduleSettingsChanged: ((ScheduleSettings) async -> Void)? = nil,
         onViewModelReady: ((SettingsViewModel) -> Void)? = nil
     ) {
         let service = dataService ?? MockDataPersistenceService()
         self._viewModel = State(wrappedValue: SettingsViewModel(dataService: service))
         self.setupCoordinator = setupCoordinator
+        self.hasActiveSession = hasActiveSession
         self.onScheduleSettingsChanged = onScheduleSettingsChanged
         self.onViewModelReady = onViewModelReady
     }
@@ -176,25 +193,34 @@ struct SettingsView: View {
         NavigationStack(path: $navigationManager.settingsPath) {
             if viewModel.isLoading {
                 ProgressView("Loading Settings...")
+                    .foregroundColor(AppConstants.Colors.text)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(AppConstants.Colors.background)
             } else {
                 List {
                     // Intentions State Section
                     scheduleSection
-                    
+
                     // Category Mapping Section
                     categoryMappingSection
-                    
+
                     // Statistics Section
                     statisticsSection
-                    
+
                     // General Settings Section
                     generalSection
-                    
+
                     // About Section
                     aboutSection
+
+                    // Debug Section (only in debug builds)
+                    #if DEBUG
+                    debugSection
+                    #endif
                 }
                 .listStyle(.insetGrouped)
+                .background(AppConstants.Colors.background)
+                .scrollContentBackground(.hidden)
                 .navigationDestination(for: SettingsDestination.self) { destination in
                     switch destination {
                     case .notifications:
@@ -218,12 +244,13 @@ struct SettingsView: View {
                             }
                         } else {
                             Text("Setup not available")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppConstants.Colors.textSecondary)
                         }
                     }
                 }
             }
         }
+        .background(AppConstants.Colors.background)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(.visible, for: .tabBar)
@@ -323,7 +350,7 @@ struct SettingsView: View {
 
                     Text("Control when apps are blocked by default")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                 }
 
                 Spacer()
@@ -348,23 +375,36 @@ struct SettingsView: View {
 
                     Text(viewModel.intentionsStateText)
                         .font(.caption)
-                        .foregroundStyle(viewModel.intentionsStateColor)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                 }
             }
 
-            // Schedule Details (when enabled)
-            if viewModel.scheduleSettings.isEnabled {
-                ScheduleDetailsRow(
-                    title: "Blocking Hours",
-                    value: viewModel.formattedActiveHours,
-                    action: { viewModel.showScheduleEditor() }
-                )
+            // Schedule Details (always visible)
+            ScheduleDetailsRow(
+                title: "Blocking Hours",
+                value: viewModel.formattedActiveHours,
+                action: { viewModel.showScheduleEditor() },
+                isDisabled: hasActiveSession
+            )
 
-                ScheduleDetailsRow(
-                    title: "Blocking Days",
-                    value: viewModel.activeDaysText,
-                    action: { viewModel.showScheduleEditor() }
-                )
+            ScheduleDetailsRow(
+                title: "Blocking Days",
+                value: viewModel.activeDaysText,
+                action: { viewModel.showScheduleEditor() },
+                isDisabled: hasActiveSession
+            )
+
+
+            // Show information when disabled due to active session
+            if hasActiveSession {
+                HStack {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(AppConstants.Colors.textSecondary)
+                    Text("Cannot modify schedule while session is active")
+                        .font(.caption)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
+                }
+                .padding(.top, 4)
             }
         } header: {
             Text("Intentions State")
@@ -376,7 +416,8 @@ struct SettingsView: View {
             }
         }
     }
-    
+
+
     // MARK: - Statistics Section
     
     private var statisticsSection: some View {
@@ -442,6 +483,17 @@ struct SettingsView: View {
                     icon: SettingsDestination.setupFlow.systemImage
                 )
             }
+
+            // Greyscale recommendation
+            Button(action: {
+                openGeneralAccessibilitySettings()
+            }) {
+                SettingsRow(
+                    title: "Enable Greyscale",
+                    subtitle: "Optional: Enable greyscale in Settings → Accessibility → Display & Text Size → Color Filters",
+                    icon: "eye.slash"
+                )
+            }
         } header: {
             Text("Setup")
         }
@@ -467,8 +519,45 @@ struct SettingsView: View {
         } footer: {
             Text("Intentions is designed to promote mindful phone usage through intentional app access.")
                 .multilineTextAlignment(.center)
+                .foregroundColor(AppConstants.Colors.textSecondary)
                 .padding(.top)
         }
+    }
+
+    // MARK: - Helper Functions
+
+    /// Open iOS Settings to Color Filters section
+    /// Using various iOS 18 compatible URL formats
+    private func openGeneralAccessibilitySettings() {
+        // Try newest iOS 18 settings-navigation format first
+//        let settingsNavigationURL = "settings-navigation://com.apple.Settings"
+//
+//        if let colorFiltersURL = URL(string: settingsNavigationURL){
+//            UIApplication.shared.open(colorFiltersURL)
+//            return
+//        }
+//        ,
+//        UIApplication.shared.canOpenURL(colorFiltersURL)
+
+        // Try iOS 18 prefs format
+//        let prefsURL = "prefs:root=ACCESSIBILITY" //&path=DISPLAY_AND_TEXTDISPLAY_FILTER_COLOR"
+//
+//        if let prefsColorFiltersURL = URL(string: prefsURL){
+//            UIApplication.shared.open(prefsColorFiltersURL)
+//            return
+//        }
+//
+//        // Fallback to general Accessibility settings
+//        if let accessibilityURL = URL(string: "prefs:root=ACCESSIBILITY"),
+//           UIApplication.shared.canOpenURL(accessibilityURL) {
+//            UIApplication.shared.open(accessibilityURL)
+//            return
+//        }`
+//
+//        // Final fallback: open main Settings app
+//        if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+//            UIApplication.shared.open(settingsURL)
+//        }
     }
 }
 
@@ -500,10 +589,12 @@ struct ScheduleSettingsView: View {
                 // Intentions State Toggle
                 Section {
                     Toggle("Enable Scheduled Blocking", isOn: $isEnabled)
+                        .tint(AppConstants.Colors.accent)
                 } header: {
                     Text("Blocking Mode")
                 } footer: {
                     Text(isEnabled ? "Apps will only be blocked during specified times and days" : "Apps will be blocked by default 24/7")
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                 }
                 
                 if isEnabled {
@@ -511,6 +602,7 @@ struct ScheduleSettingsView: View {
                     Section {
                         HStack {
                             Text("Start Time")
+                                .foregroundColor(AppConstants.Colors.text)
                             Spacer()
                             Picker("Start Hour", selection: $startHour) {
                                 ForEach(0..<24) { hour in
@@ -523,6 +615,7 @@ struct ScheduleSettingsView: View {
                         
                         HStack {
                             Text("End Time")
+                                .foregroundColor(AppConstants.Colors.text)
                             Spacer()
                             Picker("End Hour", selection: $endHour) {
                                 ForEach(1..<24) { hour in
@@ -536,6 +629,7 @@ struct ScheduleSettingsView: View {
                         Text("Blocking Hours")
                     } footer: {
                         Text("Apps will be blocked from \(hourFormatter.string(from: dateFromHour(startHour))) to \(hourFormatter.string(from: dateFromHour(endHour)))")
+                            .foregroundColor(AppConstants.Colors.textSecondary)
                     }
                     
                     // Active Days
@@ -543,10 +637,11 @@ struct ScheduleSettingsView: View {
                         ForEach(Weekday.allCases, id: \.self) { day in
                             HStack {
                                 Text(day.displayName)
+                                    .foregroundColor(AppConstants.Colors.text)
                                 Spacer()
                                 if selectedDays.contains(day) {
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(AppConstants.Colors.accent)
                                 }
                             }
                             .contentShape(Rectangle())
@@ -562,32 +657,38 @@ struct ScheduleSettingsView: View {
                                     selectedDays = Set(Weekday.allCases)
                                 }
                                 .buttonStyle(.bordered)
+                                .tint(AppConstants.Colors.accent)
                                 
                                 Button("Weekdays") {
                                     selectedDays = [.monday, .tuesday, .wednesday, .thursday, .friday]
                                 }
                                 .buttonStyle(.bordered)
+                                .tint(AppConstants.Colors.accent)
                                 
                                 Button("Weekends") {
                                     selectedDays = [.saturday, .sunday]
                                 }
                                 .buttonStyle(.bordered)
+                                .tint(AppConstants.Colors.accent)
                             }
                             
                             Button("Clear All") {
                                 selectedDays.removeAll()
                             }
                             .buttonStyle(.bordered)
-                            .foregroundColor(.red)
+                            .tint(AppConstants.Colors.destructive)
                         }
                         .padding(.vertical, 8)
                     } header: {
                         Text("Blocking Days")
                     } footer: {
                         Text("Select the days when apps should be blocked by default. At least one day must be selected.")
+                            .foregroundColor(AppConstants.Colors.textSecondary)
                     }
                 }
             }
+            .background(AppConstants.Colors.background)
+            .scrollContentBackground(.hidden)
             .navigationTitle("Intentions State")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -671,7 +772,7 @@ struct NotificationSettingsView: View {
         List {
             Section {
                 Text("Configure your notification preferences")
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
             }
             
             Section("Session Reminders") {
@@ -690,7 +791,7 @@ struct PrivacySettingsView: View {
         List {
             Section {
                 Text("Manage your privacy and data settings")
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
             }
             
             Section("Data Usage") {
@@ -709,12 +810,12 @@ struct DataManagementView: View {
         List {
             Section {
                 Text("Manage your app data and settings")
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
             }
             
             Section("Actions") {
                 Button("Export Settings") {}
-                    .foregroundStyle(.primary)
+                    .foregroundColor(AppConstants.Colors.text)
                 Button("Reset All Data", role: .destructive) {}
             }
         }
@@ -734,11 +835,11 @@ struct AboutView: View {
                         .fontWeight(.semibold)
                     
                     Text("Promoting mindful phone usage through intentional app access")
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                     
                     Text("Version 1.0")
                         .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundColor(AppConstants.Colors.disabled)
                 }
                 .padding(.vertical, 8)
             }
@@ -748,6 +849,79 @@ struct AboutView: View {
         .toolbarBackground(.visible, for: .tabBar)
     }
 }
+
+// MARK: - Debug Extension
+
+#if DEBUG
+extension SettingsView {
+    private var debugSection: some View {
+        Section("Debug Tools") {
+            Button(action: {
+                CrashReporting.testCrash()
+            }) {
+                SettingsRow(
+                    title: "Test Crash",
+                    subtitle: "Trigger a test crash to verify logging",
+                    icon: "exclamationmark.triangle"
+                )
+            }
+            .foregroundColor(.red)
+
+            Button(action: {
+                CrashReporting.logCritical("Test critical log entry", context: "Settings Debug")
+            }) {
+                SettingsRow(
+                    title: "Test Error Log",
+                    subtitle: "Generate a test error log entry",
+                    icon: "info.circle"
+                )
+            }
+            .foregroundColor(AppConstants.Colors.text)
+
+            Button(action: {
+                openAnalyticsSettings()
+            }) {
+                SettingsRow(
+                    title: "Open Analytics Settings",
+                    subtitle: "Go to device analytics to check for logs",
+                    icon: "gear"
+                )
+            }
+            .foregroundColor(AppConstants.Colors.text)
+
+            Button(action: {
+                // Test app state functionality
+                print("🧪 DEBUG: Testing app state")
+                print("🧪 DEBUG: hasActiveSession: \(hasActiveSession)")
+                print("🧪 DEBUG: Debug functionality working")
+            }) {
+                SettingsRow(
+                    title: "Test App State",
+                    subtitle: "Debug current app state",
+                    icon: "paintbrush"
+                )
+            }
+            .foregroundColor(AppConstants.Colors.text)
+
+            VStack {
+                Text("Debug mode active")
+                    .font(.caption)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+            }
+        }
+    }
+
+    private func openAnalyticsSettings() {
+        if let url = URL(string: "App-prefs:Privacy&path=ANALYTICS") {
+            Task { @MainActor in
+                if UIApplication.shared.canOpenURL(url) {
+                    UIApplication.shared.open(url)
+                }
+            }
+        }
+    }
+}
+#endif
 
 // MARK: - All Apps Discovery Test View
 
@@ -778,7 +952,7 @@ struct AllAppsDiscoveryTestView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "magnifyingglass.circle")
                         .font(.system(size: 60))
-                        .foregroundColor(.blue)
+                        .foregroundColor(AppConstants.Colors.text)
                     
                     Text("Ready to Discover")
                         .font(.title2)
@@ -794,7 +968,8 @@ struct AllAppsDiscoveryTestView: View {
                         print("🔍 INSTRUCTION: Please select ALL apps and ALL categories")
                         showingPicker = true
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
+                    .foregroundColor(AppConstants.Colors.text)
                     .controlSize(.large)
                 }
             } else {
@@ -802,7 +977,7 @@ struct AllAppsDiscoveryTestView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 60))
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConstants.Colors.text)
                     
                     Text("Discovery Complete!")
                         .font(.title2)
@@ -834,7 +1009,7 @@ struct AllAppsDiscoveryTestView: View {
             // Apps Summary
             HStack {
                 Image(systemName: "app.badge")
-                    .foregroundColor(.blue)
+                    .foregroundColor(AppConstants.Colors.text)
                 Text("Apps: \(allAppsSelection.applications.count)")
                     .font(.headline)
                 Spacer()
@@ -843,7 +1018,7 @@ struct AllAppsDiscoveryTestView: View {
             // Categories Summary  
             HStack {
                 Image(systemName: "folder.badge")
-                    .foregroundColor(.orange)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                 Text("Categories: \(allAppsSelection.categories.count)")
                     .font(.headline)
                 Spacer()
@@ -852,7 +1027,7 @@ struct AllAppsDiscoveryTestView: View {
             // Web Domains Summary
             HStack {
                 Image(systemName: "globe.badge")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppConstants.Colors.text)
                 Text("Web Domains: \(allAppsSelection.webDomains.count)")
                     .font(.headline)
                 Spacer()
@@ -866,7 +1041,7 @@ struct AllAppsDiscoveryTestView: View {
             
             HStack {
                 Image(systemName: "key.fill")
-                    .foregroundColor(.purple)
+                    .foregroundColor(AppConstants.Colors.text)
                 Text("Valid App Tokens: \(validAppTokens)")
                     .font(.subheadline)
                 Spacer()
@@ -874,7 +1049,7 @@ struct AllAppsDiscoveryTestView: View {
             
             HStack {
                 Image(systemName: "key.fill")
-                    .foregroundColor(.purple)
+                    .foregroundColor(AppConstants.Colors.text)
                 Text("Valid Category Tokens: \(validCategoryTokens)")
                     .font(.subheadline)
                 Spacer()
@@ -1038,7 +1213,7 @@ struct IncludeEntireCategoryTestView: View {
             VStack(spacing: 8) {
                 Text("Select a CATEGORY (not individual apps)")
                     .font(.headline)
-                    .foregroundColor(.orange)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                 
                 Text("We want to see if selecting a category populates individual apps when includeEntireCategory: true")
                     .font(.caption)
@@ -1046,7 +1221,7 @@ struct IncludeEntireCategoryTestView: View {
                     .foregroundColor(.secondary)
             }
             .padding()
-            .background(Color.orange.opacity(0.1))
+            .background(AppConstants.Colors.surface)
             .cornerRadius(8)
             
             // Open Picker Button
@@ -1054,7 +1229,8 @@ struct IncludeEntireCategoryTestView: View {
                 print("\n🧪 TESTING: \(testMode.rawValue)")
                 showingPicker = true
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
+            .foregroundColor(AppConstants.Colors.text)
             .controlSize(.large)
             
             // Results
@@ -1095,14 +1271,14 @@ struct IncludeEntireCategoryTestView: View {
             // Basic counts
             HStack {
                 Image(systemName: "app.badge")
-                    .foregroundColor(.blue)
+                    .foregroundColor(AppConstants.Colors.text)
                 Text("Individual Apps: \(currentSelection.applications.count)")
                 Spacer()
             }
             
             HStack {
                 Image(systemName: "folder.badge")
-                    .foregroundColor(.orange)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                 Text("Categories: \(currentSelection.categories.count)")
                 Spacer()
             }
@@ -1115,14 +1291,14 @@ struct IncludeEntireCategoryTestView: View {
             
             HStack {
                 Image(systemName: "key.fill")
-                    .foregroundColor(.purple)
+                    .foregroundColor(AppConstants.Colors.text)
                 Text("Valid App Tokens: \(validAppTokens)")
                 Spacer()
             }
             
             HStack {
                 Image(systemName: "key.fill")
-                    .foregroundColor(.purple)
+                    .foregroundColor(AppConstants.Colors.text)
                 Text("Valid Category Tokens: \(validCategoryTokens)")
                 Spacer()
             }
@@ -1138,23 +1314,23 @@ struct IncludeEntireCategoryTestView: View {
                 if testMode == .withCategories {
                     Text("✅ Selecting 1 category should give you BOTH:")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConstants.Colors.text)
                     Text("  • 1 category token")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConstants.Colors.text)
                     Text("  • Multiple individual app tokens from that category")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConstants.Colors.text)
                 } else {
                     Text("⚠️ Selecting 1 category should give you ONLY:")
                         .font(.caption)
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                     Text("  • 1 category token")
                         .font(.caption)
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                     Text("  • No individual app tokens")
                         .font(.caption)
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                 }
             }
             

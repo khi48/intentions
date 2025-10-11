@@ -173,8 +173,10 @@ final class SessionStatusViewModel: Sendable {
     
     /// Extend the current session
     func extendSession(by minutes: Int) async {
-        guard let currentSession = session, currentSession.isActive else { return }
-        
+        guard let currentSession = session, currentSession.isActive else {
+            return
+        }
+
         let extensionTime = TimeInterval(minutes * 60)
         
         await withLoading {
@@ -182,13 +184,13 @@ final class SessionStatusViewModel: Sendable {
                 // Create extended session by modifying current session
                 let extendedSession = currentSession
                 extendedSession.duration += extensionTime
-                
+
                 try await dataService.saveIntentionSession(extendedSession)
                 session = extendedSession
                 updateRemainingTime()
-                
+
                 await onSessionExtended?(extensionTime)
-                
+
                 // Close dialog
                 showingExtendDialog = false
                 
@@ -317,12 +319,11 @@ final class SessionStatusViewModel: Sendable {
         let totalSeconds = Int(timeInterval)
         let hours = totalSeconds / 3600
         let minutes = (totalSeconds % 3600) / 60
-        let seconds = totalSeconds % 60
-        
+
         if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+            return String(format: "%dh %dm", hours, minutes)
         } else {
-            return String(format: "%d:%02d", minutes, seconds)
+            return String(format: "%dm", minutes)
         }
     }
     

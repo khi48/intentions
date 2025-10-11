@@ -197,6 +197,14 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
             }
         }
     }
+
+    func removeOrphanedAppGroupReferences(_ deletedGroupId: UUID) async throws {
+        trackMethodCall("removeOrphanedAppGroupReferences")
+        try throwErrorIfNeeded()
+
+        // Mock implementation - for testing purposes only
+        print("MOCK: Cleaned up orphaned app group references for \(deletedGroupId)")
+    }
     
     // MARK: - Schedule Settings Methods
     

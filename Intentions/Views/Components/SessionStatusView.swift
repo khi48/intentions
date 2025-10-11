@@ -35,13 +35,11 @@ struct SessionStatusView: View {
         .padding()
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        // TEMPORARILY DISABLED: Extend session sheet to test presentation conflict
-        .sheet(isPresented: .constant(false)) {
+        .sheet(isPresented: $viewModel.showingExtendDialog) {
             ExtendSessionSheet(
                 viewModel: viewModel,
                 onExtend: { minutes in
                     await viewModel.extendSession(by: minutes)
-                    // Note: onExtendSession is not needed here as SessionStatusViewModel handles the extension
                 }
             )
         }
@@ -65,7 +63,7 @@ struct SessionStatusView: View {
             
             // Session status indicator with pulse animation
             Circle()
-                .fill(.green)
+                .fill(AppConstants.Colors.textSecondary)
                 .frame(width: 12, height: 12)
                 .scaleEffect(viewModel.isSessionActive ? 1.0 : 0.8)
                 .opacity(viewModel.isSessionActive ? 1.0 : 0.6)
@@ -132,7 +130,7 @@ struct SessionStatusView: View {
                 if viewModel.progress > 0.8 {
                     Text("Almost done! 🎯")
                         .font(.caption)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(AppConstants.Colors.textSecondary)
                 }
             }
         }
@@ -141,11 +139,11 @@ struct SessionStatusView: View {
     private var progressColor: Color {
         switch viewModel.progress {
         case 0.0..<0.5:
-            return .green
+            return AppConstants.Colors.textSecondary
         case 0.5..<0.8:
-            return .orange
+            return AppConstants.Colors.textSecondary
         default:
-            return .red
+            return AppConstants.Colors.textSecondary
         }
     }
     
@@ -171,13 +169,13 @@ struct SessionStatusView: View {
                     ForEach(viewModel.sessionApps.prefix(10)) { app in
                         VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(.blue.opacity(0.1))
+                                .fill(AppConstants.Colors.surface)
                                 .frame(width: 40, height: 40)
                                 .overlay(
                                     Text(String(app.displayName.prefix(1)))
                                         .font(.headline)
                                         .fontWeight(.semibold)
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(AppConstants.Colors.text)
                                 )
                             
                             Text(app.displayName)
@@ -211,7 +209,7 @@ struct SessionStatusView: View {
             }
         }
         .padding()
-        .background(.blue.opacity(0.05))
+        .background(AppConstants.Colors.surface)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
     
@@ -247,7 +245,8 @@ struct SessionStatusView: View {
                     Text("End Session")
                 }
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
+            .foregroundColor(AppConstants.Colors.text)
             .disabled(viewModel.isLoading)
         }
     }
@@ -262,48 +261,25 @@ private struct ExtendSessionSheet: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
+            VStack(spacing: 16) {
                 // Header
                 VStack(spacing: 8) {
                     Text("Extend Session")
                         .font(.title2)
                         .fontWeight(.semibold)
-                    
+
                     Text("Add more time to your current focused session")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
-                .padding(.top)
-                
-                // Current time info
-                VStack(spacing: 12) {
-                    HStack {
-                        Text("Current session:")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        
-                        Spacer()
-                        
-                        Text(viewModel.formattedRemainingTime)
-                            .font(.subheadline.monospacedDigit())
-                            .fontWeight(.medium)
-                            .foregroundStyle(.primary)
-                    }
-                    
-                    ProgressView(value: viewModel.progress)
-                        .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                        .scaleEffect(y: 2)
-                }
-                .padding()
-                .background(.blue.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                
+                .padding(.top, 8)
+
                 // Extension options
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Add time:")
                         .font(.headline)
-                    
+
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
                         ForEach(viewModel.extensionOptions, id: \.self) { minutes in
                             ExtensionOptionButton(
@@ -318,7 +294,8 @@ private struct ExtendSessionSheet: View {
                         }
                     }
                 }
-                
+                .padding(.top, 8)
+
                 Spacer()
             }
             .padding()
@@ -352,8 +329,8 @@ private struct ExtensionOptionButton: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 60)
-            .background(.blue.opacity(0.1))
-            .foregroundStyle(.blue)
+            .background(AppConstants.Colors.surface)
+            .foregroundStyle(AppConstants.Colors.text)
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)

@@ -12,10 +12,11 @@ import SwiftUI
 import FamilyControls
 
 @main
-struct IntentionsApp: App {
+struct IntentApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     handleWidgetURL(url)
                 }
@@ -25,12 +26,12 @@ struct IntentionsApp: App {
     
     private func handleWidgetURL(_ url: URL) {
         print("🔗 WIDGET: Received URL from widget: \(url)")
-        
-        guard url.scheme == "intentions" else {
+
+        guard url.scheme == "intent" else {
             print("❌ WIDGET: Invalid URL scheme: \(url.scheme ?? "nil")")
             return
         }
-        
+
         switch url.host {
         case "home":
             print("✅ WIDGET: Opening app to home page")

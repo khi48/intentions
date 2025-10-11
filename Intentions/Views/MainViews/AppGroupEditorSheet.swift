@@ -21,6 +21,7 @@ struct AppGroupEditorSheet: View {
     @State private var groupName: String = ""
     @State private var selectedApps: Set<ApplicationToken> = []
     @State private var selectedCategories: Set<ActivityCategoryToken> = []
+    @State private var allowAllWebsites: Bool = false
     @State private var familyActivitySelection = FamilyActivitySelection(includeEntireCategory: true)
     @State private var showingFamilyActivityPicker = false
     @State private var searchText = ""
@@ -45,7 +46,10 @@ struct AppGroupEditorSheet: View {
                         
                         // Group name input
                         groupNameSection
-                        
+
+                        // Website access section
+                        websiteAccessSection
+
                         // App selection section
                         appSelectionSection
                         
@@ -118,7 +122,7 @@ struct AppGroupEditorSheet: View {
         VStack(spacing: 8) {
             Image(systemName: isEditing ? "pencil.circle.fill" : "plus.circle.fill")
                 .font(.system(size: 48))
-                .foregroundColor(.blue)
+                .foregroundColor(AppConstants.Colors.text)
             
             Text(isEditing ? "Edit App Group" : "Create New App Group")
                 .font(.title2)
@@ -134,13 +138,18 @@ struct AppGroupEditorSheet: View {
     // MARK: - Group Name Section
     
     private var groupNameSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Group Name")
                 .font(.headline)
                 .foregroundColor(.primary)
-            
-            VStack(alignment: .leading, spacing: 8) {
-                TextField("Enter group name...", text: $groupName)
+
+            VStack(alignment: .leading, spacing: 4) {
+                TextField("Enter group name...", text: Binding(
+                    get: { groupName },
+                    set: { newValue in
+                        groupName = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                ))
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .submitLabel(.done)
                 
@@ -148,20 +157,20 @@ struct AppGroupEditorSheet: View {
                 HStack {
                     if !groupName.isEmpty && groupName.count > AppConstants.AppGroup.maxNameLength {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.red)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
                             .font(.caption)
                         
                         Text("Name exceeds maximum length of \(AppConstants.AppGroup.maxNameLength) characters")
                             .font(.caption)
-                            .foregroundColor(.red)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
                     } else if !groupName.isEmpty && AppConstants.AppGroup.reservedNames.contains(groupName) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.red)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
                             .font(.caption)
                         
                         Text("This name is reserved. Please choose a different name.")
                             .font(.caption)
-                            .foregroundColor(.red)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
                     }
                     
                     Spacer()
@@ -170,7 +179,29 @@ struct AppGroupEditorSheet: View {
             }
         }
     }
-    
+
+    // MARK: - Website Access Section
+
+    private var websiteAccessSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Website Access")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Allow All Websites", isOn: $allowAllWebsites)
+                    .toggleStyle(SwitchToggleStyle())
+
+                Text("When enabled, this group will include access to all websites during sessions.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(AppConstants.UI.cornerRadius)
+    }
+
     // MARK: - App Selection Section
     
     private var appSelectionSection: some View {
@@ -200,12 +231,12 @@ struct AppGroupEditorSheet: View {
                 HStack {
                     Image(systemName: "plus.circle.fill")
                         .font(.title2)
-                        .foregroundColor(.blue)
+                        .foregroundColor(AppConstants.Colors.text)
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text(isEditing ? "Add More Apps & Categories" : "Add Apps & Categories")
                             .font(.headline)
-                            .foregroundColor(.blue)
+                            .foregroundColor(AppConstants.Colors.text)
                         
                         Text(isEditing ? "New selections will be added to existing ones" : "Tap to open app selector")
                             .font(.caption)
@@ -219,7 +250,7 @@ struct AppGroupEditorSheet: View {
                         .foregroundColor(.secondary)
                 }
                 .padding()
-                .background(.blue.opacity(0.05))
+                .background(AppConstants.Colors.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .buttonStyle(PlainButtonStyle())
@@ -242,9 +273,22 @@ struct AppGroupEditorSheet: View {
                 if !selectedCategories.isEmpty {
                     selectedCategoriesView
                 }
+
+                // Show optimization note when both apps and categories are selected
+                if willOptimizeSelection {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(AppConstants.Colors.text)
+                            .font(.caption)
+                        Text("Categories will include their apps automatically, so individual app selections will be optimized out.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 8)
+                }
             }
             .padding()
-            .background(.green.opacity(0.05))
+            .background(AppConstants.Colors.surface)
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }
@@ -253,10 +297,11 @@ struct AppGroupEditorSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "app.badge")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppConstants.Colors.text)
                 Text("Individual Apps")
                     .font(.subheadline)
                     .fontWeight(.medium)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                 Spacer()
                 Text("\(selectedApps.count) selected")
                     .font(.caption)
@@ -283,7 +328,7 @@ struct AppGroupEditorSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "folder.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppConstants.Colors.text)
                 Text("App Categories")
                     .font(.subheadline)
                     .fontWeight(.medium)
@@ -348,7 +393,7 @@ struct AppGroupEditorSheet: View {
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
-                    .background(.red)
+                    .background(AppConstants.Colors.textSecondary)
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
@@ -366,14 +411,20 @@ struct AppGroupEditorSheet: View {
                !AppConstants.AppGroup.reservedNames.contains(trimmedName) &&
                (!selectedApps.isEmpty || !selectedCategories.isEmpty)
     }
+
+    /// Returns true if the current selection will be optimized during save
+    private var willOptimizeSelection: Bool {
+        return !selectedCategories.isEmpty && !selectedApps.isEmpty
+    }
     
     private var hasUnsavedChanges: Bool {
         if let editingGroup = editingGroup {
             return groupName != editingGroup.name ||
                    selectedApps != editingGroup.applications ||
-                   selectedCategories != editingGroup.categories
+                   selectedCategories != editingGroup.categories ||
+                   allowAllWebsites != editingGroup.allowAllWebsites
         } else {
-            return !groupName.isEmpty || !selectedApps.isEmpty || !selectedCategories.isEmpty
+            return !groupName.isEmpty || !selectedApps.isEmpty || !selectedCategories.isEmpty || allowAllWebsites
         }
     }
     
@@ -384,7 +435,8 @@ struct AppGroupEditorSheet: View {
             groupName = editingGroup.name
             selectedApps = editingGroup.applications
             selectedCategories = editingGroup.categories
-            
+            allowAllWebsites = editingGroup.allowAllWebsites
+
             // Set up FamilyActivitySelection from existing data
             familyActivitySelection = FamilyActivitySelection(includeEntireCategory: true)
             // Note: FamilyActivitySelection will be updated through the UI picker
@@ -395,35 +447,45 @@ struct AppGroupEditorSheet: View {
         // Convert new selections to tokens
         let newApps = Set(selection.applications.compactMap { $0.token })
         let newCategories = Set(selection.categories.compactMap { $0.token })
-        
+
         // Only add items that aren't already selected (additive behavior)
         let appsToAdd = newApps.subtracting(selectedApps)
         let categoriesToAdd = newCategories.subtracting(selectedCategories)
-        
+
         // Add new items to existing selections
         selectedApps.formUnion(appsToAdd)
         selectedCategories.formUnion(categoriesToAdd)
-        
-        // Log what was added for debugging
-        if !appsToAdd.isEmpty {
-            print("➕ APPS ADDED: \(appsToAdd.count) new apps added to group")
-        }
-        if !categoriesToAdd.isEmpty {
-            print("➕ CATEGORIES ADDED: \(categoriesToAdd.count) new categories added to group")
-        }
-        if appsToAdd.isEmpty && categoriesToAdd.isEmpty {
-            print("ℹ️ NO NEW ITEMS: All selected items were already in the group")
-        }
     }
     
     private func removeApp(_ token: ApplicationToken) {
         selectedApps.remove(token)
-        print("➖ APP REMOVED: Removed app from group selection")
     }
     
     private func removeCategory(_ token: ActivityCategoryToken) {
         selectedCategories.remove(token)
-        print("➖ CATEGORY REMOVED: Removed category from group selection")
+    }
+
+    /// Optimizes the selection by prioritizing categories over individual apps
+    /// When categories are selected, individual apps become redundant since categories include all their apps
+    private func getOptimizedSelection() -> (apps: Set<ApplicationToken>, categories: Set<ActivityCategoryToken>) {
+        // If no categories are selected, return all individual apps
+        guard !selectedCategories.isEmpty else {
+            return (apps: selectedApps, categories: Set())
+        }
+
+        // If categories are selected, prioritize them for efficiency
+        // Categories automatically include all their apps, so individual app selections become redundant
+        // This follows the principle: "When entire categories are being saved, there is no need
+        // to save all the individual apps from those categories too"
+
+        if !selectedCategories.isEmpty {
+            // Categories are selected - they handle app inclusion automatically
+            // Only keep individual apps if no categories are selected, otherwise categories take precedence
+            return (apps: Set(), categories: selectedCategories)
+        } else {
+            // Only individual apps are selected
+            return (apps: selectedApps, categories: Set())
+        }
     }
     
     private func saveGroup() async {
@@ -465,14 +527,18 @@ struct AppGroupEditorSheet: View {
                 print("❌ VALIDATION ERROR: Please select at least one app or category")
                 return
             }
-            
+
+            // Get optimized selection to avoid redundancy
+            let optimizedSelection = getOptimizedSelection()
+
             if let editingGroup = editingGroup {
                 // Create updated group locally - should not throw now
                 let updatedGroup = try AppGroup(
                     id: editingGroup.id,
                     name: trimmedName,
-                    applications: selectedApps,
-                    categories: selectedCategories,
+                    applications: optimizedSelection.apps,
+                    categories: optimizedSelection.categories,
+                    allowAllWebsites: allowAllWebsites,
                     createdAt: editingGroup.createdAt,
                     lastModified: Date()
                 )
@@ -489,8 +555,9 @@ struct AppGroupEditorSheet: View {
                 let newGroup = try AppGroup(
                     id: UUID(),
                     name: trimmedName,
-                    applications: selectedApps,
-                    categories: selectedCategories,
+                    applications: optimizedSelection.apps,
+                    categories: optimizedSelection.categories,
+                    allowAllWebsites: allowAllWebsites,
                     createdAt: Date(),
                     lastModified: Date()
                 )
@@ -541,10 +608,10 @@ private struct StableIconGrid: View {
     let onRemove: ((ApplicationToken) -> Void)?
     
     var body: some View {
-        // Simple, static grid - no lazy loading, no dynamic changes
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
-        
-        LazyVGrid(columns: columns, spacing: 12) {
+        // Simple, static grid with fixed-width columns to allow larger icons
+        let columns = Array(repeating: GridItem(.fixed(100), spacing: 16), count: 3)
+
+        LazyVGrid(columns: columns, spacing: 16) {
             ForEach(tokens.indices, id: \.self) { index in
                 StableAppIconCell(
                     token: tokens[index],
@@ -564,36 +631,32 @@ private struct StableAppIconCell: View {
     let onRemove: ((ApplicationToken) -> Void)?
     
     var body: some View {
-        VStack(spacing: 6) {
-            ZStack(alignment: .topTrailing) {
-                // App icon
-                StableFamilyControlsLabel(token: token, id: tokenID)
-                    .frame(width: 40, height: 40)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                
-                // Remove button (only show if onRemove callback provided)
-                if let onRemove = onRemove {
-                    Button(action: {
-                        onRemove(token)
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(.red)
-                            .background(Color.white, in: Circle())
+        VStack(spacing: 0) {
+            // App icon with overlay remove button
+            StableFamilyControlsLabel(token: token, id: tokenID, size: 55)
+                .overlay(alignment: .topTrailing) {
+                    // Remove button (only show if onRemove callback provided)
+                    if let onRemove = onRemove {
+                        Button(action: {
+                            onRemove(token)
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(AppConstants.Colors.textSecondary)
+                                .background(Color.white, in: Circle())
+                        }
+                        .buttonStyle(.plain)
+//                        .padding(6) // Padding within overlay instead of offset
                     }
-                    .offset(x: 6, y: -6)
-                    .buttonStyle(.plain)
                 }
-            }
-            
-            // App name with stable token reference
+
+            // App name with stable token reference - smaller text
             StableFamilyControlsName(token: token, id: tokenID)
                 .font(.caption2)
                 .foregroundColor(.primary)
-                .lineLimit(2)
+                .lineLimit(1)
                 .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity)
     }
 }
 
@@ -607,7 +670,7 @@ private struct CategoryItemView: View {
         HStack(spacing: 8) {
             Image(systemName: "folder.fill")
                 .font(.system(size: 16))
-                .foregroundColor(.blue)
+                .foregroundColor(AppConstants.Colors.text)
                 .frame(width: 20, height: 20)
             
             Text("Category") // Note: ActivityCategoryToken doesn't have a display name
@@ -622,13 +685,13 @@ private struct CategoryItemView: View {
             }) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 14))
-                    .foregroundColor(.red)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(.blue.opacity(0.1))
+        .background(AppConstants.Colors.surface)
         .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 }
@@ -638,16 +701,21 @@ private struct CategoryItemView: View {
 private struct StableFamilyControlsLabel: View {
     let token: ApplicationToken
     let id: Int
-    
+    let size: CGFloat
+
+    init(token: ApplicationToken, id: Int, size: CGFloat = 50) {
+        self.token = token
+        self.id = id
+        self.size = size
+    }
+
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(.gray.opacity(0.1))
-            
-            Label(token)
-                .labelStyle(.iconOnly)
-                .id("app_icon_\(id)")
-        }
+        Label(token)
+            .labelStyle(.iconOnly)
+            .scaleEffect(size / 25) // Scale from native 25px to desired size
+            .grayscale(1.0) // Convert to greyscale
+            .frame(width: size, height: size)
+            .id("app_icon_\(id)")
     }
 }
 

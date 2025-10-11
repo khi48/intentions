@@ -74,7 +74,7 @@ struct SetupFlowView: View {
         ZStack {
             // Background
             LinearGradient(
-                colors: [Color.blue.opacity(0.1), Color.purple.opacity(0.1)],
+                colors: [AppConstants.Colors.surface, AppConstants.Colors.surface],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -137,39 +137,39 @@ struct SetupFlowView: View {
             HStack(spacing: 8) {
                 // Step 1: Screen Time
                 Circle()
-                    .fill(step >= 1 ? Color.blue : Color.gray.opacity(0.3))
+                    .fill(step >= 1 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
                     .frame(width: 12, height: 12)
                     .overlay(
                         Circle()
-                            .stroke(Color.blue, lineWidth: step == 1 ? 2 : 0)
+                            .stroke(AppConstants.Colors.text, lineWidth: step == 1 ? 2 : 0)
                     )
                 
                 Rectangle()
-                    .fill(step >= 2 ? Color.blue : Color.gray.opacity(0.3))
+                    .fill(step >= 2 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
                     .frame(height: 2)
                     .frame(maxWidth: 30)
                 
                 // Step 2: Category Mapping
                 Circle()
-                    .fill(step >= 2 ? Color.blue : Color.gray.opacity(0.3))
+                    .fill(step >= 2 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
                     .frame(width: 12, height: 12)
                     .overlay(
                         Circle()
-                            .stroke(Color.blue, lineWidth: step == 2 ? 2 : 0)
+                            .stroke(AppConstants.Colors.text, lineWidth: step == 2 ? 2 : 0)
                     )
                 
                 Rectangle()
-                    .fill(step >= 3 ? Color.blue : Color.gray.opacity(0.3))
+                    .fill(step >= 3 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
                     .frame(height: 2)
                     .frame(maxWidth: 30)
                 
                 // Step 3: Widget Setup
                 Circle()
-                    .fill(step >= 3 ? Color.blue : Color.gray.opacity(0.3))
+                    .fill(step >= 3 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
                     .frame(width: 12, height: 12)
                     .overlay(
                         Circle()
-                            .stroke(Color.blue, lineWidth: step == 3 ? 2 : 0)
+                            .stroke(AppConstants.Colors.text, lineWidth: step == 3 ? 2 : 0)
                     )
             }
             .padding(.horizontal)
@@ -217,12 +217,12 @@ struct SetupFlowView: View {
             VStack(spacing: 16) {
                 ZStack {
                     Circle()
-                        .fill(Color.green.opacity(0.2))
+                        .fill(AppConstants.Colors.surface)
                         .frame(width: 80, height: 80)
                     
                     Image(systemName: "widget.large.badge.plus")
                         .font(.system(size: 40))
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConstants.Colors.text)
                 }
                 
                 Text("Add Intentions Widget")
@@ -243,7 +243,7 @@ struct SetupFlowView: View {
                 HStack(spacing: 20) {
                     VStack(spacing: 4) {
                         Image(systemName: "shield.fill")
-                            .foregroundColor(.red)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
                             .font(.title2)
                         Text("Blocked")
                             .font(.caption)
@@ -251,7 +251,7 @@ struct SetupFlowView: View {
                     
                     VStack(spacing: 4) {
                         Image(systemName: "checkmark.circle")
-                            .foregroundColor(.green)
+                            .foregroundColor(AppConstants.Colors.text)
                             .font(.title2)
                         Text("Open")
                             .font(.caption)
@@ -259,7 +259,7 @@ struct SetupFlowView: View {
                     
                     VStack(spacing: 4) {
                         Image(systemName: "questionmark.circle")
-                            .foregroundColor(.orange)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
                             .font(.title2)
                         Text("Unknown")
                             .font(.caption)
@@ -274,7 +274,8 @@ struct SetupFlowView: View {
                 print("📱 STATE: Widget setup completed, finishing setup")
                 onComplete()
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
+            .foregroundColor(AppConstants.Colors.text)
             .controlSize(.large)
             
             Text("You can add the widget later from your device settings")

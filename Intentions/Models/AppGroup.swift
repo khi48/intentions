@@ -19,6 +19,7 @@ final class AppGroup: Identifiable, Codable, @unchecked Sendable {
     var name: String
     var applications: Set<ApplicationToken>
     var categories: Set<ActivityCategoryToken>
+    var allowAllWebsites: Bool = false // Whether this group includes access to all websites
     var createdAt: Date
     var lastModified: Date
     
@@ -27,6 +28,7 @@ final class AppGroup: Identifiable, Codable, @unchecked Sendable {
         name: String,
         applications: Set<ApplicationToken> = [],
         categories: Set<ActivityCategoryToken> = [],
+        allowAllWebsites: Bool = false,
         createdAt: Date = Date(),
         lastModified: Date = Date()
     ) throws {
@@ -46,13 +48,14 @@ final class AppGroup: Identifiable, Codable, @unchecked Sendable {
         self.name = name
         self.applications = applications
         self.categories = categories
+        self.allowAllWebsites = allowAllWebsites
         self.createdAt = createdAt
         self.lastModified = lastModified
     }
     
     // Codable implementation for ApplicationToken and ActivityCategoryToken
     enum CodingKeys: String, CodingKey {
-        case id, name, applications, categories, createdAt, lastModified
+        case id, name, applications, categories, allowAllWebsites, createdAt, lastModified
     }
     
     init(from decoder: Decoder) throws {
@@ -61,10 +64,11 @@ final class AppGroup: Identifiable, Codable, @unchecked Sendable {
         name = try container.decode(String.self, forKey: .name)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         lastModified = try container.decode(Date.self, forKey: .lastModified)
-        
+
         // Handle FamilyControls tokens (may need special handling)
         applications = try container.decodeIfPresent(Set<ApplicationToken>.self, forKey: .applications) ?? []
         categories = try container.decodeIfPresent(Set<ActivityCategoryToken>.self, forKey: .categories) ?? []
+        allowAllWebsites = try container.decodeIfPresent(Bool.self, forKey: .allowAllWebsites) ?? false
     }
     
     func encode(to encoder: Encoder) throws {
@@ -75,6 +79,7 @@ final class AppGroup: Identifiable, Codable, @unchecked Sendable {
         try container.encode(lastModified, forKey: .lastModified)
         try container.encode(applications, forKey: .applications)
         try container.encode(categories, forKey: .categories)
+        try container.encode(allowAllWebsites, forKey: .allowAllWebsites)
     }
     
     func updateModified() {

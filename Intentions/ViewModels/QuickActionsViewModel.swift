@@ -54,7 +54,7 @@ final class QuickActionsViewModel: ObservableObject, Sendable {
             do {
                 // Load quick actions
                 let actions = try await dataService.load([QuickAction].self, forKey: "quickActions") ?? []
-                quickActions = actions
+                quickActions = actions.sorted { $0.sortOrder < $1.sortOrder }
                 
                 // Load available app groups
                 availableAppGroups = try await dataService.loadAppGroups()
@@ -77,9 +77,16 @@ final class QuickActionsViewModel: ObservableObject, Sendable {
                 if let index = quickActions.firstIndex(where: { $0.id == quickAction.id }) {
                     quickActions[index] = quickAction
                 } else {
-                    quickActions.append(quickAction)
+                    // Assign sortOrder for new quick action (highest value + 1)
+                    var newQuickAction = quickAction
+                    let maxSortOrder = quickActions.map(\.sortOrder).max() ?? -1
+                    newQuickAction.sortOrder = maxSortOrder + 1
+                    quickActions.append(newQuickAction)
                 }
-                
+
+                // Keep array sorted by sortOrder
+                quickActions.sort { $0.sortOrder < $1.sortOrder }
+
                 // Save to persistence
                 try await dataService.save(quickActions, forKey: "quickActions")
                 
@@ -88,7 +95,34 @@ final class QuickActionsViewModel: ObservableObject, Sendable {
             }
         }
     }
-    
+
+    /// Move a quick action to a new position (for reordering)
+    func moveQuickAction(from sourceIndex: Int, to destinationIndex: Int) async {
+        guard sourceIndex != destinationIndex &&
+              sourceIndex < quickActions.count &&
+              destinationIndex < quickActions.count else { return }
+
+        await withLoading {
+            do {
+                // Move the item in the array
+                let movedItem = quickActions.remove(at: sourceIndex)
+                quickActions.insert(movedItem, at: destinationIndex)
+
+                // Reassign sortOrder values based on new positions
+                for (index, _) in quickActions.enumerated() {
+                    quickActions[index].sortOrder = index
+                }
+
+                // Save to persistence
+                guard let dataService = dataService else { return }
+                try await dataService.save(quickActions, forKey: "quickActions")
+
+            } catch {
+                await handleError(error)
+            }
+        }
+    }
+
     /// Delete a quick action
     func deleteQuickAction(_ quickAction: QuickAction) async {
         guard let dataService = dataService else { return }
@@ -231,6 +265,6 @@ extension QuickActionsViewModel {
                 quickAction.appGroupIds.isEmpty || // No groups required
                 !quickAction.appGroupIds.isDisjoint(with: Set(availableAppGroups.map(\.id))) // Has valid groups
             )
-        }
+        }.sorted { $0.sortOrder < $1.sortOrder }
     }
 }

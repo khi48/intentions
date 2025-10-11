@@ -38,16 +38,19 @@ struct IntentionPromptView: View {
             VStack(spacing: 20) {
                 // Header
                 headerSection
-                
+
                 // Content
                 ScrollView {
                     VStack(spacing: 24) {
                         // Duration Selection
                         durationSection
-                        
+
+                        // Website Access Toggle
+                        websiteAccessSection
+
                         // App Selection
                         appSelectionSection
-                        
+
                         // Selected Items Summary
                         if viewModel.selectionCount > 0 {
                             selectedItemsSection
@@ -55,6 +58,7 @@ struct IntentionPromptView: View {
                     }
                     .padding(.horizontal)
                 }
+                .background(AppConstants.Colors.background)
                 
                 // Action Buttons
                 actionButtonsSection
@@ -68,11 +72,13 @@ struct IntentionPromptView: View {
                     Button("Cancel") {
                         viewModel.cancel()
                     }
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                 }
             }
         }
+        .background(AppConstants.Colors.background)
         .alert("Error", isPresented: Binding(
-            get: { 
+            get: {
                 // COMPLETELY DISABLE IntentionPromptView alerts to prevent presentation conflicts
                 false  // Sheet-based error handling only
             },
@@ -132,69 +138,107 @@ struct IntentionPromptView: View {
     
     private var headerSection: some View {
         VStack(spacing: 12) {
-            Text("🚫 All apps are blocked by default")
-                .font(.headline)
-                .foregroundColor(.primary)
-                .multilineTextAlignment(.center)
-            
             Text("Select which apps you need for this focused session")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConstants.Colors.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
-        .background(Color.orange.opacity(0.1))
+        .background(AppConstants.Colors.surface)
         .cornerRadius(12)
         .padding(.horizontal)
     }
     
     // MARK: - Duration Section
-    
+
     private var durationSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Session Duration")
                     .font(.headline)
-                
+                    .foregroundColor(AppConstants.Colors.text)
+
                 Spacer()
-                
+
                 Text(viewModel.formattedDuration)
                     .font(.title2)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppConstants.Colors.text)
             }
-            
-            // Preset Duration Buttons
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
-                ForEach(viewModel.presetDurations, id: \.self) { duration in
-                    DurationPresetButton(
-                        duration: duration,
-                        isSelected: viewModel.isPresetSelected(duration),
-                        action: {
-                            viewModel.selectPresetDuration(duration)
-                        }
-                    )
-                }
-            }
-            
-            // Custom Duration Input
-            HStack {
-                Text("Custom")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                Button("Set Custom") {
-                    viewModel.currentSheet = .durationPicker
-                }
-                .buttonStyle(.bordered)
-            }
+
+            // Duration Slider
+            durationSliderSection
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(AppConstants.Colors.surface)
         .cornerRadius(AppConstants.UI.cornerRadius)
+    }
+
+    private var durationSliderSection: some View {
+        VStack(spacing: 12) {
+            durationSlider
+            durationPresetButtons
+        }
+    }
+
+    private var durationSlider: some View {
+        Slider(
+            value: Binding(
+                get: { viewModel.selectedDuration },
+                set: { newValue in viewModel.selectedDuration = newValue }
+            ),
+            in: TimeInterval(AppConstants.Session.minimumDuration)...TimeInterval(AppConstants.Session.maximumDuration),
+            step: 5 * 60 // 5-minute intervals
+        ) {
+            Text("Duration")
+        } minimumValueLabel: {
+            Text("5m")
+                .font(.caption)
+                .foregroundColor(AppConstants.Colors.textSecondary)
+        } maximumValueLabel: {
+            Text("2h")
+                .font(.caption)
+                .foregroundColor(AppConstants.Colors.textSecondary)
+        }
+        .tint(AppConstants.Colors.textSecondary)
+    }
+
+    private var durationPresetButtons: some View {
+        HStack(spacing: 8) {
+            durationPresetButton(TimeInterval(5*60))   // 5m
+            durationPresetButton(TimeInterval(15*60))  // 15m
+            durationPresetButton(TimeInterval(30*60))  // 30m
+            durationPresetButton(TimeInterval(60*60))  // 1h
+            durationPresetButton(TimeInterval(2*60*60)) // 2h
+        }
+    }
+
+    private func durationPresetButton(_ duration: TimeInterval) -> some View {
+        let isSelected = viewModel.isPresetSelected(duration)
+        let backgroundColor = isSelected ? AppConstants.Colors.accent : AppConstants.Colors.surface
+        let textColor = isSelected ? AppConstants.Colors.text : AppConstants.Colors.textSecondary
+
+        return Button(action: {
+            viewModel.selectPresetDuration(duration)
+        }) {
+            Text(formatDurationForButton(duration))
+                .font(.caption)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(backgroundColor)
+                .foregroundColor(textColor)
+                .cornerRadius(8)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func formatDurationForButton(_ duration: TimeInterval) -> String {
+        if duration < 3600 {
+            return "\(Int(duration / 60))m"
+        } else {
+            return "\(Int(duration / 3600))h"
+        }
     }
     
     // MARK: - App Selection Section
@@ -202,14 +246,9 @@ struct IntentionPromptView: View {
     private var appSelectionSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Header
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Choose Apps to Allow")
-                    .font(.headline)
-                
-                Text("Select apps using groups (quick) or individual selection (precise).")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            Text("Choose Apps to Allow")
+                .font(.headline)
+                .foregroundColor(AppConstants.Colors.text)
             
             // Selection methods
             VStack(spacing: 16) {
@@ -220,82 +259,66 @@ struct IntentionPromptView: View {
                     HStack {
                         Rectangle()
                             .frame(height: 1)
-                            .foregroundColor(.secondary.opacity(0.3))
+                            .foregroundColor(AppConstants.Colors.border)
                         
                         Text("or")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
                             .padding(.horizontal, 8)
                         
                         Rectangle()
                             .frame(height: 1)
-                            .foregroundColor(.secondary.opacity(0.3))
+                            .foregroundColor(AppConstants.Colors.border)
                     }
                 } else {
                     // Show placeholder when no groups exist
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Quick Select: App Groups")
+                        Text("App Groups")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.secondary)
-                        
-                        VStack(spacing: 8) {
-                            Text("No app groups created yet")
-                                .font(.body)
-                                .foregroundColor(.secondary)
-                            
-                            Text("Create app groups in Settings to enable quick selection")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
+
+                        Text("No groups created yet")
+                            .font(.body)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
                     }
                     
                     HStack {
                         Rectangle()
                             .frame(height: 1)
-                            .foregroundColor(.secondary.opacity(0.3))
+                            .foregroundColor(AppConstants.Colors.border)
                         
                         Text("or")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
                             .padding(.horizontal, 8)
                         
                         Rectangle()
                             .frame(height: 1)
-                            .foregroundColor(.secondary.opacity(0.3))
+                            .foregroundColor(AppConstants.Colors.border)
                     }
                 }
                 
                 // Individual app picker
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Individual App Selection")
+                    Text("Individual Apps")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(.secondary)
-                    
-                    Button("Pick Individual Apps") {
+                        .foregroundColor(AppConstants.Colors.textSecondary)
+
+                    Button("Select Apps") {
                         viewModel.showingFamilyActivityPicker = true
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
+                    .foregroundColor(AppConstants.Colors.text)
                     .frame(maxWidth: .infinity)
                 }
             }
             
-            // Selection summary
-            if viewModel.selectionCount > 0 {
-                familyActivitySelectionSummary
-            } else {
-                Text("Use app groups for quick selection or pick individual apps for precise control")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.vertical, 12)
-            }
         }
         .padding()
         .background(Color(.systemGray6))
@@ -312,7 +335,7 @@ struct IntentionPromptView: View {
                 Text("Apps Allowed During Session")
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                 
                 Spacer()
                 
@@ -323,36 +346,32 @@ struct IntentionPromptView: View {
                 .buttonStyle(.borderless)
             }
             
-            Text("\(viewModel.familyActivitySelection.applications.count) apps, \(viewModel.familyActivitySelection.categories.count) categories")
+            Text("\(viewModel.totalAllowedApps) apps, \(viewModel.totalAllowedCategories) categories")
                 .font(.headline)
                 .foregroundColor(.primary)
-            
-            Text("All other apps will be blocked using intelligent category-based blocking")
-                .font(.caption)
-                .foregroundColor(.orange)
         }
         .padding(12)
-        .background(Color.green.opacity(0.1))
+        .background(AppConstants.Colors.surface)
         .cornerRadius(8)
     }
     
     private var appGroupsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Quick Select: App Groups")
+                Text("App Groups")
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                 
                 Spacer()
                 
                 if !viewModel.selectedAppGroups.isEmpty {
                     Text("\(viewModel.selectedAppGroups.count) selected")
                         .font(.caption)
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(AppConstants.Colors.text)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 2)
-                        .background(Color.accentColor.opacity(0.1))
+                        .background(AppConstants.Colors.surface)
                         .cornerRadius(4)
                 }
             }
@@ -369,12 +388,6 @@ struct IntentionPromptView: View {
                 }
             }
             
-            if !viewModel.availableAppGroups.isEmpty {
-                Text("Selecting an app group will include all its apps and categories in your session")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.leading)
-            }
         }
     }
     
@@ -393,7 +406,7 @@ struct IntentionPromptView: View {
                     viewModel.clearSelections()
                 }
                 .buttonStyle(.borderless)
-                .foregroundColor(.red)
+                .foregroundColor(AppConstants.Colors.textSecondary)
             }
             
             VStack(alignment: .leading, spacing: 8) {
@@ -411,7 +424,7 @@ struct IntentionPromptView: View {
             }
         }
         .padding()
-        .background(Color(.systemBlue).opacity(0.1))
+        .background(AppConstants.Colors.surface)
         .cornerRadius(AppConstants.UI.cornerRadius)
     }
     
@@ -419,7 +432,7 @@ struct IntentionPromptView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Image(systemName: "square.stack.3d.up.fill")
-                    .foregroundColor(.blue)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                 Text("App Groups")
                     .font(.subheadline)
                     .fontWeight(.medium)
@@ -429,7 +442,7 @@ struct IntentionPromptView: View {
                 if let group = viewModel.availableAppGroups.first(where: { $0.id == groupId }) {
                     Text("• \(group.name) (\(group.applications.count) apps, \(group.categories.count) categories)")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                 }
             }
         }
@@ -439,7 +452,7 @@ struct IntentionPromptView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Image(systemName: "hand.tap")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                 Text("Individual Selection")
                     .font(.subheadline)
                     .fontWeight(.medium)
@@ -447,7 +460,7 @@ struct IntentionPromptView: View {
             
             Text("• \(viewModel.familyActivitySelection.applications.count) apps, \(viewModel.familyActivitySelection.categories.count) categories")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConstants.Colors.textSecondary)
         }
     }
     
@@ -455,7 +468,7 @@ struct IntentionPromptView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Image(systemName: "app.badge")
-                    .foregroundColor(.orange)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                 Text("Manual Selection")
                     .font(.subheadline)
                     .fontWeight(.medium)
@@ -463,90 +476,68 @@ struct IntentionPromptView: View {
             
             Text("• \(viewModel.selectedApplications.count) apps")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConstants.Colors.textSecondary)
         }
     }
     
     // MARK: - Action Buttons
     
     private var actionButtonsSection: some View {
-        VStack(spacing: 12) {
-            Button(action: {
-                Task {
-                    // Small delay to ensure UI binding updates are processed
-                    try? await Task.sleep(for: .milliseconds(100))
-                    await viewModel.startSession()
-                }
-            }) {
-                HStack {
-                    if viewModel.isLoading {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    }
-                    
-                    Text("Start Session")
-                        .fontWeight(.semibold)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
+        Button(action: {
+            Task {
+                // Small delay to ensure UI binding updates are processed
+                try? await Task.sleep(for: .milliseconds(100))
+                await viewModel.startSession()
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(!viewModel.canStartSession)
-            
-            Button("Cancel") {
-                viewModel.cancel()
+        }) {
+            HStack {
+                if viewModel.isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                }
+
+                Text("Start Session")
+                    .fontWeight(.semibold)
             }
-            .buttonStyle(.bordered)
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
         }
+        .buttonStyle(.bordered)
+        .foregroundColor(AppConstants.Colors.text)
+        .disabled(!viewModel.canStartSession)
+    }
+
+    // MARK: - Website Access Section
+
+    private var websiteAccessSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Website Access")
+                    .font(.headline)
+
+                Text("Choose whether to allow access to all websites during your session.")
+                    .font(.caption)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+            }
+
+            // Toggle
+            HStack {
+                Toggle("Allow All Websites", isOn: Binding(
+                    get: { self.viewModel.allowAllWebsites },
+                    set: { self.viewModel.allowAllWebsites = $0 }
+                ))
+                .toggleStyle(SwitchToggleStyle())
+            }
+            .padding(.vertical, 8)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(AppConstants.UI.cornerRadius)
     }
 }
 
 // MARK: - Supporting Views
-
-struct DurationPresetButton: View {
-    let duration: TimeInterval
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Text(formattedDuration)
-                    .font(.title3)
-                    .fontWeight(.medium)
-                
-                Text(durationLabel)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 60)
-            .background(isSelected ? Color.accentColor : Color(.systemGray5))
-            .foregroundColor(isSelected ? .white : .primary)
-            .cornerRadius(8)
-        }
-        .buttonStyle(.plain)
-    }
-    
-    private var formattedDuration: String {
-        if duration < 3600 {
-            return "\(Int(duration / 60))m"
-        } else {
-            return "\(Int(duration / 3600))h"
-        }
-    }
-    
-    private var durationLabel: String {
-        if duration < 3600 {
-            let minutes = Int(duration / 60)
-            return minutes == 1 ? "minute" : "minutes"
-        } else {
-            let hours = Int(duration / 3600)
-            return hours == 1 ? "hour" : "hours"
-        }
-    }
-}
-
 
 struct AppGroupSelectionCard: View {
     let group: AppGroup
@@ -566,7 +557,7 @@ struct AppGroupSelectionCard: View {
                     
                     if isSelected {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.accentColor)
+                            .foregroundColor(AppConstants.Colors.text)
                     }
                 }
                 
@@ -582,22 +573,31 @@ struct AppGroupSelectionCard: View {
                     
                     if !group.categories.isEmpty {
                         HStack(spacing: 2) {
-                            Image(systemName: "folder.badge")
+                            Image(systemName: "folder")
                                 .font(.caption2)
                             Text("\(group.categories.count)")
                                 .font(.caption)
                         }
                     }
+
+                    if group.allowAllWebsites {
+                        HStack(spacing: 2) {
+                            Image(systemName: "globe")
+                                .font(.caption2)
+                            Text("Web")
+                                .font(.caption)
+                        }
+                    }
                 }
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConstants.Colors.textSecondary)
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(isSelected ? Color.accentColor.opacity(0.1) : Color(.systemGray5))
+            .background(isSelected ? AppConstants.Colors.surface : Color(.systemGray5))
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+                    .stroke(isSelected ? AppConstants.Colors.text : Color.clear, lineWidth: 2)
             )
         }
         .buttonStyle(.plain)
@@ -622,23 +622,23 @@ struct AppSelectionCard: View {
                     
                     if isSelected {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.accentColor)
+                            .foregroundColor(AppConstants.Colors.text)
                     }
                 }
                 
                 if let category = app.category {
                     Text(category)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                 }
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(isSelected ? Color.accentColor.opacity(0.1) : Color(.systemGray5))
+            .background(isSelected ? AppConstants.Colors.surface : Color(.systemGray5))
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+                    .stroke(isSelected ? AppConstants.Colors.text : Color.clear, lineWidth: 2)
             )
         }
         .buttonStyle(.plain)
@@ -730,7 +730,7 @@ struct AppSelectionSheet: View {
                 // Search Bar
                 HStack {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                     
                     TextField("Search apps...", text: $viewModel.searchText)
                         .textFieldStyle(.roundedBorder)
@@ -768,6 +768,7 @@ struct AppSelectionSheet: View {
             }
         }
     }
+
 }
 
 struct AppSelectionRow: View {
@@ -785,7 +786,7 @@ struct AppSelectionRow: View {
                     
                     Text(app.bundleIdentifier)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                     
                     if let category = app.category {
                         Text(category)
@@ -809,6 +810,7 @@ struct AppSelectionRow: View {
         }
         .buttonStyle(.plain)
     }
+
 }
 
 // Back to simple Apple implementation - debugging the dismissal issue

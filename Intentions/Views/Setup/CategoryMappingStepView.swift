@@ -62,12 +62,12 @@ struct CategoryMappingStepView: View {
         VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(Color.purple.opacity(0.2))
+                    .fill(AppConstants.Colors.surface)
                     .frame(width: 80, height: 80)
                 
                 Image(systemName: "square.grid.3x3.topleft.filled")
                     .font(.system(size: 40))
-                    .foregroundColor(.purple)
+                    .foregroundColor(AppConstants.Colors.text)
             }
             
             Text("App Category Mapping")
@@ -120,10 +120,10 @@ struct CategoryMappingStepView: View {
             if categoryMappingService.isTrulySetupCompleted {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConstants.Colors.text)
                     Text("Category mapping completed successfully!")
                         .font(.subheadline)
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConstants.Colors.text)
                     Spacer()
                 }
                 .padding(.top, 8)
@@ -138,13 +138,13 @@ struct CategoryMappingStepView: View {
         Group {
             if categoryMappingService.isTrulySetupCompleted {
                 Label("Complete", systemImage: "checkmark.circle")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppConstants.Colors.text)
             } else if categoryMappingService.completedCategories.isEmpty {
                 Label("Not Started", systemImage: "clock")
-                    .foregroundColor(.orange)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
             } else {
                 Label("In Progress", systemImage: "arrow.clockwise")
-                    .foregroundColor(.blue)
+                    .foregroundColor(AppConstants.Colors.text)
             }
         }
         .font(.subheadline)
@@ -152,7 +152,7 @@ struct CategoryMappingStepView: View {
     
     private var progressBar: some View {
         ProgressView(value: categoryMappingService.setupCompletionPercentage)
-            .progressViewStyle(LinearProgressViewStyle(tint: .purple))
+            .progressViewStyle(LinearProgressViewStyle(tint: AppConstants.Colors.textSecondary))
             .scaleEffect(x: 1, y: 2, anchor: .center)
     }
     
@@ -168,7 +168,8 @@ struct CategoryMappingStepView: View {
                             await completeStep()
                         }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
+            .foregroundColor(AppConstants.Colors.text)
                     .controlSize(.large)
                     
                     Button("Review Mapping") {
@@ -182,7 +183,8 @@ struct CategoryMappingStepView: View {
                         print("🔘 BUTTON: Start/Continue Category Mapping button pressed")
                         showingCategoryMapping = true
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
+            .foregroundColor(AppConstants.Colors.text)
                     .controlSize(.large)
                     
                     // Show completion requirement message
@@ -190,7 +192,7 @@ struct CategoryMappingStepView: View {
                         VStack(spacing: 8) {
                             HStack {
                                 Image(systemName: "info.circle")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(AppConstants.Colors.text)
                                 Text("All categories must be mapped to continue")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
@@ -202,7 +204,7 @@ struct CategoryMappingStepView: View {
                                 .multilineTextAlignment(.center)
                         }
                         .padding()
-                        .background(Color.blue.opacity(0.1))
+                        .background(AppConstants.Colors.surface)
                         .cornerRadius(8)
                     }
                 }

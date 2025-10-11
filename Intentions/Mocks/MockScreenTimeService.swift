@@ -14,7 +14,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
     private var mockCurrentlyAllowedApps: Set<ApplicationToken> = []
     private var mockSystemApps: Set<ApplicationToken> = []
     private var mockSessionTask: Task<Void, Never>?
-    private var mockIsInitialized = false
+    nonisolated(unsafe) private var mockIsInitialized = false
     
     // MARK: - Test Configuration Properties
     
@@ -71,14 +71,18 @@ actor MockScreenTimeService: ScreenTimeManaging {
     
     func initialize() async throws {
         guard !mockIsInitialized else { return }
-        
+
         let authorized = await requestAuthorization()
         guard authorized else {
             throw AppError.screenTimeAuthorizationFailed
         }
-        
+
         mockIsInitialized = true
         print("🧪 MockScreenTimeService: Initialized (blocking will be applied separately)")
+    }
+
+    nonisolated var isReady: Bool {
+        mockIsInitialized
     }
     
     func blockAllApps() async throws {
@@ -94,7 +98,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
         print("Mock: All apps blocked")
     }
     
-    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken> = [], duration: TimeInterval) async throws {
+    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken> = [], allowWebsites: Bool = false, duration: TimeInterval) async throws {
         let status = await authorizationStatus()
         guard status == .approved else {
             throw AppError.screenTimeAuthorizationFailed
@@ -105,7 +109,9 @@ actor MockScreenTimeService: ScreenTimeManaging {
         }
         
         mockCurrentlyAllowedApps = tokens
-        
+
+        print("Mock: Allowed \(tokens.count) apps, \(categories.count) categories. Websites: \(allowWebsites ? "Allowed" : "Blocked")")
+
         // Mock session expiration
         mockSessionTask?.cancel()
         mockSessionTask = Task { [weak self] in

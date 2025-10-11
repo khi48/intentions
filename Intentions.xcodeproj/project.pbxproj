@@ -15,6 +15,12 @@
 		2071C4A52DE43AC800DF737F /* IntentionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4A42DE43AC800DF737F /* IntentionsTests.swift */; };
 		2071C4AF2DE43AC800DF737F /* IntentionsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4AE2DE43AC800DF737F /* IntentionsUITests.swift */; };
 		2071C4B12DE43AC800DF737F /* IntentionsUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4B02DE43AC800DF737F /* IntentionsUITestsLaunchTests.swift */; };
+		207E14562E90881E00730900 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E14552E90881E00730900 /* ManagedSettings.framework */; };
+		207E14582E90881E00730900 /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E14572E90881E00730900 /* ManagedSettingsUI.framework */; };
+		207E14602E90881E00730900 /* IntentionsShieldConfiguration.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 207E14542E90881E00730900 /* IntentionsShieldConfiguration.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		207E146A2E90883400730900 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E14552E90881E00730900 /* ManagedSettings.framework */; };
+		207E14722E90883400730900 /* IntentionsShieldAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 207E14692E90883300730900 /* IntentionsShieldAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		207E147C2E98382400730900 /* CrashReporting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207E147B2E98382400730900 /* CrashReporting.swift */; };
 		2085A8E12DF559940011EB9A /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8E02DF559910011EB9A /* AppGroup.swift */; };
 		2085A8E32DF55A060011EB9A /* IntentionsSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8E22DF55A060011EB9A /* IntentionsSession.swift */; };
 		2085A8E52DF55A2A0011EB9A /* ScheduleSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8E42DF55A250011EB9A /* ScheduleSettings.swift */; };
@@ -103,6 +109,20 @@
 			remoteGlobalIDString = 2071C48F2DE43AC600DF737F;
 			remoteInfo = Intentions;
 		};
+		207E145E2E90881E00730900 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2071C4882DE43AC600DF737F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 207E14532E90881E00730900;
+			remoteInfo = IntentionsShieldConfiguration;
+		};
+		207E14702E90883400730900 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2071C4882DE43AC600DF737F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 207E14682E90883300730900;
+			remoteInfo = IntentionsShieldAction;
+		};
 		20EB27242E6C057B00FC4BE4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 2071C4882DE43AC600DF737F /* Project object */;
@@ -119,6 +139,8 @@
 			dstSubfolder = PlugIns;
 			files = (
 				20EB27262E6C057B00FC4BE4 /* IntentionsWidgetExtension.appex in Embed Foundation Extensions */,
+				207E14722E90883400730900 /* IntentionsShieldAction.appex in Embed Foundation Extensions */,
+				207E14602E90881E00730900 /* IntentionsShieldConfiguration.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 		};
@@ -136,6 +158,11 @@
 		2071C4AA2DE43AC800DF737F /* IntentionsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = IntentionsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2071C4AE2DE43AC800DF737F /* IntentionsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsUITests.swift; sourceTree = "<group>"; };
 		2071C4B02DE43AC800DF737F /* IntentionsUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		207E14542E90881E00730900 /* IntentionsShieldConfiguration.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = IntentionsShieldConfiguration.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		207E14552E90881E00730900 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		207E14572E90881E00730900 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
+		207E14692E90883300730900 /* IntentionsShieldAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = IntentionsShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		207E147B2E98382400730900 /* CrashReporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReporting.swift; sourceTree = "<group>"; };
 		2085A8E02DF559910011EB9A /* AppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroup.swift; sourceTree = "<group>"; };
 		2085A8E22DF55A060011EB9A /* IntentionsSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsSession.swift; sourceTree = "<group>"; };
 		2085A8E42DF55A250011EB9A /* ScheduleSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleSettings.swift; sourceTree = "<group>"; };
@@ -213,6 +240,20 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		207E14612E90881E00730900 /* Exceptions for "IntentionsShieldConfiguration" folder in "IntentionsShieldConfiguration" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 207E14532E90881E00730900 /* IntentionsShieldConfiguration */;
+		};
+		207E14732E90883400730900 /* Exceptions for "IntentionsShieldAction" folder in "IntentionsShieldAction" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 207E14682E90883300730900 /* IntentionsShieldAction */;
+		};
 		20EB27272E6C057B00FC4BE4 /* Exceptions for "IntentionsWidget" folder in "IntentionsWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -223,6 +264,22 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		207E14592E90881E00730900 /* IntentionsShieldConfiguration */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				207E14612E90881E00730900 /* Exceptions for "IntentionsShieldConfiguration" folder in "IntentionsShieldConfiguration" target */,
+			);
+			path = IntentionsShieldConfiguration;
+			sourceTree = "<group>";
+		};
+		207E146B2E90883400730900 /* IntentionsShieldAction */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				207E14732E90883400730900 /* Exceptions for "IntentionsShieldAction" folder in "IntentionsShieldAction" target */,
+			);
+			path = IntentionsShieldAction;
+			sourceTree = "<group>";
+		};
 		20EB27182E6C057700FC4BE4 /* IntentionsWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -250,6 +307,19 @@
 			files = (
 			);
 		};
+		207E14512E90881E00730900 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				207E14562E90881E00730900 /* ManagedSettings.framework in Frameworks */,
+				207E14582E90881E00730900 /* ManagedSettingsUI.framework in Frameworks */,
+			);
+		};
+		207E14662E90883300730900 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				207E146A2E90883400730900 /* ManagedSettings.framework in Frameworks */,
+			);
+		};
 		20EB27102E6C057700FC4BE4 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
@@ -268,6 +338,8 @@
 				2071C4A32DE43AC800DF737F /* IntentionsTests */,
 				2071C4AD2DE43AC800DF737F /* IntentionsUITests */,
 				20EB27182E6C057700FC4BE4 /* IntentionsWidget */,
+				207E14592E90881E00730900 /* IntentionsShieldConfiguration */,
+				207E146B2E90883400730900 /* IntentionsShieldAction */,
 				2071C4912DE43AC600DF737F /* Products */,
 				2092FF042DF1921C0055A01D /* Frameworks */,
 			);
@@ -280,6 +352,8 @@
 				2071C4A02DE43AC800DF737F /* IntentionsTests.xctest */,
 				2071C4AA2DE43AC800DF737F /* IntentionsUITests.xctest */,
 				20EB27132E6C057700FC4BE4 /* IntentionsWidgetExtension.appex */,
+				207E14542E90881E00730900 /* IntentionsShieldConfiguration.appex */,
+				207E14692E90883300730900 /* IntentionsShieldAction.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -474,6 +548,7 @@
 		2085A8DF2DF550440011EB9A /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				207E147B2E98382400730900 /* CrashReporting.swift */,
 				20EB265C2E1EF9A800FC4BE4 /* Constants.swift */,
 			);
 			path = Utilities;
@@ -528,6 +603,8 @@
 				2092FF052DF1921C0055A01D /* FamilyControls.framework */,
 				20EB27142E6C057700FC4BE4 /* WidgetKit.framework */,
 				20EB27162E6C057700FC4BE4 /* SwiftUI.framework */,
+				207E14552E90881E00730900 /* ManagedSettings.framework */,
+				207E14572E90881E00730900 /* ManagedSettingsUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -608,6 +685,8 @@
 			);
 			dependencies = (
 				20EB27252E6C057B00FC4BE4 /* PBXTargetDependency */,
+				207E145F2E90881E00730900 /* PBXTargetDependency */,
+				207E14712E90883400730900 /* PBXTargetDependency */,
 			);
 			name = Intentions;
 			productName = Intentions;
@@ -650,6 +729,42 @@
 			productReference = 2071C4AA2DE43AC800DF737F /* IntentionsUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		207E14532E90881E00730900 /* IntentionsShieldConfiguration */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 207E14622E90881E00730900 /* Build configuration list for PBXNativeTarget "IntentionsShieldConfiguration" */;
+			buildPhases = (
+				207E14502E90881E00730900 /* Sources */,
+				207E14512E90881E00730900 /* Frameworks */,
+				207E14522E90881E00730900 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				207E14592E90881E00730900 /* IntentionsShieldConfiguration */,
+			);
+			name = IntentionsShieldConfiguration;
+			productName = IntentionsShieldConfiguration;
+			productReference = 207E14542E90881E00730900 /* IntentionsShieldConfiguration.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		207E14682E90883300730900 /* IntentionsShieldAction */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 207E14742E90883400730900 /* Build configuration list for PBXNativeTarget "IntentionsShieldAction" */;
+			buildPhases = (
+				207E14652E90883300730900 /* Sources */,
+				207E14662E90883300730900 /* Frameworks */,
+				207E14672E90883300730900 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				207E146B2E90883400730900 /* IntentionsShieldAction */,
+			);
+			name = IntentionsShieldAction;
+			productName = IntentionsShieldAction;
+			productReference = 207E14692E90883300730900 /* IntentionsShieldAction.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		20EB27122E6C057700FC4BE4 /* IntentionsWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 20EB27282E6C057B00FC4BE4 /* Build configuration list for PBXNativeTarget "IntentionsWidgetExtension" */;
@@ -689,6 +804,12 @@
 						CreatedOnToolsVersion = 15.0.1;
 						TestTargetID = 2071C48F2DE43AC600DF737F;
 					};
+					207E14532E90881E00730900 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					207E14682E90883300730900 = {
+						CreatedOnToolsVersion = 16.4;
+					};
 					20EB27122E6C057700FC4BE4 = {
 						CreatedOnToolsVersion = 16.4;
 					};
@@ -713,6 +834,8 @@
 				2071C49F2DE43AC800DF737F /* IntentionsTests */,
 				2071C4A92DE43AC800DF737F /* IntentionsUITests */,
 				20EB27122E6C057700FC4BE4 /* IntentionsWidgetExtension */,
+				207E14532E90881E00730900 /* IntentionsShieldConfiguration */,
+				207E14682E90883300730900 /* IntentionsShieldAction */,
 			);
 		};
 /* End PBXProject section */
@@ -731,6 +854,16 @@
 			);
 		};
 		2071C4A82DE43AC800DF737F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		207E14522E90881E00730900 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		207E14672E90883300730900 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -772,6 +905,7 @@
 				20EB26552E1322A400FC4BE4 /* MockDataPersistenceService.swift in Sources */,
 				2085A8F72DF5857E0011EB9A /* ScreenTimeManaging.swift in Sources */,
 				2085A8E52DF55A2A0011EB9A /* ScheduleSettings.swift in Sources */,
+				207E147C2E98382400730900 /* CrashReporting.swift in Sources */,
 				20EB26F42E488A1400FC4BE4 /* CategoryMappingService.swift in Sources */,
 				20EB27302E6D06B500FC4BE4 /* SetupCoordinator.swift in Sources */,
 				20EB265F2E21A34600FC4BE4 /* ContentViewModel.swift in Sources */,
@@ -831,6 +965,16 @@
 				2071C4B12DE43AC800DF737F /* IntentionsUITestsLaunchTests.swift in Sources */,
 			);
 		};
+		207E14502E90881E00730900 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		207E14652E90883300730900 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 		20EB270F2E6C057700FC4BE4 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
@@ -848,6 +992,16 @@
 			isa = PBXTargetDependency;
 			target = 2071C48F2DE43AC600DF737F /* Intentions */;
 			targetProxy = 2071C4AB2DE43AC800DF737F /* PBXContainerItemProxy */;
+		};
+		207E145F2E90881E00730900 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 207E14532E90881E00730900 /* IntentionsShieldConfiguration */;
+			targetProxy = 207E145E2E90881E00730900 /* PBXContainerItemProxy */;
+		};
+		207E14712E90883400730900 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 207E14682E90883300730900 /* IntentionsShieldAction */;
+			targetProxy = 207E14702E90883400730900 /* PBXContainerItemProxy */;
 		};
 		20EB27252E6C057B00FC4BE4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1111,6 +1265,110 @@
 			};
 			name = Release;
 		};
+		207E14632E90881E00730900 /* Debug configuration for PBXNativeTarget "IntentionsShieldConfiguration" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = IntentionsShieldConfiguration/IntentionsShieldConfiguration.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IntentionsShieldConfiguration/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentionsShieldConfiguration;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsShieldConfiguration;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		207E14642E90881E00730900 /* Release configuration for PBXNativeTarget "IntentionsShieldConfiguration" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = IntentionsShieldConfiguration/IntentionsShieldConfiguration.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IntentionsShieldConfiguration/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentionsShieldConfiguration;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsShieldConfiguration;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		207E14752E90883400730900 /* Debug configuration for PBXNativeTarget "IntentionsShieldAction" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = IntentionsShieldAction/IntentionsShieldAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IntentionsShieldAction/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentionsShieldAction;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsShieldAction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		207E14762E90883400730900 /* Release configuration for PBXNativeTarget "IntentionsShieldAction" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = IntentionsShieldAction/IntentionsShieldAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IntentionsShieldAction/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentionsShieldAction;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsShieldAction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		20EB27292E6C057B00FC4BE4 /* Debug configuration for PBXNativeTarget "IntentionsWidgetExtension" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1199,6 +1457,22 @@
 			buildConfigurations = (
 				2071C4BB2DE43AC800DF737F /* Debug configuration for PBXNativeTarget "IntentionsUITests" */,
 				2071C4BC2DE43AC800DF737F /* Release configuration for PBXNativeTarget "IntentionsUITests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		207E14622E90881E00730900 /* Build configuration list for PBXNativeTarget "IntentionsShieldConfiguration" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				207E14632E90881E00730900 /* Debug configuration for PBXNativeTarget "IntentionsShieldConfiguration" */,
+				207E14642E90881E00730900 /* Release configuration for PBXNativeTarget "IntentionsShieldConfiguration" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		207E14742E90883400730900 /* Build configuration list for PBXNativeTarget "IntentionsShieldAction" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				207E14752E90883400730900 /* Debug configuration for PBXNativeTarget "IntentionsShieldAction" */,
+				207E14762E90883400730900 /* Release configuration for PBXNativeTarget "IntentionsShieldAction" */,
 			);
 			defaultConfigurationName = Release;
 		};

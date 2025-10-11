@@ -49,6 +49,7 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
     var requestedAppGroups: [UUID] // References to AppGroup IDs
     var requestedApplications: Set<ApplicationToken>
     var selectedCategories: Set<ActivityCategoryToken> = [] // Categories from FamilyActivityPicker
+    var allowAllWebsites: Bool = false // Whether to allow access to all websites during this session
     var duration: TimeInterval
     var createdAt: Date
     var state: SessionState
@@ -96,37 +97,39 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
         return min(1.0, elapsed / duration)
     }
     
-    init(appGroups: [UUID] = [], applications: Set<ApplicationToken> = [], categories: Set<ActivityCategoryToken> = [], duration: TimeInterval) throws {
+    init(appGroups: [UUID] = [], applications: Set<ApplicationToken> = [], categories: Set<ActivityCategoryToken> = [], allowAllWebsites: Bool = false, duration: TimeInterval) throws {
         // Validate duration
         guard duration >= AppConstants.Session.minimumDuration else {
-            throw AppError.validationFailed("duration", reason: "Session duration must be at least \(AppConstants.Session.minimumDuration.formattedMinutesSeconds)")
+            throw AppError.validationFailed("duration", reason: "Session duration must be at least \(AppConstants.Session.minimumDuration.formattedDuration)")
         }
         guard duration <= AppConstants.Session.maximumDuration else {
-            throw AppError.validationFailed("duration", reason: "Session duration cannot exceed \(AppConstants.Session.maximumDuration.formattedHoursMinutes)")
+            throw AppError.validationFailed("duration", reason: "Session duration cannot exceed \(AppConstants.Session.maximumDuration.formattedDuration)")
         }
-        
+
         self.id = UUID()
         self.requestedAppGroups = appGroups
         self.requestedApplications = applications
         self.selectedCategories = categories
+        self.allowAllWebsites = allowAllWebsites
         self.duration = duration
         self.createdAt = Date()
         self.state = .active(startedAt: Date())
     }
     
     // Private initializer for persistence reconstruction with existing ID
-    private init(id: UUID, appGroups: [UUID], applications: Set<ApplicationToken>, duration: TimeInterval, createdAt: Date) throws {
+    private init(id: UUID, appGroups: [UUID], applications: Set<ApplicationToken>, allowAllWebsites: Bool, duration: TimeInterval, createdAt: Date) throws {
         // Validate duration for reconstructed sessions too
         guard duration >= AppConstants.Session.minimumDuration else {
-            throw AppError.validationFailed("duration", reason: "Session duration must be at least \(AppConstants.Session.minimumDuration.formattedMinutesSeconds)")
+            throw AppError.validationFailed("duration", reason: "Session duration must be at least \(AppConstants.Session.minimumDuration.formattedDuration)")
         }
         guard duration <= AppConstants.Session.maximumDuration else {
-            throw AppError.validationFailed("duration", reason: "Session duration cannot exceed \(AppConstants.Session.maximumDuration.formattedHoursMinutes)")
+            throw AppError.validationFailed("duration", reason: "Session duration cannot exceed \(AppConstants.Session.maximumDuration.formattedDuration)")
         }
-        
+
         self.id = id
         self.requestedAppGroups = appGroups
         self.requestedApplications = applications
+        self.allowAllWebsites = allowAllWebsites
         self.duration = duration
         self.createdAt = createdAt
         self.state = .active(startedAt: Date()) // Will be overridden by caller
@@ -137,6 +140,7 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
         id: UUID,
         appGroups: [UUID],
         applications: Set<ApplicationToken>,
+        allowAllWebsites: Bool = false,
         duration: TimeInterval,
         createdAt: Date,
         state: SessionState
@@ -145,6 +149,7 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
             id: id,
             appGroups: appGroups,
             applications: applications,
+            allowAllWebsites: allowAllWebsites,
             duration: duration,
             createdAt: createdAt
         )

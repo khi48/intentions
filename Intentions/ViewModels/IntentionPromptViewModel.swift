@@ -32,8 +32,10 @@ final class IntentionPromptViewModel: Sendable {
     
     /// Currently selected individual apps
     var selectedApplications: Set<ApplicationToken> = []
-    
-    
+
+    /// Whether to allow access to all websites during the session
+    var allowAllWebsites: Bool = false
+
     /// Available app groups loaded from persistence
     private(set) var availableAppGroups: [AppGroup] = []
     
@@ -263,10 +265,15 @@ final class IntentionPromptViewModel: Sendable {
             }
             
             // Also include any selected app groups (both apps AND categories)
+            var sessionAllowWebsites = allowAllWebsites
             for groupId in selectedAppGroups {
                 if let group = availableAppGroups.first(where: { $0.id == groupId }) {
                     allApplications.formUnion(group.applications)
                     allowedCategories.formUnion(group.categories)
+                    // If any group allows websites, enable website access for the session
+                    if group.allowAllWebsites {
+                        sessionAllowWebsites = true
+                    }
                     print("📦 SESSION SETUP: Added \(group.applications.count) apps and \(group.categories.count) categories from group '\(group.name)'")
                 }
             }
@@ -284,13 +291,15 @@ final class IntentionPromptViewModel: Sendable {
             print("   - Total apps to ALLOW: \(allApplications.count)")
             print("   - Total categories to ALLOW: \(allowedCategories.count)")
             print("   - All other apps/categories will be BLOCKED")
+            print("   - Website access: \(sessionAllowWebsites ? "ALLOWED" : "BLOCKED")")
             print("   - Session duration: \(selectedDuration.formattedMinutesSeconds)")
-            
+
             // Create the session with apps to allow
             let session = try IntentionSession(
                 appGroups: Array(selectedAppGroups),
                 applications: allApplications,
                 categories: allowedCategories,
+                allowAllWebsites: sessionAllowWebsites,
                 duration: selectedDuration
             )
             
@@ -322,17 +331,50 @@ final class IntentionPromptViewModel: Sendable {
     
     /// Total number of selected items
     var selectionCount: Int {
-        return selectedAppGroups.count + selectedApplications.count + 
+        return selectedAppGroups.count + selectedApplications.count +
                familyActivitySelection.applications.count + familyActivitySelection.categories.count
+    }
+
+    /// Total number of unique apps that will be allowed (avoiding double counting)
+    var totalAllowedApps: Int {
+        var totalApps = 0
+
+        // Count apps from selected app groups
+        for groupId in selectedAppGroups {
+            if let group = availableAppGroups.first(where: { $0.id == groupId }) {
+                totalApps += group.applications.count
+            }
+        }
+
+        // Add individual apps selected through Family Activity Picker
+        totalApps += familyActivitySelection.applications.count
+
+        // Add manually selected individual apps
+        totalApps += selectedApplications.count
+
+        return totalApps
+    }
+
+    /// Total number of categories that will be allowed
+    var totalAllowedCategories: Int {
+        var totalCategories = 0
+
+        // Count categories from selected app groups
+        for groupId in selectedAppGroups {
+            if let group = availableAppGroups.first(where: { $0.id == groupId }) {
+                totalCategories += group.categories.count
+            }
+        }
+
+        // Add categories selected through Family Activity Picker
+        totalCategories += familyActivitySelection.categories.count
+
+        return totalCategories
     }
     
     /// Formatted duration string for display
     var formattedDuration: String {
-        if selectedDuration < 3600 {
-            return selectedDuration.formattedMinutesSeconds
-        } else {
-            return selectedDuration.formattedHoursMinutes
-        }
+        return selectedDuration.formattedDuration
     }
     
     // MARK: - Search & Filtering

@@ -74,7 +74,7 @@ struct DisableBlockingConfirmationView: View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 40))
-                .foregroundColor(.orange)
+                .foregroundColor(AppConstants.Colors.textSecondary)
 
             Text("Disable App Blocking?")
                 .font(.title3)
@@ -111,13 +111,13 @@ struct DisableBlockingConfirmationView: View {
                     HStack {
                         Text("\(intentionText.count)/\(minimumCharacters) characters minimum")
                             .font(.caption)
-                            .foregroundColor(intentionText.count >= minimumCharacters ? .green : .secondary)
+                            .foregroundColor(intentionText.count >= minimumCharacters ? AppConstants.Colors.text : .secondary)
 
                         Spacer()
 
                         if intentionText.count >= minimumCharacters {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
+                                .foregroundColor(AppConstants.Colors.text)
                         }
                     }
 
@@ -132,12 +132,12 @@ struct DisableBlockingConfirmationView: View {
 
             ZStack {
                 Circle()
-                    .stroke(Color.orange.opacity(0.2), lineWidth: 6)
+                    .stroke(AppConstants.Colors.textSecondary.opacity(0.3), lineWidth: 6)
                     .frame(width: 120, height: 120)
 
                 Circle()
                     .trim(from: 0, to: circleProgress)
-                    .stroke(Color.orange, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .stroke(AppConstants.Colors.textSecondary, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                     .frame(width: 120, height: 120)
                     .rotationEffect(.degrees(-90))
 
@@ -145,7 +145,7 @@ struct DisableBlockingConfirmationView: View {
                     Text("\(Int(ceil(max(0, countdownSecondsRemaining))))")
                         .font(.title)
                         .fontWeight(.bold)
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
 
                     Text("seconds")
                         .font(.caption)
@@ -154,35 +154,23 @@ struct DisableBlockingConfirmationView: View {
             }
             .frame(width: 120, height: 120)
 
-            Text("Please wait \(Int(ceil(max(0, countdownSecondsRemaining)))) more seconds to confirm")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
         }
         .padding(.vertical, 16)
         .padding(.horizontal, 20)
-        .background(Color.orange.opacity(0.05))
+        .background(AppConstants.Colors.surface)
         .cornerRadius(16)
     }
 
     private var actionButtonsSection: some View {
-        VStack(spacing: 16) {
-            Button("Confirm Disable") {
-                onConfirm()
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(!isConfirmEnabled)
-            .tint(.orange)
-
-            Button("Cancel") {
-                countdownCancellable?.cancel()
-                countdownCancellable = nil
-                onCancel()
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
+        Button("Confirm Disable") {
+            onConfirm()
         }
+        .buttonStyle(.bordered)
+        .foregroundColor(isConfirmEnabled ? AppConstants.Colors.text : AppConstants.Colors.textSecondary)
+        .controlSize(.large)
+        .disabled(!isConfirmEnabled)
+        .tint(isConfirmEnabled ? AppConstants.Colors.text : AppConstants.Colors.textSecondary)
+        .opacity(isConfirmEnabled ? 1.0 : 0.5)
     }
 
     // MARK: - Computed Properties

@@ -1,2 +1,0 @@
-Target dependency graph (1 target)
-Target 'Intentions' in project 'Intentions' (no dependencies)

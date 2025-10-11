@@ -6,7 +6,8 @@
 //
 
 import SwiftUI
-import FamilyControls
+@preconcurrency import FamilyControls
+@preconcurrency import ManagedSettings
 
 /// Sheet for creating and editing quick actions
 struct QuickActionEditorSheet: View {
@@ -20,17 +21,13 @@ struct QuickActionEditorSheet: View {
     @State private var name: String = ""
     @State private var subtitle: String = ""
     @State private var selectedIcon: String = "star.fill"
-    @State private var selectedColor: Color = .blue
-    @State private var duration: TimeInterval = AppConstants.Session.defaultDuration
+    @State private var selectedColor: Color = AppConstants.Colors.accent
+    @State private var duration: TimeInterval = 300 // 5 minutes default
     @State private var selectedAppGroupIds: Set<UUID> = []
-    // Temporarily disabled for FamilyControls integration until device testing  
-    // @State private var selectedApplications: Set<ApplicationToken> = []
-    // @State private var selectedCategories: Set<ActivityCategoryToken> = []
     
     // UI state
     @State private var isLoading: Bool = false
     @State private var errorMessage: String?
-    @State private var showingFamilyActivityPicker = false
     @State private var lastSaveTapTime: Date = .distantPast
     
     // Available icons
@@ -41,10 +38,6 @@ struct QuickActionEditorSheet: View {
         "location.fill", "car.fill", "airplane", "bicycle", "figure.walk"
     ]
     
-    // Available colors
-    private let availableColors: [Color] = [
-        .blue, .green, .orange, .red, .purple, .pink, .yellow, .indigo, .teal, .brown
-    ]
     
     var isEditing: Bool {
         editingQuickAction != nil
@@ -65,10 +58,7 @@ struct QuickActionEditorSheet: View {
                     
                     // App groups section
                     appGroupsSection
-                    
-                    // Individual apps section
-                    individualAppsSection
-                    
+
                     // Delete section (if editing)
                     if isEditing {
                         deleteSection
@@ -92,24 +82,9 @@ struct QuickActionEditorSheet: View {
                         }
                     }
                     .fontWeight(.semibold)
-                    .disabled(name.isEmpty || isLoading)
+                    .disabled(name.isEmpty || selectedAppGroupIds.isEmpty || isLoading)
                 }
             }
-            // Temporarily disabled FamilyActivityPicker until device testing
-            /*.sheet(isPresented: $showingFamilyActivityPicker) {
-                FamilyActivityPicker(selection: Binding(
-                    get: {
-                        FamilyActivitySelection(
-                            applicationTokens: selectedApplications,
-                            categoryTokens: selectedCategories
-                        )
-                    },
-                    set: { selection in
-                        selectedApplications = selection.applicationTokens
-                        selectedCategories = selection.categoryTokens
-                    }
-                ))
-            }*/
             .alert("Error", isPresented: Binding(
                 get: { errorMessage != nil },
                 set: { _ in clearError() }
@@ -132,9 +107,9 @@ struct QuickActionEditorSheet: View {
                 .font(.headline)
                 .padding(.horizontal)
             
-            VStack(spacing: 16) {
+            VStack(spacing: 8) {
                 // Name field
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Name")
                         .font(.subheadline)
                         .fontWeight(.medium)
@@ -147,7 +122,9 @@ struct QuickActionEditorSheet: View {
                         SafeUITextField(
                             placeholder: "Enter action name",
                             text: $name,
-                            onTextChange: { _ in }
+                            onTextChange: { newText in
+                                name = newText.trimmingCharacters(in: .whitespacesAndNewlines)
+                            }
                         )
                         .frame(width: safeWidth, height: safeHeight)
                     }
@@ -155,7 +132,7 @@ struct QuickActionEditorSheet: View {
                 }
                 
                 // Subtitle field
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Subtitle (Optional)")
                         .font(.subheadline)
                         .fontWeight(.medium)
@@ -168,7 +145,9 @@ struct QuickActionEditorSheet: View {
                         SafeUITextField(
                             placeholder: "Brief description",
                             text: $subtitle,
-                            onTextChange: { _ in }
+                            onTextChange: { newText in
+                                subtitle = newText.trimmingCharacters(in: .whitespacesAndNewlines)
+                            }
                         )
                         .frame(width: safeWidth, height: safeHeight)
                     }
@@ -203,18 +182,6 @@ struct QuickActionEditorSheet: View {
                     }
                 }
                 
-                // Color selection
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Color")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
-                        ForEach(availableColors, id: \.self) { color in
-                            colorButton(color)
-                        }
-                    }
-                }
             }
             .padding()
             .background(.regularMaterial)
@@ -276,44 +243,6 @@ struct QuickActionEditorSheet: View {
         }
     }
     
-    // MARK: - Individual Apps Section (Temporarily Disabled)
-    
-    private var individualAppsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Individual Apps & Categories")
-                .font(.headline)
-                .padding(.horizontal)
-            
-            VStack(spacing: 16) {
-                Text("Individual app selection will be available when testing on a physical device. For now, use app groups to organize your apps.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding()
-                
-                /*
-                Button(action: {
-                    showingFamilyActivityPicker = true
-                }) {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                        Text("Select Apps & Categories")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(.blue)
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                */
-            }
-            .padding()
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-    }
-    
-    
     // MARK: - Delete Section
     
     private var deleteSection: some View {
@@ -327,7 +256,7 @@ struct QuickActionEditorSheet: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(.red)
+                .background(AppConstants.Colors.textSecondary)
                 .foregroundColor(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
@@ -362,7 +291,7 @@ struct QuickActionEditorSheet: View {
             get: { 
                 let currentDuration = duration
                 if currentDuration.isNaN || currentDuration.isInfinite || !currentDuration.isFinite || currentDuration < 0 {
-                    return AppConstants.Session.defaultDuration
+                    return 300 // 5 minutes default
                 }
                 return currentDuration
             },
@@ -370,7 +299,7 @@ struct QuickActionEditorSheet: View {
                 if newValue.isNaN || newValue.isInfinite || !newValue.isFinite {
                     return
                 }
-                let safeValue = max(5*60, min(4*60*60, newValue))
+                let safeValue = max(AppConstants.Session.minimumDuration, min(AppConstants.Session.maximumDuration, newValue))
                 duration = safeValue
             }
         )
@@ -379,21 +308,25 @@ struct QuickActionEditorSheet: View {
     private var durationSlider: some View {
         Slider(
             value: durationBinding,
-            in: 5*60...4*60*60, // 5 minutes to 4 hours
-            step: 5*60 // 5 minute steps
+            in: TimeInterval(AppConstants.Session.minimumDuration)...TimeInterval(AppConstants.Session.maximumDuration),
+            step: 5 * 60 // 5-minute intervals
         ) {
             Text("Duration")
         } minimumValueLabel: {
             Text("5m")
                 .font(.caption)
+                .foregroundColor(AppConstants.Colors.textSecondary)
         } maximumValueLabel: {
-            Text("4h")
+            Text("2h")
                 .font(.caption)
+                .foregroundColor(AppConstants.Colors.textSecondary)
         }
+        .tint(AppConstants.Colors.textSecondary)
     }
     
     private var durationButtonsSection: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
+            durationButton("5m", 5*60)
             durationButton("15m", 15*60)
             durationButton("30m", 30*60)
             durationButton("1h", 60*60)
@@ -404,15 +337,21 @@ struct QuickActionEditorSheet: View {
     private func durationButton(_ title: String, _ value: TimeInterval) -> some View {
         // Safe comparison to prevent NaN issues
         let isSelected = duration.isFinite && value.isFinite && abs(duration - value) < 60
-        
-        return Button(title) {
+        let backgroundColor = isSelected ? AppConstants.Colors.text : AppConstants.Colors.surface
+        let textColor = isSelected ? AppConstants.Colors.background : AppConstants.Colors.textSecondary
+
+        return Button(action: {
             duration = value
+        }) {
+            Text(title)
+                .font(.caption)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(backgroundColor)
+                .foregroundColor(textColor)
+                .cornerRadius(8)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(isSelected ? selectedColor : Color.gray.opacity(0.2))
-        .foregroundColor(isSelected ? .white : .primary)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .buttonStyle(.plain)
     }
     
     // MARK: - Actions
@@ -433,6 +372,11 @@ struct QuickActionEditorSheet: View {
             errorMessage = "Name is required"
             return
         }
+
+        guard !selectedAppGroupIds.isEmpty else {
+            errorMessage = "At least one app group must be selected"
+            return
+        }
         
         isLoading = true
         
@@ -448,6 +392,7 @@ struct QuickActionEditorSheet: View {
                     color: selectedColor,
                     duration: duration,
                     appGroupIds: selectedAppGroupIds
+                    // TODO: Add individual apps/categories when model supports it
                 )
                 quickAction = existing
             } else {
@@ -459,6 +404,7 @@ struct QuickActionEditorSheet: View {
                     color: selectedColor,
                     duration: duration,
                     appGroupIds: selectedAppGroupIds
+                    // TODO: Add individual apps/categories when model supports it
                 )
             }
             
@@ -473,21 +419,24 @@ struct QuickActionEditorSheet: View {
     
     private func setupForEditing() {
         guard let quickAction = editingQuickAction else { return }
-        
+
         name = quickAction.name
         subtitle = quickAction.subtitle ?? ""
         selectedIcon = quickAction.iconName
         selectedColor = quickAction.color
-        
+
         // Validate duration from quick action
         let qaDuration = quickAction.duration
         if qaDuration.isNaN || qaDuration.isInfinite || !qaDuration.isFinite || qaDuration <= 0 {
-            duration = AppConstants.Session.defaultDuration
+            duration = 300 // 5 minutes default
         } else {
             duration = qaDuration
         }
-        
+
         selectedAppGroupIds = quickAction.appGroupIds
+        // TODO: Load individual apps/categories when model supports it
+        // selectedApplications = quickAction.individualApplications
+        // selectedCategories = quickAction.individualCategories
     }
     
     private func safeFormatDuration(_ duration: TimeInterval) -> String {
@@ -549,38 +498,23 @@ struct QuickActionEditorSheet: View {
     private func clearError() {
         errorMessage = nil
     }
-    
-    
+
+
     private func iconButton(_ icon: String) -> some View {
         let isSelected = selectedIcon == icon
-        
+
         return Button(action: {
             selectedIcon = icon
         }) {
             Image(systemName: icon)
                 .font(.title2)
                 .frame(width: 44, height: 44)
-                .background(isSelected ? selectedColor : Color.gray.opacity(0.2))
-                .foregroundColor(isSelected ? .white : .primary)
+                .background(isSelected ? AppConstants.Colors.text : AppConstants.Colors.surface)
+                .foregroundColor(isSelected ? AppConstants.Colors.background : AppConstants.Colors.text)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
     }
     
-    private func colorButton(_ color: Color) -> some View {
-        let isSelected = selectedColor == color
-        
-        return Button(action: {
-            selectedColor = color
-        }) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(color)
-                .frame(width: 44, height: 44)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(isSelected ? Color.primary : Color.clear, lineWidth: 3)
-                )
-        }
-    }
 }
 
 // MARK: - App Group Selection Row
@@ -596,7 +530,7 @@ private struct AppGroupSelectionRow: View {
                 HStack(spacing: 12) {
                     // Selection indicator
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(isSelected ? .blue : .gray)
+                        .foregroundColor(isSelected ? AppConstants.Colors.text : .gray)
                     
                     // Group info
                     VStack(alignment: .leading, spacing: 2) {

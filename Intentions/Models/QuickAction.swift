@@ -38,8 +38,8 @@ struct QuickAction: Identifiable, Codable, Sendable {
     
     /// Additional individual applications (not in groups) - temporarily disabled
     // var individualApplications: Set<ApplicationToken>
-    
-    /// Additional individual categories (not in groups) - temporarily disabled  
+
+    /// Additional individual categories (not in groups) - temporarily disabled
     // var individualCategories: Set<ActivityCategoryToken>
     
     /// Whether this quick action is enabled/active
@@ -56,7 +56,10 @@ struct QuickAction: Identifiable, Codable, Sendable {
     
     /// Last used timestamp for analytics
     var lastUsed: Date?
-    
+
+    /// Sort order for manual reordering (lower values appear first)
+    var sortOrder: Int
+
     // MARK: - Computed Properties
     
     /// Color representation of the stored hex color
@@ -89,6 +92,8 @@ struct QuickAction: Identifiable, Codable, Sendable {
     /// Whether this quick action has any content (apps or categories)
     var hasContent: Bool {
         !appGroupIds.isEmpty
+        // TODO: Add individual app/category support when fully implemented
+        // || !individualApplications.isEmpty || !individualCategories.isEmpty
     }
     
     // MARK: - Initialization
@@ -108,6 +113,9 @@ struct QuickAction: Identifiable, Codable, Sendable {
         color: Color = .blue,
         duration: TimeInterval = AppConstants.Session.defaultDuration,
         appGroupIds: Set<UUID> = []
+        // TODO: Add individual app/category support when fully implemented
+        // individualApplications: Set<ApplicationToken> = [],
+        // individualCategories: Set<ActivityCategoryToken> = []
     ) {
         self.id = UUID()
         self.name = name
@@ -116,11 +124,15 @@ struct QuickAction: Identifiable, Codable, Sendable {
         self._colorHex = color.toHex() ?? "#007AFF"
         self.duration = duration
         self.appGroupIds = appGroupIds
+        // TODO: Add individual app/category support when fully implemented
+        // self.individualApplications = individualApplications
+        // self.individualCategories = individualCategories
         self.isEnabled = true
         self.createdAt = Date()
         self.lastModified = Date()
         self.usageCount = 0
         self.lastUsed = nil
+        self.sortOrder = 0 // Default sort order, will be assigned properly when saved
     }
     
     // MARK: - Codable Implementation
@@ -128,12 +140,14 @@ struct QuickAction: Identifiable, Codable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case id, name, subtitle, iconName, _colorHex, duration
         case appGroupIds
-        case isEnabled, createdAt, lastModified, usageCount, lastUsed
+        // TODO: Add individual app/category support when fully implemented
+        // case individualApplications, individualCategories
+        case isEnabled, createdAt, lastModified, usageCount, lastUsed, sortOrder
     }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
+
         id = try container.decode(UUID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         subtitle = try container.decodeIfPresent(String.self, forKey: .subtitle)
@@ -141,17 +155,23 @@ struct QuickAction: Identifiable, Codable, Sendable {
         _colorHex = try container.decode(String.self, forKey: ._colorHex)
         duration = try container.decode(TimeInterval.self, forKey: .duration)
         appGroupIds = try container.decode(Set<UUID>.self, forKey: .appGroupIds)
-        
+
+        // TODO: Add individual app/category support when fully implemented
+        // Handle backward compatibility for individual tokens
+        // individualApplications = try container.decodeIfPresent(Set<ApplicationToken>.self, forKey: .individualApplications) ?? []
+        // individualCategories = try container.decodeIfPresent(Set<ActivityCategoryToken>.self, forKey: .individualCategories) ?? []
+
         isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         lastModified = try container.decode(Date.self, forKey: .lastModified)
         usageCount = try container.decode(Int.self, forKey: .usageCount)
         lastUsed = try container.decodeIfPresent(Date.self, forKey: .lastUsed)
+        sortOrder = try container.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
     }
     
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        
+
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encodeIfPresent(subtitle, forKey: .subtitle)
@@ -159,12 +179,16 @@ struct QuickAction: Identifiable, Codable, Sendable {
         try container.encode(_colorHex, forKey: ._colorHex)
         try container.encode(duration, forKey: .duration)
         try container.encode(appGroupIds, forKey: .appGroupIds)
-        
+        // TODO: Add individual app/category support when fully implemented
+        // try container.encode(individualApplications, forKey: .individualApplications)
+        // try container.encode(individualCategories, forKey: .individualCategories)
+
         try container.encode(isEnabled, forKey: .isEnabled)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(lastModified, forKey: .lastModified)
         try container.encode(usageCount, forKey: .usageCount)
         try container.encodeIfPresent(lastUsed, forKey: .lastUsed)
+        try container.encode(sortOrder, forKey: .sortOrder)
     }
     
     // MARK: - Action Methods
@@ -177,6 +201,9 @@ struct QuickAction: Identifiable, Codable, Sendable {
         color: Color? = nil,
         duration: TimeInterval? = nil,
         appGroupIds: Set<UUID>? = nil
+        // TODO: Add individual app/category support when fully implemented
+        // individualApplications: Set<ApplicationToken>? = nil,
+        // individualCategories: Set<ActivityCategoryToken>? = nil
     ) {
         if let name = name { self.name = name }
         if let subtitle = subtitle { self.subtitle = subtitle }
@@ -184,7 +211,10 @@ struct QuickAction: Identifiable, Codable, Sendable {
         if let color = color { self.setColor(color) }
         if let duration = duration { self.duration = duration }
         if let appGroupIds = appGroupIds { self.appGroupIds = appGroupIds }
-        
+        // TODO: Add individual app/category support when fully implemented
+        // if let individualApplications = individualApplications { self.individualApplications = individualApplications }
+        // if let individualCategories = individualCategories { self.individualCategories = individualCategories }
+
         lastModified = Date()
     }
     
@@ -205,16 +235,23 @@ struct QuickAction: Identifiable, Codable, Sendable {
     /// - Parameter appGroups: Available app groups to resolve IDs
     /// - Returns: Configured IntentionSession
     func createSession(with appGroups: [AppGroup]) throws -> IntentionSession {
-        // Collect all applications and categories from referenced app groups  
+        // Collect all applications and categories from referenced app groups
         var resolvedGroupIds: [UUID] = []
-        
+
         for groupId in appGroupIds {
             if appGroups.contains(where: { $0.id == groupId }) {
                 resolvedGroupIds.append(groupId)
             }
         }
-        
+
+        // Validate that we have at least one valid app group
+        // Empty quick actions should not create sessions that unlock everything
+        guard !resolvedGroupIds.isEmpty else {
+            throw AppError.validationFailed("appGroups", reason: "Quick action must have at least one valid app group to create a session")
+        }
+
         // Create session with comprehensive blocking - collect tokens from app groups
+        // TODO: Include individual applications and categories when fully implemented
         return try IntentionSession(
             appGroups: resolvedGroupIds,
             duration: duration

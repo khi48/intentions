@@ -13,9 +13,9 @@ import SwiftUI
 private struct WidgetDataManager {
     // Widget Constants
     private enum Constants {
-        static let appGroupId = "group.oh.Intentions"
-        static let blockingStatusKey = "intentions.widget.blockingStatus"
-        static let lastUpdateKey = "intentions.widget.lastUpdate"
+        static let appGroupId = "group.oh.Intent"
+        static let blockingStatusKey = "intent.widget.blockingStatus"
+        static let lastUpdateKey = "intent.widget.lastUpdate"
     }
     
     // Shared UserDefaults for communication between app and widget
@@ -57,10 +57,10 @@ private struct WidgetDataManager {
         let appGroupId = Constants.appGroupId as CFString
 
         // Try different user scopes
-        let currentUserValue = CFPreferencesCopyValue("intentions.widget.blockingStatus" as CFString, appGroupId, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        let currentUserValue = CFPreferencesCopyValue("intent.widget.blockingStatus" as CFString, appGroupId, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
         print("🔍 CFPrefs kCFPreferencesCurrentUser: \(currentUserValue != nil ? "✅ Success" : "❌ Failed")")
 
-        let anyUserValue = CFPreferencesCopyValue("intentions.widget.blockingStatus" as CFString, appGroupId, kCFPreferencesAnyUser, kCFPreferencesAnyHost)
+        let anyUserValue = CFPreferencesCopyValue("intent.widget.blockingStatus" as CFString, appGroupId, kCFPreferencesAnyUser, kCFPreferencesAnyHost)
         print("🔍 CFPrefs kCFPreferencesAnyUser: \(anyUserValue != nil ? "✅ Success" : "❌ Failed")")
 
         // Check what domains are actually available
@@ -175,7 +175,7 @@ struct IntentionsWidgetEntryView: View {
                 .foregroundColor(blockingColor)
         }
         .widgetBackground()
-        .widgetURL(URL(string: "intentions://home"))
+        .widgetURL(URL(string: "intent://home"))
     }
     
     // MARK: - Rectangular Widget (More detailed)
@@ -187,7 +187,7 @@ struct IntentionsWidgetEntryView: View {
                 .foregroundColor(blockingColor)
             
             VStack(alignment: .leading, spacing: 1) {
-                Text("Intentions")
+                Text("Intent")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.white)
                 
@@ -200,7 +200,7 @@ struct IntentionsWidgetEntryView: View {
         }
         .padding(.horizontal, 8)
         .widgetBackground()
-        .widgetURL(URL(string: "intentions://home"))
+        .widgetURL(URL(string: "intent://home"))
     }
     
     // MARK: - Inline Widget (Minimal text)
@@ -216,7 +216,7 @@ struct IntentionsWidgetEntryView: View {
                 .foregroundColor(.white)
         }
         .widgetBackground()
-        .widgetURL(URL(string: "intentions://home"))
+        .widgetURL(URL(string: "intent://home"))
     }
     
     // MARK: - Status Properties
@@ -263,11 +263,11 @@ struct IntentionsWidgetEntryView: View {
     
     private var inlineStatusText: String {
         if entry.isDataStale {
-            return "Intentions (Unknown)"
+            return "Intent (Unknown)"
         } else if entry.isBlocking {
-            return "Intentions (Blocked)"
+            return "Intent (Blocked)"
         } else {
-            return "Intentions (Open)"
+            return "Intent (Open)"
         }
     }
 }
@@ -279,8 +279,8 @@ struct IntentionsWidget: Widget {
         StaticConfiguration(kind: kind, provider: IntentionsProvider()) { entry in
             IntentionsWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("Intentions - Status & Access")
-        .description("Shows app blocking status and provides quick access to the Intentions app.")
+        .configurationDisplayName("Intent - Status & Access")
+        .description("Shows app blocking status and provides quick access to the Intent app.")
         .supportedFamilies([
             .accessoryCircular,
             .accessoryRectangular,

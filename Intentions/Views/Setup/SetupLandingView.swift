@@ -36,7 +36,7 @@ struct SetupLandingView: View {
         VStack(spacing: 20) {
             Image(systemName: "gear.badge.checkmark")
                 .font(.system(size: 80))
-                .foregroundColor(.blue)
+                .foregroundColor(AppConstants.Colors.text)
             
             Text("Welcome to Intentions")
                 .font(.largeTitle)
@@ -92,19 +92,19 @@ struct SetupLandingView: View {
             // Step number circle
             ZStack {
                 Circle()
-                    .fill(Color.blue.opacity(0.2))
+                    .fill(AppConstants.Colors.surface)
                     .frame(width: 32, height: 32)
                 
                 Text("\(stepNumber)")
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(.blue)
+                    .foregroundColor(AppConstants.Colors.text)
             }
             
             // Icon
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundColor(.blue)
+                .foregroundColor(AppConstants.Colors.text)
                 .frame(width: 30)
             
             // Content
@@ -112,12 +112,15 @@ struct SetupLandingView: View {
                 Text(title)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                
+                    .fixedSize(horizontal: false, vertical: true)
+
                 Text(description)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             
             Spacer()
         }
@@ -130,7 +133,8 @@ struct SetupLandingView: View {
             Button("Get Started") {
                 onGetStarted()
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
+            .foregroundColor(AppConstants.Colors.text)
             .controlSize(.large)
             .font(.headline)
             

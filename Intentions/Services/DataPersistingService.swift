@@ -11,6 +11,7 @@ protocol DataPersisting: Sendable {
     func saveAppGroup(_ group: AppGroup) async throws
     func loadAppGroups() async throws -> [AppGroup]
     func deleteAppGroup(_ id: UUID) async throws
+    func removeOrphanedAppGroupReferences(_ deletedGroupId: UUID) async throws
     func saveScheduleSettings(_ settings: ScheduleSettings) async throws
     func loadScheduleSettings() async throws -> ScheduleSettings?
     func saveIntentionSession(_ session: IntentionSession) async throws
@@ -284,6 +285,41 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         } catch {
             print("❌ DATA PERSISTENCE: Failed to delete app group: \(error)")
             throw AppError.persistenceError("Failed to delete AppGroup: \(error.localizedDescription)")
+        }
+    }
+
+    func removeOrphanedAppGroupReferences(_ deletedGroupId: UUID) async throws {
+        do {
+            // Load existing quick actions
+            let quickActions = try await load([QuickAction].self, forKey: "quickActions") ?? []
+
+            // Filter out the deleted group ID from all quick actions
+            var updatedQuickActions: [QuickAction] = []
+            var orphanedReferencesFound = false
+
+            for var quickAction in quickActions {
+                let originalCount = quickAction.appGroupIds.count
+                quickAction.appGroupIds.remove(deletedGroupId)
+
+                if quickAction.appGroupIds.count != originalCount {
+                    orphanedReferencesFound = true
+                    print("🧹 CLEANUP: Removed orphaned group reference from quick action '\(quickAction.name)'")
+                }
+
+                updatedQuickActions.append(quickAction)
+            }
+
+            // Save updated quick actions if any changes were made
+            if orphanedReferencesFound {
+                try await save(updatedQuickActions, forKey: "quickActions")
+                print("✅ CLEANUP: Successfully cleaned up orphaned app group references")
+            } else {
+                print("ℹ️ CLEANUP: No orphaned app group references found in quick actions")
+            }
+
+        } catch {
+            print("❌ CLEANUP: Failed to remove orphaned app group references: \(error)")
+            throw AppError.persistenceError("Failed to clean up orphaned references: \(error.localizedDescription)")
         }
     }
     

@@ -39,7 +39,7 @@ struct WidgetSetupStepView: View {
                 
                 Image(systemName: "widget.large.badge.plus")
                     .font(.system(size: 40))
-                    .foregroundColor(.green)
+                    .foregroundColor(AppConstants.Colors.text)
             }
             
             Text("Add Intentions Widget")
@@ -137,7 +137,7 @@ struct WidgetSetupStepView: View {
             }
         }
         .padding()
-        .background(Color.blue.opacity(0.1))
+        .background(AppConstants.Colors.surface)
         .cornerRadius(12)
     }
     
@@ -170,7 +170,8 @@ struct WidgetSetupStepView: View {
             Button("Complete Setup") {
                 onComplete()
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
+            .foregroundColor(AppConstants.Colors.text)
             .controlSize(.large)
             
             Text("You can add the widget later from your device settings")

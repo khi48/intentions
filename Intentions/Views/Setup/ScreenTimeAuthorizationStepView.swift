@@ -53,12 +53,12 @@ struct ScreenTimeAuthorizationStepView: View {
         VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(Color.blue.opacity(0.2))
+                    .fill(AppConstants.Colors.surface)
                     .frame(width: 60, height: 60)
                 
                 Image(systemName: "hourglass.circle.fill")
                     .font(.system(size: 30))
-                    .foregroundColor(.blue)
+                    .foregroundColor(AppConstants.Colors.text)
             }
             
             Text("Screen Time Permission")
@@ -90,10 +90,10 @@ struct ScreenTimeAuthorizationStepView: View {
             if authorizationStatus == .approved {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConstants.Colors.text)
                     Text("Screen Time permission granted successfully!")
                         .font(.subheadline)
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConstants.Colors.text)
                     Spacer()
                 }
             }
@@ -108,13 +108,13 @@ struct ScreenTimeAuthorizationStepView: View {
             switch authorizationStatus {
             case .notDetermined:
                 Label("Not Requested", systemImage: "questionmark.circle")
-                    .foregroundColor(.orange)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
             case .denied:
                 Label("Denied", systemImage: "xmark.circle")
-                    .foregroundColor(.red)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
             case .approved:
                 Label("Approved", systemImage: "checkmark.circle")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppConstants.Colors.text)
             @unknown default:
                 Label("Unknown", systemImage: "exclamationmark.circle")
                     .foregroundColor(.gray)
@@ -134,7 +134,8 @@ struct ScreenTimeAuthorizationStepView: View {
                         await completeStep()
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
+            .foregroundColor(AppConstants.Colors.text)
                 .controlSize(.large)
                 
             case .denied:
@@ -142,7 +143,8 @@ struct ScreenTimeAuthorizationStepView: View {
                     Button("Open Settings to Grant Permission") {
                         openSettings()
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
+            .foregroundColor(AppConstants.Colors.text)
                     .controlSize(.large)
                     
                     Button("I've Updated Settings") {
@@ -159,7 +161,8 @@ struct ScreenTimeAuthorizationStepView: View {
                         await requestPermission()
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
+            .foregroundColor(AppConstants.Colors.text)
                 .controlSize(.large)
                 .disabled(isRequesting)
                 
@@ -191,7 +194,7 @@ struct ScreenTimeAuthorizationStepView: View {
             }
         }
         .padding()
-        .background(Color.blue.opacity(0.1))
+        .background(AppConstants.Colors.surface)
         .cornerRadius(12)
     }
     

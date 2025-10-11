@@ -12,18 +12,24 @@ import FamilyControls
 struct QuickActionsView: View {
     let dataService: DataPersisting
     let contentViewModel: ContentViewModel
-    
-    @StateObject private var viewModel = QuickActionsViewModel()
+
+    @ObservedObject private var viewModel: QuickActionsViewModel
     @State private var showingQuickActionEditor = false
     @State private var editingQuickAction: QuickAction?
     @State private var searchText = ""
-    
+
+    init(dataService: DataPersisting, contentViewModel: ContentViewModel) {
+        self.dataService = dataService
+        self.contentViewModel = contentViewModel
+        self.viewModel = contentViewModel.sharedQuickActionsViewModel
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Search bar
                 searchBar
-                
+
                 if viewModel.isLoading {
                     loadingView
                 } else if viewModel.quickActions.isEmpty {
@@ -32,6 +38,7 @@ struct QuickActionsView: View {
                     actionsList
                 }
             }
+            .background(AppConstants.Colors.background)
             .navigationTitle("Quick Actions")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -81,7 +88,7 @@ struct QuickActionsView: View {
             
             Text("Loading quick actions...")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConstants.Colors.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -94,17 +101,17 @@ struct QuickActionsView: View {
             
             Image(systemName: "bolt.slash")
                 .font(.system(size: 80))
-                .foregroundColor(.blue.opacity(0.7))
+                .foregroundColor(AppConstants.Colors.textSecondary)
             
             VStack(spacing: 8) {
                 Text("No Quick Actions Yet")
                     .font(.title2)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppConstants.Colors.text)
                 
                 Text("Create quick actions for instant access to your most common app groups and session types")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -115,10 +122,10 @@ struct QuickActionsView: View {
                     Text("Create Your First Quick Action")
                 }
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(AppConstants.Colors.text)
                 .padding(.vertical, 12)
                 .padding(.horizontal, 24)
-                .background(.blue)
+                .background(AppConstants.Colors.buttonPrimary)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             
@@ -132,7 +139,7 @@ struct QuickActionsView: View {
     private var searchBar: some View {
         HStack {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConstants.Colors.textSecondary)
             
             TextField("Search quick actions...", text: $searchText)
                 .textFieldStyle(PlainTextFieldStyle())
@@ -140,13 +147,13 @@ struct QuickActionsView: View {
             if !searchText.isEmpty {
                 Button(action: { searchText = "" }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                 }
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.regularMaterial)
+        .background(AppConstants.Colors.surface)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal)
         .padding(.top, 8)
@@ -178,6 +185,8 @@ struct QuickActionsView: View {
                 }
             }
             .listStyle(PlainListStyle())
+            .background(AppConstants.Colors.background)
+            .scrollContentBackground(.hidden)
     }
     
     
@@ -273,13 +282,13 @@ private struct QuickActionRowView: View {
             // Header with name and info
             HStack {
                 HStack(spacing: 12) {
-                    // Icon with color
+                    // Icon with greyscale
                     Image(systemName: quickAction.iconName)
                         .font(.title2)
-                        .foregroundColor(quickAction.color)
+                        .foregroundColor(AppConstants.Colors.text)
                         .frame(width: 32, height: 32)
                         .frame(minWidth: 32, minHeight: 32)
-                        .background(quickAction.color.opacity(0.1))
+                        .background(AppConstants.Colors.surface)
                         .clipShape(Circle())
                     
                     VStack(alignment: .leading, spacing: 2) {
@@ -306,7 +315,7 @@ private struct QuickActionRowView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "clock")
                         .font(.caption)
-                        .foregroundColor(.blue)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                     Text(quickAction.formattedDuration)
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -315,7 +324,7 @@ private struct QuickActionRowView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "square.stack.3d.up")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                     Text("\(quickAction.appGroupIds.count) groups")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -325,7 +334,7 @@ private struct QuickActionRowView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "chart.bar")
                             .font(.caption)
-                            .foregroundColor(.orange)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
                         Text("Used \(quickAction.usageCount)x")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -346,12 +355,24 @@ private struct QuickActionRowView: View {
             Button("Delete", role: .destructive) {
                 onDelete()
             }
-            .tint(.red)
-            
+            .tint(Color(.systemGray3))
+            .foregroundColor(AppConstants.Colors.text)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray3))
+                    .padding(4)
+            )
+
             Button("Edit") {
                 onEdit()
             }
-            .tint(.blue)
+            .tint(Color(.systemGray5))
+            .foregroundColor(AppConstants.Colors.text)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray5))
+                    .padding(4)
+            )
         }
     }
 }
@@ -368,10 +389,10 @@ private struct StatisticCard: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundColor(color)
+                .foregroundColor(AppConstants.Colors.text)
                 .frame(width: 32, height: 32)
                 .frame(minWidth: 32, minHeight: 32)
-                .background(color.opacity(0.1))
+                .background(AppConstants.Colors.surface)
                 .clipShape(Circle())
             
             VStack(alignment: .leading, spacing: 2) {

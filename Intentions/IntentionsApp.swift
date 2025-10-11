@@ -10,6 +10,12 @@ import SwiftUI
 @main
 struct IntentionsApp: App {
     let persistenceController = PersistenceController.shared
+
+    init() {
+        // Initialize crash reporting
+        CrashReporting.initialize()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

@@ -56,7 +56,7 @@ struct IncludeEntireCategoryTestView: View {
             VStack(spacing: 8) {
                 Text("Select a CATEGORY (not individual apps)")
                     .font(.headline)
-                    .foregroundColor(.orange)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                 
                 Text("We want to see if selecting a category populates individual apps when includeEntireCategory: true")
                     .font(.caption)
@@ -64,7 +64,7 @@ struct IncludeEntireCategoryTestView: View {
                     .foregroundColor(.secondary)
             }
             .padding()
-            .background(Color.orange.opacity(0.1))
+            .background(AppConstants.Colors.surface)
             .cornerRadius(8)
             
             // Open Picker Button
@@ -72,7 +72,8 @@ struct IncludeEntireCategoryTestView: View {
                 print("\n🧪 TESTING: \(testMode.rawValue)")
                 showingPicker = true
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
+            .foregroundColor(AppConstants.Colors.text)
             .controlSize(.large)
             
             // Results
@@ -120,14 +121,14 @@ struct IncludeEntireCategoryTestView: View {
             
             HStack {
                 Image(systemName: "folder.badge")
-                    .foregroundColor(.orange)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                 Text("Categories: \(currentSelection.categories.count)")
                 Spacer()
             }
             
             HStack {
                 Image(systemName: "globe.badge")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppConstants.Colors.text)
                 Text("Web Domains: \(currentSelection.webDomains.count)")
                 Spacer()
             }
@@ -140,14 +141,14 @@ struct IncludeEntireCategoryTestView: View {
             
             HStack {
                 Image(systemName: "key.fill")
-                    .foregroundColor(.purple)
+                    .foregroundColor(AppConstants.Colors.text)
                 Text("Valid App Tokens: \(validAppTokens)")
                 Spacer()
             }
             
             HStack {
                 Image(systemName: "key.fill")
-                    .foregroundColor(.purple)
+                    .foregroundColor(AppConstants.Colors.text)
                 Text("Valid Category Tokens: \(validCategoryTokens)")
                 Spacer()
             }
@@ -163,23 +164,23 @@ struct IncludeEntireCategoryTestView: View {
                 if testMode == .withCategories {
                     Text("✅ Selecting 1 category should give you BOTH:")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConstants.Colors.text)
                     Text("  • 1 category token")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConstants.Colors.text)
                     Text("  • Multiple individual app tokens from that category")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConstants.Colors.text)
                 } else {
                     Text("⚠️ Selecting 1 category should give you ONLY:")
                         .font(.caption)
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                     Text("  • 1 category token")
                         .font(.caption)
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                     Text("  • No individual app tokens")
                         .font(.caption)
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                 }
             }
             

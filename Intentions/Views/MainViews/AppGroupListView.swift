@@ -22,7 +22,7 @@ struct AppGroupListView: View {
             VStack(spacing: 0) {
                 // Search bar
                 searchBar
-                
+
                 // Content based on state
                 if viewModel.isLoading {
                     loadingView
@@ -32,6 +32,7 @@ struct AppGroupListView: View {
                     groupsList
                 }
             }
+            .background(AppConstants.Colors.background)
             .navigationTitle("App Groups")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -80,7 +81,7 @@ struct AppGroupListView: View {
     private var searchBar: some View {
         HStack {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConstants.Colors.textSecondary)
             
             TextField("Search app groups...", text: $viewModel.searchText)
                 .textFieldStyle(PlainTextFieldStyle())
@@ -88,13 +89,13 @@ struct AppGroupListView: View {
             if !viewModel.searchText.isEmpty {
                 Button(action: { viewModel.searchText = "" }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                 }
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.regularMaterial)
+        .background(AppConstants.Colors.surface)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal)
         .padding(.top, 8)
@@ -109,7 +110,7 @@ struct AppGroupListView: View {
             
             Text("Loading app groups...")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConstants.Colors.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -122,17 +123,17 @@ struct AppGroupListView: View {
             
             Image(systemName: "square.stack.3d.up.slash")
                 .font(.system(size: 80))
-                .foregroundColor(.blue.opacity(0.7))
+                .foregroundColor(AppConstants.Colors.textSecondary)
             
             VStack(spacing: 8) {
                 Text("No App Groups Yet")
                     .font(.title2)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppConstants.Colors.text)
                 
                 Text("Create your first app group to organize apps into collections for quick session setup")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -145,10 +146,10 @@ struct AppGroupListView: View {
                     Text("Create Your First Group")
                 }
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(AppConstants.Colors.text)
                 .padding(.vertical, 12)
                 .padding(.horizontal, 24)
-                .background(.blue)
+                .background(AppConstants.Colors.buttonPrimary)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             
@@ -171,12 +172,24 @@ struct AppGroupListView: View {
                         Button("Delete", role: .destructive) {
                             viewModel.confirmDeleteGroup(group)
                         }
-                        .tint(.red)
-                        
+                        .tint(Color(.systemGray3))
+                        .foregroundColor(AppConstants.Colors.text)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color(.systemGray3))
+                                .padding(4)
+                        )
+
                         Button("Edit") {
                             viewModel.showEditGroupEditor(for: group)
                         }
-                        .tint(.blue)
+                        .tint(Color(.systemGray5))
+                        .foregroundColor(AppConstants.Colors.text)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color(.systemGray5))
+                                .padding(4)
+                        )
                     }
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .listRowSeparator(.hidden)
@@ -184,6 +197,8 @@ struct AppGroupListView: View {
                 }
             }
             .listStyle(PlainListStyle())
+            .background(AppConstants.Colors.background)
+            .scrollContentBackground(.hidden)
     }
     
     
@@ -266,12 +281,7 @@ private struct AppGroupRowView: View {
                     Text(group.name)
                         .font(.headline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                    
-                    Text("Modified \(group.lastModified, formatter: Self.relativeDateFormatter)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConstants.Colors.text)
                         .lineLimit(1)
                 }
                 
@@ -288,18 +298,18 @@ private struct AppGroupRowView: View {
                     label: "Apps",
                     value: "\(group.applications.count)"
                 )
-                
+
                 StatDetail(
                     icon: "folder.fill",
-                    label: "Categories", 
+                    label: "Categories",
                     value: "\(group.categories.count)"
                 )
-                
+
                 Spacer()
             }
         }
         .padding()
-        .background(.regularMaterial)
+        .background(AppConstants.Colors.surface)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
@@ -354,11 +364,11 @@ private struct StatDetail: View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 14))
-                .foregroundColor(.blue)
-            
+                .foregroundColor(AppConstants.Colors.textSecondary)
+
             Text("\(value) \(label)")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConstants.Colors.textSecondary)
         }
     }
 }
@@ -375,34 +385,26 @@ private struct AppIconsPreview: View {
             // Show app icons with count indicator
             if !group.applications.isEmpty {
                 HStack(spacing: 8) {
-                    Text("Apps")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fontWeight(.medium)
-                    
                     Spacer()
-                    
+
                     // Show app icons with overflow indicator
                     HStack(spacing: -2) {
                         ForEach(Array(group.applications.prefix(maxPreviewIcons)).enumerated().map { $0 }, id: \.offset) { index, token in
                             Label(token)
                                 .labelStyle(.iconOnly)
+                                .grayscale(1.0) // Convert to greyscale
                                 .frame(width: 20, height: 20)
                                 .clipShape(RoundedRectangle(cornerRadius: 4))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .stroke(Color.white, lineWidth: 1)
-                                )
                                 .zIndex(Double(maxPreviewIcons - index))
                                 .id("group_app_\(token.hashValue)")
                         }
-                        
+
                         // Show remaining count if more than 3 apps
                         if group.applications.count > maxPreviewIcons {
                             Text("+\(group.applications.count - maxPreviewIcons)")
                                 .font(.caption2)
                                 .fontWeight(.medium)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppConstants.Colors.textSecondary)
                         }
                     }
                 }

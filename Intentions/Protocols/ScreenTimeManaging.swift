@@ -23,9 +23,10 @@ protocol ScreenTimeManaging: Sendable {
     /// - Parameters:
     ///   - tokens: Set of ApplicationTokens to allow
     ///   - categories: Set of ActivityCategoryTokens to allow (default empty)
+    ///   - allowWebsites: Whether to allow access to all websites (default false)
     ///   - duration: How long to allow access (in seconds)
     /// - Throws: AppError if allowing apps fails
-    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken>, duration: TimeInterval) async throws
+    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken>, allowWebsites: Bool, duration: TimeInterval) async throws
     
     /// Get currently allowed apps
     /// - Returns: Set of ApplicationTokens that are currently allowed
@@ -47,6 +48,9 @@ protocol ScreenTimeManaging: Sendable {
     /// Initialize the service - call after creation
     /// - Throws: AppError if initialization fails
     func initialize() async throws
+
+    /// Check if the service has been properly initialized
+    var isReady: Bool { get }
     
     /// Get detailed status information for debugging and UI
     /// - Returns: Current status information

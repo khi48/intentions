@@ -32,7 +32,7 @@ struct CategoryMappingSetupView: View {
                         VStack(spacing: 20) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 60))
-                                .foregroundColor(.orange)
+                                .foregroundColor(AppConstants.Colors.textSecondary)
 
                             Text("Screen Time Authorization Required")
                                 .font(.title2)
@@ -47,7 +47,7 @@ struct CategoryMappingSetupView: View {
                                 .foregroundColor(.secondary)
                         }
                         .padding()
-                        .background(Color.orange.opacity(0.1))
+                        .background(AppConstants.Colors.surface)
                         .cornerRadius(16)
                     }
 
@@ -55,7 +55,7 @@ struct CategoryMappingSetupView: View {
                     VStack(spacing: 12) {
                         HStack {
                             Image(systemName: "info.circle.fill")
-                                .foregroundColor(.blue)
+                                .foregroundColor(AppConstants.Colors.text)
                             Text("Note")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
@@ -67,7 +67,7 @@ struct CategoryMappingSetupView: View {
                             .foregroundColor(.secondary)
                     }
                     .padding()
-                    .background(Color.blue.opacity(0.1))
+                    .background(AppConstants.Colors.surface)
                     .cornerRadius(12)
 
                     
@@ -155,7 +155,7 @@ struct CategoryMappingSetupView: View {
         VStack(spacing: 16) {
             Image(systemName: "app.badge.checkmark.fill")
                 .font(.system(size: 60))
-                .foregroundColor(.blue)
+                .foregroundColor(AppConstants.Colors.text)
             
             Text("App Category Mapping")
                 .font(.title)
@@ -168,7 +168,7 @@ struct CategoryMappingSetupView: View {
                 .padding(.horizontal)
         }
         .padding()
-        .background(Color.blue.opacity(0.1))
+        .background(AppConstants.Colors.surface)
         .cornerRadius(16)
     }
     
@@ -187,7 +187,7 @@ struct CategoryMappingSetupView: View {
                     .fontWeight(.medium)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.blue.opacity(0.2))
+                    .background(AppConstants.Colors.surface)
                     .cornerRadius(8)
             }
             
@@ -238,12 +238,12 @@ struct CategoryMappingSetupView: View {
         VStack(spacing: 16) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 50))
-                .foregroundColor(.green)
+                .foregroundColor(AppConstants.Colors.text)
             
             Text("Setup Complete!")
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(.green)
+                .foregroundColor(AppConstants.Colors.text)
             
             Text("All categories have been mapped. Your app blocking will now be intelligently prioritized by category.")
                 .font(.body)
@@ -255,7 +255,7 @@ struct CategoryMappingSetupView: View {
                 ForEach(mappingService.completedCategories.prefix(5), id: \.self) { category in
                     HStack {
                         Image(systemName: category.iconName)
-                            .foregroundColor(.blue)
+                            .foregroundColor(AppConstants.Colors.text)
                             .frame(width: 20)
                         
                         Text(category.displayName)
@@ -283,11 +283,12 @@ struct CategoryMappingSetupView: View {
             Button("Complete Setup") {
                 onComplete(mappingService)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
+            .foregroundColor(AppConstants.Colors.text)
             .controlSize(.large)
         }
         .padding()
-        .background(Color.green.opacity(0.1))
+        .background(AppConstants.Colors.surface)
         .cornerRadius(16)
     }
 
@@ -405,7 +406,7 @@ struct CategorySetupCard: View {
                         Image(systemName: "checkmark")
                             .font(.title3)
                             .fontWeight(.bold)
-                            .foregroundColor(.green)
+                            .foregroundColor(AppConstants.Colors.text)
                     }
                 } else {
                     // Apple icons without background circle, larger size
@@ -434,7 +435,7 @@ struct CategorySetupCard: View {
                         Text("\(appCount) apps mapped")
                             .font(.caption2)
                             .fontWeight(.medium)
-                            .foregroundColor(.green)
+                            .foregroundColor(AppConstants.Colors.text)
                             .padding(.top, 2)
                     }
                 }
@@ -455,10 +456,10 @@ struct CategorySetupCard: View {
                     } else {
                         Image(systemName: "hand.tap.fill")
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundColor(AppConstants.Colors.text)
                         Text("Tap to map")
                             .font(.caption2)
-                            .foregroundColor(.blue)
+                            .foregroundColor(AppConstants.Colors.text)
                     }
                 }
             }

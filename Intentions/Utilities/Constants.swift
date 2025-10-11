@@ -6,37 +6,38 @@
 //
 
 import Foundation
+import SwiftUI
 
 enum AppConstants {
     
     // MARK: - Widget Sharing
     enum Widget {
         /// UserDefaults keys for sharing data with widgets
-        static let blockingStatusKey = "intentions.widget.blockingStatus"
-        static let lastUpdateKey = "intentions.widget.lastUpdate"
+        static let blockingStatusKey = "intent.widget.blockingStatus"
+        static let lastUpdateKey = "intent.widget.lastUpdate"
     }
     
     // MARK: - Session Management
     enum Session {
-        /// Default session duration (30 minutes)
-        static let defaultDuration: TimeInterval = 30 * 60
+        /// Default session duration (5 minutes)
+        static let defaultDuration: TimeInterval = 5 * 60
         
         /// Minimum allowed session duration (5 minutes)
         static let minimumDuration: TimeInterval = 5 * 60
         
-        /// Maximum allowed session duration (8 hours)
-        static let maximumDuration: TimeInterval = 8 * 60 * 60
+        /// Maximum allowed session duration (2 hours)
+        static let maximumDuration: TimeInterval = 2 * 60 * 60
         
         /// Warning notification intervals before session expiry
         static let warningIntervals: [TimeInterval] = [5 * 60, 1 * 60] // 5min, 1min
         
         /// Available preset durations for quick selection
         static let presetDurations: [TimeInterval] = [
+            5 * 60,     // 5 minutes
             15 * 60,    // 15 minutes
             30 * 60,    // 30 minutes
             60 * 60,    // 1 hour
-            2 * 60 * 60, // 2 hours
-            4 * 60 * 60  // 4 hours
+            2 * 60 * 60 // 2 hours
         ]
     }
     
@@ -132,10 +133,10 @@ enum AppConstants {
     // MARK: - CloudKit & Storage
     enum Storage {
         /// CloudKit database name
-        static let cloudKitDatabase = "IntentionsAppDatabase"
-        
+        static let cloudKitDatabase = "IntentAppDatabase"
+
         /// UserDefaults key prefix
-        static let userDefaultsPrefix = "intentions."
+        static let userDefaultsPrefix = "intent."
         
         /// Maximum file size for exports
         static let maxExportFileSize: Int = 10 * 1024 * 1024 // 10MB
@@ -152,6 +153,45 @@ enum AppConstants {
         /// Notification category for session management
         static let sessionCategory = "SESSION_MANAGEMENT"
     }
+
+    // MARK: - Color Scheme
+    enum Colors {
+        /// Primary background color (very dark grey, not black)
+        static let background = Color(red: 0.08, green: 0.08, blue: 0.08)
+
+        /// Secondary background color (dark grey)
+        static let backgroundSecondary = Color(red: 0.12, green: 0.12, blue: 0.12)
+
+        /// Card/surface background color (darker for better contrast)
+        static let surface = Color(red: 0.15, green: 0.15, blue: 0.15)
+
+        /// Primary text color (white)
+        static let text = Color.white
+
+        /// Secondary text color (light grey)
+        static let textSecondary = Color(red: 0.6, green: 0.6, blue: 0.6)
+
+        /// Accent color for buttons and highlights
+        static let accent = Color(red: 0.7, green: 0.7, blue: 0.7)
+
+        /// Destructive action color (light grey for monochrome)
+        static let destructive = Color(red: 0.7, green: 0.7, blue: 0.7)
+
+        /// Success/positive action color (light grey)
+        static let positive = Color(red: 0.7, green: 0.7, blue: 0.7)
+
+        /// Border and separator color (medium dark grey)
+        static let border = Color(red: 0.25, green: 0.25, blue: 0.25)
+
+        /// Disabled state color (medium grey)
+        static let disabled = Color(red: 0.4, green: 0.4, blue: 0.4)
+
+        /// Tab bar icon color (lighter for better visibility)
+        static let tabBarIcon = Color(red: 0.8, green: 0.8, blue: 0.8)
+
+        /// Button background for primary actions
+        static let buttonPrimary = Color(red: 0.3, green: 0.3, blue: 0.3)
+    }
 }
 
 // MARK: - Convenience Extensions
@@ -161,18 +201,38 @@ extension TimeInterval {
         UInt64(self * Double(AppConstants.Time.nanosPerSecond))
     }
     
-    /// Format time interval as MM:SS string
+    /// Format time interval as MM:SS string (deprecated - use formattedDuration instead)
     var formattedMinutesSeconds: String {
         let minutes = Int(self) / 60
-        let seconds = Int(self) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+        return "\(minutes)m"
     }
-    
-    /// Format time interval as HH:MM string
+
+    /// Format time interval as HH:MM string (deprecated - use formattedDuration instead)
     var formattedHoursMinutes: String {
         let hours = Int(self) / 3600
         let minutes = (Int(self) % 3600) / 60
-        return String(format: "%02d:%02d", hours, minutes)
+        if minutes == 0 {
+            return "\(hours)h"
+        } else {
+            return "\(hours)h \(minutes)m"
+        }
+    }
+
+    /// Format time interval as duration string (e.g., "5m", "1h 30m")
+    var formattedDuration: String {
+        let totalSeconds = Int(self)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+
+        if hours > 0 {
+            if minutes == 0 {
+                return "\(hours)h"
+            } else {
+                return "\(hours)h \(minutes)m"
+            }
+        } else {
+            return "\(minutes)m"
+        }
     }
 }
 

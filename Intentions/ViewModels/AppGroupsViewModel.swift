@@ -182,13 +182,18 @@ final class AppGroupsViewModel: Sendable {
     func deleteAppGroup(_ group: AppGroup) async {
         await withLoading {
             do {
+                // Delete the app group
                 try await dataService.deleteAppGroup(group.id)
+
+                // Clean up orphaned references in quick actions
+                try await dataService.removeOrphanedAppGroupReferences(group.id)
+
                 appGroups.removeAll { $0.id == group.id }
-                
+
                 // Clear delete state
                 groupToDelete = nil
                 showingDeleteAlert = false
-                
+
             } catch {
                 await handleError(error)
             }

@@ -25,7 +25,7 @@ actor ScreenTimeService: ScreenTimeManaging {
     private var essentialSystemApps: Set<ApplicationToken> = []
     
     /// Track initialization state
-    private var isInitialized = false
+    nonisolated(unsafe) private var isInitialized = false
 
     /// Track the state before a session started (was Intentions blocking or allowing?)
     private var preSessionBlockingState: Bool?
@@ -51,7 +51,9 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// Must be called after creating the service before any other operations
     /// Blocking should be applied separately based on schedule settings
     func initialize() async throws {
+        print("🔧 ScreenTimeService.initialize() called - Current isInitialized: \(isInitialized)")
         guard !isInitialized else {
+            print("❌ ScreenTimeService already initialized - throwing error")
             throw AppError.serviceUnavailable("ScreenTimeService already initialized")
         }
 
@@ -73,10 +75,11 @@ actor ScreenTimeService: ScreenTimeManaging {
 
         // Mark as initialized - blocking will be applied separately by ContentViewModel
         isInitialized = true
+        print("✅ ScreenTimeService successfully initialized")
     }
     
     /// Check if the service has been properly initialized
-    var isReady: Bool {
+    nonisolated var isReady: Bool {
         isInitialized
     }
     
@@ -179,7 +182,7 @@ actor ScreenTimeService: ScreenTimeManaging {
         return Set<ActivityCategoryToken>()
     }
     
-    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken> = [], duration: TimeInterval) async throws {
+    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken> = [], allowWebsites: Bool = false, duration: TimeInterval) async throws {
         try ensureInitialized()
 
         let status = await authorizationStatus()
@@ -188,11 +191,11 @@ actor ScreenTimeService: ScreenTimeManaging {
         }
 
         guard duration >= AppConstants.Session.minimumDuration else {
-            throw AppError.validationFailed("duration", reason: "Must be at least \(AppConstants.Session.minimumDuration.formattedMinutesSeconds)")
+            throw AppError.validationFailed("duration", reason: "Must be at least \(AppConstants.Session.minimumDuration.formattedDuration)")
         }
 
         guard duration <= AppConstants.Session.maximumDuration else {
-            throw AppError.validationFailed("duration", reason: "Cannot exceed \(AppConstants.Session.maximumDuration.formattedHoursMinutes)")
+            throw AppError.validationFailed("duration", reason: "Cannot exceed \(AppConstants.Session.maximumDuration.formattedDuration)")
         }
 
         guard !tokens.isEmpty || !categories.isEmpty else {
@@ -224,8 +227,12 @@ actor ScreenTimeService: ScreenTimeManaging {
                 }
             }
 
-            // Allow web content during focused session (apps are still restricted by categories)
-            managedSettingsStore.webContent.blockedByFilter = nil
+            // Conditionally allow web content based on session preference
+            if allowWebsites {
+                managedSettingsStore.webContent.blockedByFilter = nil
+            } else {
+                managedSettingsStore.webContent.blockedByFilter = .all()
+            }
 
             // Update our tracking
             currentlyAllowedApps = tokens

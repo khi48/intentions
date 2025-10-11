@@ -13,10 +13,11 @@ import SwiftUI
 /// Main app content view with navigation and authorization handling
 struct ContentView: View {
     @State private var viewModel: ContentViewModel
-    
+
     init() {
         do {
-            self._viewModel = State(wrappedValue: try ContentViewModel())
+            let vm = try ContentViewModel()
+            self._viewModel = State(wrappedValue: vm)
         } catch {
             // If ContentViewModel initialization fails, we have a critical app failure
             fatalError("Failed to initialize ContentViewModel: \(error)")
@@ -117,6 +118,7 @@ private struct MainTabView: View {
             SettingsView(
                 dataService: viewModel.dataServiceProvider,
                 setupCoordinator: viewModel.setupCoordinator,
+                hasActiveSession: viewModel.activeSession != nil,
                 onScheduleSettingsChanged: { settings in
                     await viewModel.updateScheduleSettings(settings)
                 },
@@ -131,6 +133,7 @@ private struct MainTabView: View {
                 .tag(AppTab.settings)
             
         }
+        .tint(AppConstants.Colors.tabBarIcon)
         .sheet(isPresented: Binding(
             get: { viewModel.showingIntentionPrompt },
             set: { viewModel.showingIntentionPrompt = $0 }
