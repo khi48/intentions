@@ -10,6 +10,7 @@ import SwiftUI
 import Combine
 @preconcurrency import FamilyControls
 import ManagedSettings
+import UserNotifications
 
 /// ViewModel for session status display and management
 /// Handles real-time session monitoring, countdown timers, and session controls
@@ -94,6 +95,12 @@ final class SessionStatusViewModel: Sendable {
     
     /// Individual apps associated with current session
     private(set) var sessionApps: [DiscoveredApp] = []
+
+    /// Application tokens from the session (for direct display)
+    private(set) var sessionTokens: [ApplicationToken] = []
+
+    /// Quick action associated with the session (if it's a quick action session)
+    private(set) var associatedQuickAction: QuickAction?
     
     /// Whether showing session controls
     var showingControls: Bool = false
@@ -108,10 +115,11 @@ final class SessionStatusViewModel: Sendable {
     var selectedExtensionTime: Int = 15
     
     // MARK: - Dependencies
-    
+
     private let dataService: DataPersisting
     private let screenTimeService: ScreenTimeManaging
     private let contentViewModel: ContentViewModel
+    private let notificationService: NotificationService
     
     // MARK: - Timer
     
@@ -129,16 +137,26 @@ final class SessionStatusViewModel: Sendable {
         session: IntentionSession? = nil,
         contentViewModel: ContentViewModel,
         dataService: DataPersisting? = nil,
-        screenTimeService: ScreenTimeManaging? = nil
+        screenTimeService: ScreenTimeManaging? = nil,
+        notificationService: NotificationService? = nil
     ) {
         self.session = session
         self.contentViewModel = contentViewModel
         self.dataService = dataService ?? contentViewModel.dataServiceProvider
         self.screenTimeService = screenTimeService ?? contentViewModel.screenTimeService
-        
+        self.notificationService = notificationService ?? NotificationService.shared
+
         if let session = session {
             updateRemainingTime()
             startTimer()
+
+            // Load session data (app groups, tokens, quick action) on initialization
+            Task {
+                await self.loadSessionData()
+                await self.loadAssociatedQuickAction()
+                // TEMPORARILY DISABLED: Testing if notifications cause SpringBoard crash
+                // await self.notificationService.scheduleSessionNotifications(for: session)
+            }
         }
     }
     
@@ -153,21 +171,33 @@ final class SessionStatusViewModel: Sendable {
     func updateSession(_ newSession: IntentionSession?) {
         let wasActive = isSessionActive
         session = newSession
-        
+
         if let session = newSession, session.isActive {
             updateRemainingTime()
             if !wasActive {
                 startTimer()
+
+                // TEMPORARILY DISABLED: Testing if notifications cause SpringBoard crash
+                // Schedule notifications for new session
+                // Task {
+                //     await notificationService.scheduleSessionNotifications(for: session)
+                // }
             }
-            
+
             Task {
                 await loadSessionData()
+                await loadAssociatedQuickAction()
             }
         } else {
             stopTimer()
             remainingTime = 0
             sessionAppGroups = []
             sessionApps = []
+
+            // Cancel notifications when session ends
+            Task {
+                await notificationService.cancelSessionNotifications()
+            }
         }
     }
     
@@ -188,6 +218,10 @@ final class SessionStatusViewModel: Sendable {
                 try await dataService.saveIntentionSession(extendedSession)
                 session = extendedSession
                 updateRemainingTime()
+
+                // TEMPORARILY DISABLED: Testing if notifications cause SpringBoard crash
+                // Reschedule notifications for extended session
+                // await notificationService.scheduleSessionNotifications(for: extendedSession)
 
                 await onSessionExtended?(extensionTime)
 
@@ -213,10 +247,13 @@ final class SessionStatusViewModel: Sendable {
                 try await dataService.saveIntentionSession(endedSession)
                 session = endedSession
                 stopTimer()
-                
+
+                // Cancel any pending notifications
+                await notificationService.cancelSessionNotifications()
+
                 // Directly call ContentViewModel to handle blocking logic
                 await contentViewModel.endCurrentSession()
-                
+
                 // Keep legacy callback for backward compatibility during transition
                 await onSessionEnded?()
                 
@@ -247,34 +284,42 @@ final class SessionStatusViewModel: Sendable {
     // MARK: - Data Loading
     
     private func loadSessionData() async {
-        guard let session = session else { return }
-        
+        guard let session = session else {
+            return
+        }
+
         do {
             // Load app groups for this session
             let allGroups = try await dataService.loadAppGroups()
             sessionAppGroups = allGroups.filter { group in
                 session.requestedAppGroups.contains(group.id)
             }
-            
-            // Generate mock apps for individual selections
-            sessionApps = generateMockAppsForTokens(session.requestedApplications)
-            
+
+            // Store the ApplicationTokens directly - no need to convert
+            sessionTokens = Array(session.requestedApplications)
+
+            // For now, create simple placeholder DiscoveredApps for backward compatibility
+            var allSessionApps: [DiscoveredApp] = []
+            for (index, token) in session.requestedApplications.enumerated() {
+                let discoveredApp = DiscoveredApp(
+                    displayName: "App \(index + 1)", // Placeholder name - in real app this would come from the app metadata
+                    bundleIdentifier: "com.app\(index + 1).bundle", // Placeholder - would be real bundle ID
+                    token: token,
+                    category: "Allowed"
+                )
+                allSessionApps.append(discoveredApp)
+            }
+
+            sessionApps = allSessionApps
+
         } catch {
-            print("Failed to load session data: \(error)")
+            print("❌ Failed to load session data: \(error)")
         }
     }
     
-    private func generateMockAppsForTokens(_ tokens: Set<ApplicationToken>) -> [DiscoveredApp] {
-        // For development, create mock discovered apps
-        return tokens.enumerated().compactMap { (index, token) in
-            DiscoveredApp(
-                displayName: "App \(index + 1)",
-                bundleIdentifier: "com.app\(index + 1).bundle",
-                token: token,
-                category: "Productivity"
-            )
-        }
-    }
+
+
+
     
     // MARK: - Timer Management
     
@@ -297,16 +342,18 @@ final class SessionStatusViewModel: Sendable {
             remainingTime = 0
             return
         }
-        
+
         remainingTime = session.remainingTime
-        
+
         // Check if session expired
         if remainingTime <= 0 {
             stopTimer()
             Task {
-                // Directly call ContentViewModel to handle session expiration
+                // End the session via manual UI timer expiration
+                // This will complete the session, clear state, and re-block apps
+                print("⏰ UI TIMER: Session expired - ending session via UI timer")
                 await contentViewModel.endCurrentSession()
-                
+
                 // Keep legacy callback for backward compatibility during transition
                 await onSessionExpired?()
             }
@@ -346,6 +393,21 @@ final class SessionStatusViewModel: Sendable {
     
     func clearError() {
         errorMessage = nil
+    }
+
+    private func loadAssociatedQuickAction() async {
+        guard let session = session else {
+            associatedQuickAction = nil
+            return
+        }
+
+        guard case .quickAction(let quickAction) = session.source else {
+            associatedQuickAction = nil
+            return
+        }
+
+        // Quick action is now stored directly on the session - no lookup needed!
+        associatedQuickAction = quickAction
     }
 }
 

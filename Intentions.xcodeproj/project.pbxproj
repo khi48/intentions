@@ -21,6 +21,11 @@
 		207E146A2E90883400730900 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E14552E90881E00730900 /* ManagedSettings.framework */; };
 		207E14722E90883400730900 /* IntentionsShieldAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 207E14692E90883300730900 /* IntentionsShieldAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		207E147C2E98382400730900 /* CrashReporting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207E147B2E98382400730900 /* CrashReporting.swift */; };
+		207E14802E9B6A4E00730900 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207E147F2E9B6A4E00730900 /* NotificationService.swift */; };
+		207E14822E9B6A6200730900 /* WidgetSetupStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207E14812E9B6A6200730900 /* WidgetSetupStepView.swift */; };
+		207E14842E9B6AC000730900 /* NotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207E14832E9B6AC000730900 /* NotificationSettings.swift */; };
+		207E148B2E9F5D8500730900 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E148A2E9F5D8500730900 /* DeviceActivity.framework */; };
+		207E14932E9F5D8600730900 /* IntentionsDeviceActivityMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 207E14892E9F5D8500730900 /* IntentionsDeviceActivityMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2085A8E12DF559940011EB9A /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8E02DF559910011EB9A /* AppGroup.swift */; };
 		2085A8E32DF55A060011EB9A /* IntentionsSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8E22DF55A060011EB9A /* IntentionsSession.swift */; };
 		2085A8E52DF55A2A0011EB9A /* ScheduleSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8E42DF55A250011EB9A /* ScheduleSettings.swift */; };
@@ -123,6 +128,13 @@
 			remoteGlobalIDString = 207E14682E90883300730900;
 			remoteInfo = IntentionsShieldAction;
 		};
+		207E14912E9F5D8600730900 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2071C4882DE43AC600DF737F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 207E14882E9F5D8500730900;
+			remoteInfo = IntentionsDeviceActivityMonitor;
+		};
 		20EB27242E6C057B00FC4BE4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 2071C4882DE43AC600DF737F /* Project object */;
@@ -139,6 +151,7 @@
 			dstSubfolder = PlugIns;
 			files = (
 				20EB27262E6C057B00FC4BE4 /* IntentionsWidgetExtension.appex in Embed Foundation Extensions */,
+				207E14932E9F5D8600730900 /* IntentionsDeviceActivityMonitor.appex in Embed Foundation Extensions */,
 				207E14722E90883400730900 /* IntentionsShieldAction.appex in Embed Foundation Extensions */,
 				207E14602E90881E00730900 /* IntentionsShieldConfiguration.appex in Embed Foundation Extensions */,
 			);
@@ -163,6 +176,11 @@
 		207E14572E90881E00730900 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
 		207E14692E90883300730900 /* IntentionsShieldAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = IntentionsShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		207E147B2E98382400730900 /* CrashReporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReporting.swift; sourceTree = "<group>"; };
+		207E147F2E9B6A4E00730900 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		207E14812E9B6A6200730900 /* WidgetSetupStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSetupStepView.swift; sourceTree = "<group>"; };
+		207E14832E9B6AC000730900 /* NotificationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettings.swift; sourceTree = "<group>"; };
+		207E14892E9F5D8500730900 /* IntentionsDeviceActivityMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = IntentionsDeviceActivityMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		207E148A2E9F5D8500730900 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
 		2085A8E02DF559910011EB9A /* AppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroup.swift; sourceTree = "<group>"; };
 		2085A8E22DF55A060011EB9A /* IntentionsSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsSession.swift; sourceTree = "<group>"; };
 		2085A8E42DF55A250011EB9A /* ScheduleSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleSettings.swift; sourceTree = "<group>"; };
@@ -254,6 +272,13 @@
 			);
 			target = 207E14682E90883300730900 /* IntentionsShieldAction */;
 		};
+		207E14942E9F5D8600730900 /* Exceptions for "IntentionsDeviceActivityMonitor" folder in "IntentionsDeviceActivityMonitor" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 207E14882E9F5D8500730900 /* IntentionsDeviceActivityMonitor */;
+		};
 		20EB27272E6C057B00FC4BE4 /* Exceptions for "IntentionsWidget" folder in "IntentionsWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -278,6 +303,14 @@
 				207E14732E90883400730900 /* Exceptions for "IntentionsShieldAction" folder in "IntentionsShieldAction" target */,
 			);
 			path = IntentionsShieldAction;
+			sourceTree = "<group>";
+		};
+		207E148C2E9F5D8500730900 /* IntentionsDeviceActivityMonitor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				207E14942E9F5D8600730900 /* Exceptions for "IntentionsDeviceActivityMonitor" folder in "IntentionsDeviceActivityMonitor" target */,
+			);
+			path = IntentionsDeviceActivityMonitor;
 			sourceTree = "<group>";
 		};
 		20EB27182E6C057700FC4BE4 /* IntentionsWidget */ = {
@@ -320,6 +353,12 @@
 				207E146A2E90883400730900 /* ManagedSettings.framework in Frameworks */,
 			);
 		};
+		207E14862E9F5D8500730900 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				207E148B2E9F5D8500730900 /* DeviceActivity.framework in Frameworks */,
+			);
+		};
 		20EB27102E6C057700FC4BE4 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
@@ -340,6 +379,7 @@
 				20EB27182E6C057700FC4BE4 /* IntentionsWidget */,
 				207E14592E90881E00730900 /* IntentionsShieldConfiguration */,
 				207E146B2E90883400730900 /* IntentionsShieldAction */,
+				207E148C2E9F5D8500730900 /* IntentionsDeviceActivityMonitor */,
 				2071C4912DE43AC600DF737F /* Products */,
 				2092FF042DF1921C0055A01D /* Frameworks */,
 			);
@@ -354,6 +394,7 @@
 				20EB27132E6C057700FC4BE4 /* IntentionsWidgetExtension.appex */,
 				207E14542E90881E00730900 /* IntentionsShieldConfiguration.appex */,
 				207E14692E90883300730900 /* IntentionsShieldAction.appex */,
+				207E14892E9F5D8500730900 /* IntentionsDeviceActivityMonitor.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -412,6 +453,7 @@
 		2071C4BD2DE6DC9400DF737F /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				207E14832E9B6AC000730900 /* NotificationSettings.swift */,
 				20EB272D2E6D066100FC4BE4 /* SetupState.swift */,
 				20EB27052E695DA000FC4BE4 /* QuickAction.swift */,
 				20EB26502E13228E00FC4BE4 /* PersistentModels.swift */,
@@ -512,6 +554,7 @@
 		2085A8DB2DF54FFC0011EB9A /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				207E147F2E9B6A4E00730900 /* NotificationService.swift */,
 				20EB27382E6D070A00FC4BE4 /* SetupStateManager.swift */,
 				20EB26F32E488A1400FC4BE4 /* CategoryMappingService.swift */,
 				20EB26522E13229900FC4BE4 /* DataPersistingService.swift */,
@@ -605,6 +648,7 @@
 				20EB27162E6C057700FC4BE4 /* SwiftUI.framework */,
 				207E14552E90881E00730900 /* ManagedSettings.framework */,
 				207E14572E90881E00730900 /* ManagedSettingsUI.framework */,
+				207E148A2E9F5D8500730900 /* DeviceActivity.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -660,6 +704,7 @@
 		20EB27342E6D06DC00FC4BE4 /* Setup */ = {
 			isa = PBXGroup;
 			children = (
+				207E14812E9B6A6200730900 /* WidgetSetupStepView.swift */,
 				20EB273E2E6EE46500FC4BE4 /* SetupLandingView.swift */,
 				20EB273A2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift */,
 				20D0E4FD2E7BF73900C8BB70 /* CategoryMappingSetupView.swift */,
@@ -687,6 +732,7 @@
 				20EB27252E6C057B00FC4BE4 /* PBXTargetDependency */,
 				207E145F2E90881E00730900 /* PBXTargetDependency */,
 				207E14712E90883400730900 /* PBXTargetDependency */,
+				207E14922E9F5D8600730900 /* PBXTargetDependency */,
 			);
 			name = Intentions;
 			productName = Intentions;
@@ -765,6 +811,24 @@
 			productReference = 207E14692E90883300730900 /* IntentionsShieldAction.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		207E14882E9F5D8500730900 /* IntentionsDeviceActivityMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 207E14952E9F5D8600730900 /* Build configuration list for PBXNativeTarget "IntentionsDeviceActivityMonitor" */;
+			buildPhases = (
+				207E14852E9F5D8500730900 /* Sources */,
+				207E14862E9F5D8500730900 /* Frameworks */,
+				207E14872E9F5D8500730900 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				207E148C2E9F5D8500730900 /* IntentionsDeviceActivityMonitor */,
+			);
+			name = IntentionsDeviceActivityMonitor;
+			productName = IntentionsDeviceActivityMonitor;
+			productReference = 207E14892E9F5D8500730900 /* IntentionsDeviceActivityMonitor.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		20EB27122E6C057700FC4BE4 /* IntentionsWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 20EB27282E6C057B00FC4BE4 /* Build configuration list for PBXNativeTarget "IntentionsWidgetExtension" */;
@@ -810,6 +874,9 @@
 					207E14682E90883300730900 = {
 						CreatedOnToolsVersion = 16.4;
 					};
+					207E14882E9F5D8500730900 = {
+						CreatedOnToolsVersion = 16.4;
+					};
 					20EB27122E6C057700FC4BE4 = {
 						CreatedOnToolsVersion = 16.4;
 					};
@@ -836,6 +903,7 @@
 				20EB27122E6C057700FC4BE4 /* IntentionsWidgetExtension */,
 				207E14532E90881E00730900 /* IntentionsShieldConfiguration */,
 				207E14682E90883300730900 /* IntentionsShieldAction */,
+				207E14882E9F5D8500730900 /* IntentionsDeviceActivityMonitor */,
 			);
 		};
 /* End PBXProject section */
@@ -868,6 +936,11 @@
 			files = (
 			);
 		};
+		207E14872E9F5D8500730900 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
 		20EB27112E6C057700FC4BE4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
@@ -886,6 +959,7 @@
 				20EB27392E6D070A00FC4BE4 /* SetupStateManager.swift in Sources */,
 				20EB27062E695DA000FC4BE4 /* QuickAction.swift in Sources */,
 				20EB265D2E1EF9A800FC4BE4 /* Constants.swift in Sources */,
+				207E14822E9B6A6200730900 /* WidgetSetupStepView.swift in Sources */,
 				2085A8FF2DF6D2D40011EB9A /* ScreenTimeStatusInfo.swift in Sources */,
 				20EB26B22E389F4900FC4BE4 /* IsolatedFamilyActivityPicker.swift in Sources */,
 				20EB27092E695DB000FC4BE4 /* QuickActionEditorSheet.swift in Sources */,
@@ -907,6 +981,7 @@
 				2085A8E52DF55A2A0011EB9A /* ScheduleSettings.swift in Sources */,
 				207E147C2E98382400730900 /* CrashReporting.swift in Sources */,
 				20EB26F42E488A1400FC4BE4 /* CategoryMappingService.swift in Sources */,
+				207E14802E9B6A4E00730900 /* NotificationService.swift in Sources */,
 				20EB27302E6D06B500FC4BE4 /* SetupCoordinator.swift in Sources */,
 				20EB265F2E21A34600FC4BE4 /* ContentViewModel.swift in Sources */,
 				20EB268E2E258D5700FC4BE4 /* IntentionPromptViewModel.swift in Sources */,
@@ -926,6 +1001,7 @@
 				20EB26642E21A3E900FC4BE4 /* IntentionPromptView.swift in Sources */,
 				20EB26652E21A3E900FC4BE4 /* AppGroupsView.swift in Sources */,
 				20EB26672E21A3F300FC4BE4 /* SettingsView.swift in Sources */,
+				207E14842E9B6AC000730900 /* NotificationSettings.swift in Sources */,
 			);
 		};
 		2071C49C2DE43AC800DF737F /* Sources */ = {
@@ -975,6 +1051,11 @@
 			files = (
 			);
 		};
+		207E14852E9F5D8500730900 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 		20EB270F2E6C057700FC4BE4 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
@@ -1002,6 +1083,11 @@
 			isa = PBXTargetDependency;
 			target = 207E14682E90883300730900 /* IntentionsShieldAction */;
 			targetProxy = 207E14702E90883400730900 /* PBXContainerItemProxy */;
+		};
+		207E14922E9F5D8600730900 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 207E14882E9F5D8500730900 /* IntentionsDeviceActivityMonitor */;
+			targetProxy = 207E14912E9F5D8600730900 /* PBXContainerItemProxy */;
 		};
 		20EB27252E6C057B00FC4BE4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1369,6 +1455,58 @@
 			};
 			name = Release;
 		};
+		207E14962E9F5D8600730900 /* Debug configuration for PBXNativeTarget "IntentionsDeviceActivityMonitor" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = IntentionsDeviceActivityMonitor/IntentionsDeviceActivityMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IntentionsDeviceActivityMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentionsDeviceActivityMonitor;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsDeviceActivityMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		207E14972E9F5D8600730900 /* Release configuration for PBXNativeTarget "IntentionsDeviceActivityMonitor" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = IntentionsDeviceActivityMonitor/IntentionsDeviceActivityMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IntentionsDeviceActivityMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentionsDeviceActivityMonitor;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsDeviceActivityMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		20EB27292E6C057B00FC4BE4 /* Debug configuration for PBXNativeTarget "IntentionsWidgetExtension" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1473,6 +1611,14 @@
 			buildConfigurations = (
 				207E14752E90883400730900 /* Debug configuration for PBXNativeTarget "IntentionsShieldAction" */,
 				207E14762E90883400730900 /* Release configuration for PBXNativeTarget "IntentionsShieldAction" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		207E14952E9F5D8600730900 /* Build configuration list for PBXNativeTarget "IntentionsDeviceActivityMonitor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				207E14962E9F5D8600730900 /* Debug configuration for PBXNativeTarget "IntentionsDeviceActivityMonitor" */,
+				207E14972E9F5D8600730900 /* Release configuration for PBXNativeTarget "IntentionsDeviceActivityMonitor" */,
 			);
 			defaultConfigurationName = Release;
 		};

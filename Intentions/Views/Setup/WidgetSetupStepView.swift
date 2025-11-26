@@ -42,11 +42,11 @@ struct WidgetSetupStepView: View {
                     .foregroundColor(AppConstants.Colors.text)
             }
             
-            Text("Add Intentions Widget")
+            Text("Add Intent Widget")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
-            Text("Add the Intentions widget to your lock screen or home screen to quickly see if your apps are currently blocked or accessible.")
+
+            Text("Add the Intent widget to your lock screen or home screen to quickly see if your apps are currently blocked or accessible.")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
@@ -132,7 +132,7 @@ struct WidgetSetupStepView: View {
             VStack(alignment: .leading, spacing: 8) {
                 instructionStep(number: 1, text: "Long press on your lock screen or home screen")
                 instructionStep(number: 2, text: "Tap the \"+\" button or \"Edit\" option")
-                instructionStep(number: 3, text: "Search for \"Intentions\" in the widget gallery")
+                instructionStep(number: 3, text: "Search for \"Intent\" in the widget gallery")
                 instructionStep(number: 4, text: "Select your preferred widget size and add it")
             }
         }

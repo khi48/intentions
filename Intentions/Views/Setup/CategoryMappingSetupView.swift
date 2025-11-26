@@ -11,8 +11,9 @@ import SwiftUI
 /// Extended setup view that maps apps to categories through individual category selection
 /// Users select each category one by one to build comprehensive app-to-category mappings
 struct CategoryMappingSetupView: View {
-    
-    @State private var mappingService = CategoryMappingService()
+
+    // Use the SHARED mappingService passed in, not a new instance
+    @State private var mappingService: CategoryMappingService
     @State private var currentCategory: CategoryMappingService.AppCategory?
     @State private var showingFamilyActivityPicker = false
     @State private var currentSelection = FamilyActivitySelection(includeEntireCategory: true)
@@ -20,8 +21,13 @@ struct CategoryMappingSetupView: View {
     @State private var hasLaunchServicesError = false
     @State private var errorDetectionTimer: Timer?
     @State private var pickerDidAppear = false
-    
-    let onComplete: (CategoryMappingService) -> Void
+
+    let onComplete: () -> Void
+
+    init(mappingService: CategoryMappingService, onComplete: @escaping () -> Void) {
+        self._mappingService = State(initialValue: mappingService)
+        self.onComplete = onComplete
+    }
     
     var body: some View {
         ScrollView {
@@ -51,26 +57,6 @@ struct CategoryMappingSetupView: View {
                         .cornerRadius(16)
                     }
 
-                    // System compatibility notice
-                    VStack(spacing: 12) {
-                        HStack {
-                            Image(systemName: "info.circle.fill")
-                                .foregroundColor(AppConstants.Colors.text)
-                            Text("Note")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                        }
-
-                        Text("If the app picker doesn't appear or shows errors, this is typically due to iOS system limitations. Try restarting the app or testing on a physical device for best results.")
-                            .font(.caption)
-                            .multilineTextAlignment(.center)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding()
-                    .background(AppConstants.Colors.surface)
-                    .cornerRadius(12)
-
-                    
                     // Header Section
                     headerSection
                     
@@ -192,7 +178,7 @@ struct CategoryMappingSetupView: View {
             }
             
             ProgressView(value: mappingService.setupCompletionPercentage)
-                .progressViewStyle(LinearProgressViewStyle(tint: .blue))
+                .progressViewStyle(LinearProgressViewStyle(tint: AppConstants.Colors.textSecondary))
             
             Text(String(format: "%.0f%% complete", mappingService.setupCompletionPercentage * 100))
                 .font(.caption)
@@ -281,7 +267,7 @@ struct CategoryMappingSetupView: View {
             .cornerRadius(12)
             
             Button("Complete Setup") {
-                onComplete(mappingService)
+                onComplete()
             }
             .buttonStyle(.bordered)
             .foregroundColor(AppConstants.Colors.text)
@@ -398,20 +384,15 @@ struct CategorySetupCard: View {
             VStack(spacing: 12) {
                 // Icon and status
                 if isCompleted {
-                    ZStack {
-                        Circle()
-                            .fill(Color.green.opacity(0.2))
-                            .frame(width: 44, height: 44)
-
-                        Image(systemName: "checkmark")
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundColor(AppConstants.Colors.text)
-                    }
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 56))
+                        .foregroundColor(AppConstants.Colors.text)
                 } else {
-                    // Apple icons without background circle, larger size
+                    // Apple icons as circular greyscale images
                     CategoryIconView(category: category)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 56, height: 56)
+                        .clipShape(Circle())
+                        .grayscale(1.0)
                 }
                 
                 // Category info
@@ -474,7 +455,7 @@ struct CategorySetupCard: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isCompleted ? Color.green : Color.blue, lineWidth: isCompleted ? 2 : 1)
+                    .stroke(isCompleted ? AppConstants.Colors.text : AppConstants.Colors.textSecondary, lineWidth: isCompleted ? 2 : 1)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -526,7 +507,7 @@ struct OtherCategoryIcon: View {
 // MARK: - Preview
 
 #Preview {
-    CategoryMappingSetupView { _ in
+    CategoryMappingSetupView(mappingService: CategoryMappingService()) {
         // Preview completion handler
     }
 }

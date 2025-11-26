@@ -8,14 +8,37 @@
 import SwiftUI
 import FamilyControls
 
+/// Sheet presentation mode for QuickActionEditor
+enum QuickActionEditorMode: Identifiable {
+    case create
+    case edit(QuickAction)
+
+    var id: String {
+        switch self {
+        case .create:
+            return "create"
+        case .edit(let action):
+            return "edit-\(action.id.uuidString)"
+        }
+    }
+
+    var quickAction: QuickAction? {
+        switch self {
+        case .create:
+            return nil
+        case .edit(let action):
+            return action
+        }
+    }
+}
+
 /// Main view for managing quick actions - pre-configured sessions for fast access
 struct QuickActionsView: View {
     let dataService: DataPersisting
     let contentViewModel: ContentViewModel
 
     @ObservedObject private var viewModel: QuickActionsViewModel
-    @State private var showingQuickActionEditor = false
-    @State private var editingQuickAction: QuickAction?
+    @State private var editorMode: QuickActionEditorMode?
     @State private var searchText = ""
 
     init(dataService: DataPersisting, contentViewModel: ContentViewModel) {
@@ -46,19 +69,17 @@ struct QuickActionsView: View {
                     createQuickActionButton
                 }
             }
-            .sheet(isPresented: $showingQuickActionEditor) {
+            .sheet(item: $editorMode) { mode in
                 QuickActionEditorSheet(
                     dataService: dataService,
-                    editingQuickAction: editingQuickAction,
+                    editingQuickAction: mode.quickAction,
                     availableAppGroups: viewModel.availableAppGroups,
                     onSave: { quickAction in
                         await viewModel.saveQuickAction(quickAction)
-                        showingQuickActionEditor = false
-                        editingQuickAction = nil
+                        editorMode = nil
                     },
                     onCancel: {
-                        showingQuickActionEditor = false
-                        editingQuickAction = nil
+                        editorMode = nil
                     }
                 )
             }
@@ -172,8 +193,7 @@ struct QuickActionsView: View {
                             }
                         },
                         onEdit: {
-                            editingQuickAction = quickAction
-                            showingQuickActionEditor = true
+                            editorMode = .edit(quickAction)
                         },
                         onDelete: {
                             viewModel.confirmDeleteQuickAction(quickAction)
@@ -223,8 +243,7 @@ struct QuickActionsView: View {
     // MARK: - Actions
     
     private func createQuickAction() {
-        editingQuickAction = nil
-        showingQuickActionEditor = true
+        editorMode = .create
     }
     
     private func startQuickAction(_ quickAction: QuickAction) async {

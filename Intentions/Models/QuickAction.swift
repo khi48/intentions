@@ -254,7 +254,8 @@ struct QuickAction: Identifiable, Codable, Sendable {
         // TODO: Include individual applications and categories when fully implemented
         return try IntentionSession(
             appGroups: resolvedGroupIds,
-            duration: duration
+            duration: duration,
+            source: .quickAction(self)  // Pass the full QuickAction object
         )
     }
 }

@@ -8,6 +8,7 @@
 import SwiftUI
 @preconcurrency import FamilyControls
 import ManagedSettings
+import UserNotifications
 
 // MARK: - Settings Navigation Destinations
 
@@ -210,13 +211,6 @@ struct SettingsView: View {
                     // General Settings Section
                     generalSection
 
-                    // About Section
-                    aboutSection
-
-                    // Debug Section (only in debug builds)
-                    #if DEBUG
-                    debugSection
-                    #endif
                 }
                 .listStyle(.insetGrouped)
                 .background(AppConstants.Colors.background)
@@ -225,12 +219,6 @@ struct SettingsView: View {
                     switch destination {
                     case .notifications:
                         NotificationSettingsView()
-                    case .privacy:
-                        PrivacySettingsView()
-                    case .dataManagement:
-                        DataManagementView()
-                    case .about:
-                        AboutView()
                     case .setupFlow:
                         if let coordinator = setupCoordinator {
                             SetupFlowView(
@@ -246,6 +234,9 @@ struct SettingsView: View {
                             Text("Setup not available")
                                 .foregroundColor(AppConstants.Colors.textSecondary)
                         }
+                    case .privacy, .dataManagement, .about:
+                        // Removed sections - should not be reachable
+                        EmptyView()
                     }
                 }
             }
@@ -345,7 +336,7 @@ struct SettingsView: View {
             // Intentions State Toggle
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Intentions State")
+                    Text("Intent State")
                         .font(.headline)
 
                     Text("Control when apps are blocked by default")
@@ -407,7 +398,7 @@ struct SettingsView: View {
                 .padding(.top, 4)
             }
         } header: {
-            Text("Intentions State")
+            Text("Intent State")
         } footer: {
             if viewModel.scheduleSettings.isEnabled {
                 Text("Apps are blocked by default during the specified times and days. Outside these hours, all apps remain accessible unless you start a focused session.")
@@ -443,7 +434,7 @@ struct SettingsView: View {
     }
     
     // MARK: - General Section
-    
+
     private var generalSection: some View {
         Section("General") {
             NavigationLink(value: SettingsDestination.notifications) {
@@ -453,27 +444,11 @@ struct SettingsView: View {
                     icon: SettingsDestination.notifications.systemImage
                 )
             }
-            
-            NavigationLink(value: SettingsDestination.privacy) {
-                SettingsRow(
-                    title: SettingsDestination.privacy.title,
-                    subtitle: "Data collection and sharing",
-                    icon: SettingsDestination.privacy.systemImage
-                )
-            }
-            
-            NavigationLink(value: SettingsDestination.dataManagement) {
-                SettingsRow(
-                    title: SettingsDestination.dataManagement.title,
-                    subtitle: "Export, import, and reset",
-                    icon: SettingsDestination.dataManagement.systemImage
-                )
-            }
         }
     }
     
-    // MARK: - About Section
-    
+    // MARK: - Category Mapping Section
+
     private var categoryMappingSection: some View {
         Section {
             NavigationLink(value: SettingsDestination.setupFlow) {
@@ -490,7 +465,7 @@ struct SettingsView: View {
             }) {
                 SettingsRow(
                     title: "Enable Greyscale",
-                    subtitle: "Optional: Enable greyscale in Settings → Accessibility → Display & Text Size → Color Filters",
+                    subtitle: "Opens Settings app. Navigate to: Accessibility → Display & Text Size → Color Filters → Grayscale",
                     icon: "eye.slash"
                 )
             }
@@ -498,66 +473,25 @@ struct SettingsView: View {
             Text("Setup")
         }
     }
-    
-    private var aboutSection: some View {
-        Section {
-            NavigationLink(value: SettingsDestination.about) {
-                SettingsRow(
-                    title: SettingsDestination.about.title,
-                    subtitle: "Version, support, and feedback",
-                    icon: SettingsDestination.about.systemImage
-                )
-            }
-            
-            Link(destination: URL(string: "https://github.com/intentions-app/intentions")!) {
-                SettingsRow(
-                    title: "Open Source",
-                    subtitle: "View on GitHub",
-                    icon: "chevron.left.forwardslash.chevron.right"
-                )
-            }
-        } footer: {
-            Text("Intentions is designed to promote mindful phone usage through intentional app access.")
-                .multilineTextAlignment(.center)
-                .foregroundColor(AppConstants.Colors.textSecondary)
-                .padding(.top)
-        }
-    }
 
     // MARK: - Helper Functions
 
-    /// Open iOS Settings to Color Filters section
-    /// Using various iOS 18 compatible URL formats
+    /// Open iOS Settings app
+    /// Note: Due to iOS sandbox restrictions, we can only open to the app's settings page
+    /// User will need to navigate back to root Settings, then: Accessibility → Display & Text Size → Color Filters
     private func openGeneralAccessibilitySettings() {
-        // Try newest iOS 18 settings-navigation format first
-//        let settingsNavigationURL = "settings-navigation://com.apple.Settings"
-//
-//        if let colorFiltersURL = URL(string: settingsNavigationURL){
-//            UIApplication.shared.open(colorFiltersURL)
-//            return
-//        }
-//        ,
-//        UIApplication.shared.canOpenURL(colorFiltersURL)
-
-        // Try iOS 18 prefs format
-//        let prefsURL = "prefs:root=ACCESSIBILITY" //&path=DISPLAY_AND_TEXTDISPLAY_FILTER_COLOR"
-//
-//        if let prefsColorFiltersURL = URL(string: prefsURL){
-//            UIApplication.shared.open(prefsColorFiltersURL)
-//            return
-//        }
-//
-//        // Fallback to general Accessibility settings
-//        if let accessibilityURL = URL(string: "prefs:root=ACCESSIBILITY"),
-//           UIApplication.shared.canOpenURL(accessibilityURL) {
-//            UIApplication.shared.open(accessibilityURL)
-//            return
-//        }`
-//
-//        // Final fallback: open main Settings app
-//        if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-//            UIApplication.shared.open(settingsURL)
-//        }
+        // The only officially supported URL is openSettingsURLString which opens to app-specific settings
+        // Deep linking to other settings pages is blocked by iOS sandbox permissions
+        if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(settingsURL) { success in
+                if success {
+                    print("✅ Opened Settings (app page)")
+                    print("ℹ️  User needs to navigate: < Settings → Accessibility → Display & Text Size → Color Filters")
+                } else {
+                    print("❌ Failed to open Settings app")
+                }
+            }
+        }
     }
 }
 
@@ -689,7 +623,7 @@ struct ScheduleSettingsView: View {
             }
             .background(AppConstants.Colors.background)
             .scrollContentBackground(.hidden)
-            .navigationTitle("Intentions State")
+            .navigationTitle("Intent State")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -768,21 +702,312 @@ struct AppGroupEditorView: View {
 }
 
 struct NotificationSettingsView: View {
+    @State private var notificationService = NotificationService.shared
+    @State private var settings: NotificationSettings
+    @State private var authorizationStatus: UNAuthorizationStatus = .notDetermined
+    @State private var showingPermissionAlert = false
+
+    init() {
+        let service = NotificationService.shared
+        self._settings = State(initialValue: service.currentSettings)
+    }
+
     var body: some View {
         List {
-            Section {
-                Text("Configure your notification preferences")
-                    .foregroundColor(AppConstants.Colors.textSecondary)
+            // Permission Status Section
+            permissionSection
+
+            // Master Toggle
+            if authorizationStatus == .authorized || authorizationStatus == .provisional {
+                masterToggleSection
             }
-            
-            Section("Session Reminders") {
-                Toggle("Session warnings", isOn: .constant(true))
-                Toggle("Time remaining alerts", isOn: .constant(true))
+
+            // Detailed Settings (only if enabled)
+            if settings.isEnabled && isAuthorized {
+                sessionNotificationsSection
+
+                // Reset button
+                Section {
+                    Button("Reset to Defaults") {
+                        settings.resetToDefaults()
+                        Task { await saveSettings() }
+                    }
+                    .foregroundColor(AppConstants.Colors.destructive)
+                }
             }
         }
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(.visible, for: .tabBar)
+        .task {
+            await loadSettings()
+            await notificationService.checkAuthorizationStatus()
+            authorizationStatus = notificationService.authorizationStatus
+        }
+        .alert("Enable Notifications", isPresented: $showingPermissionAlert) {
+            Button("Settings") {
+                openAppSettings()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("To receive session reminders, please enable notifications in Settings.")
+        }
+    }
+
+    // MARK: - Permission Section
+
+    private var permissionSection: some View {
+        Section {
+            HStack {
+                Image(systemName: permissionStatusIcon)
+                    .foregroundColor(permissionStatusColor)
+                    .frame(width: 20)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Notification Permission")
+                        .font(.headline)
+
+                    Text(permissionStatusText)
+                        .font(.caption)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
+                }
+
+                Spacer()
+
+                if authorizationStatus == .denied {
+                    Button("Settings") {
+                        openAppSettings()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                } else if authorizationStatus == .notDetermined {
+                    Button("Enable") {
+                        Task {
+                            await requestPermissions()
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+        } footer: {
+            Text(permissionFooterText)
+                .foregroundColor(AppConstants.Colors.textSecondary)
+        }
+    }
+
+    // MARK: - Master Toggle Section
+
+    private var masterToggleSection: some View {
+        Section {
+            Toggle("Enable Notifications", isOn: Binding(
+                get: { settings.isEnabled },
+                set: { newValue in
+                    settings.isEnabled = newValue
+                    Task {
+                        await saveSettings()
+                    }
+                }
+            ))
+            .tint(AppConstants.Colors.accent)
+        } footer: {
+            Text("Turn off to disable all session-related notifications.")
+                .foregroundColor(AppConstants.Colors.textSecondary)
+        }
+    }
+
+    // MARK: - Session Notifications Section
+
+    private var sessionNotificationsSection: some View {
+        Section("Session Reminders") {
+            NotificationToggleRow(
+                type: .sessionWarning,
+                isOn: Binding(
+                    get: { settings.sessionWarningsEnabled },
+                    set: { newValue in
+                        settings.sessionWarningsEnabled = newValue
+                        Task { await saveSettings() }
+                    }
+                )
+            )
+
+            NotificationToggleRow(
+                type: .sessionCompletion,
+                isOn: Binding(
+                    get: { settings.sessionCompletionEnabled },
+                    set: { newValue in
+                        settings.sessionCompletionEnabled = newValue
+                        Task { await saveSettings() }
+                    }
+                )
+            )
+
+        }
+    }
+
+    // MARK: - Warning Intervals Section
+
+    private var warningIntervalsSection: some View {
+        Section {
+            ForEach(settings.sortedWarningIntervals, id: \.self) { minutes in
+                HStack {
+                    Image(systemName: "clock")
+                        .foregroundColor(AppConstants.Colors.accent)
+                        .frame(width: 20)
+
+                    Text("\(minutes) minute\(minutes == 1 ? "" : "s") before")
+                        .foregroundColor(AppConstants.Colors.text)
+
+                    Spacer()
+
+                    Button("Remove") {
+                        settings.removeWarningInterval(minutes)
+                        Task { await saveSettings() }
+                    }
+                    .foregroundColor(.red)
+                    .font(.caption)
+                }
+            }
+
+            // Add custom interval button
+            Button(action: {
+                // For now, add common intervals. Could be made customizable later.
+                let newInterval = 10
+                if !settings.warningIntervals.contains(newInterval) {
+                    settings.addWarningInterval(newInterval)
+                    Task { await saveSettings() }
+                }
+            }) {
+                HStack {
+                    Image(systemName: "plus.circle")
+                        .foregroundColor(AppConstants.Colors.accent)
+                    Text("Add 10-minute warning")
+                        .foregroundColor(AppConstants.Colors.accent)
+                }
+            }
+        } header: {
+            Text("Warning Times")
+        } footer: {
+            Text("Choose when to receive warnings before your session ends.")
+                .foregroundColor(AppConstants.Colors.textSecondary)
+        }
+    }
+
+
+    // MARK: - Helper Properties
+
+    private var isAuthorized: Bool {
+        authorizationStatus == .authorized || authorizationStatus == .provisional
+    }
+
+    private var permissionStatusIcon: String {
+        switch authorizationStatus {
+        case .authorized, .provisional:
+            return "checkmark.circle.fill"
+        case .denied:
+            return "xmark.circle.fill"
+        case .notDetermined:
+            return "questionmark.circle.fill"
+        @unknown default:
+            return "questionmark.circle.fill"
+        }
+    }
+
+    private var permissionStatusColor: Color {
+        switch authorizationStatus {
+        case .authorized, .provisional:
+            return AppConstants.Colors.textSecondary
+        case .denied:
+            return .red
+        case .notDetermined:
+            return .orange
+        @unknown default:
+            return .gray
+        }
+    }
+
+    private var permissionStatusText: String {
+        switch authorizationStatus {
+        case .authorized:
+            return "Notifications are enabled"
+        case .provisional:
+            return "Quiet notifications enabled"
+        case .denied:
+            return "Notifications are disabled"
+        case .notDetermined:
+            return "Permission not requested"
+        @unknown default:
+            return "Unknown status"
+        }
+    }
+
+    private var permissionFooterText: String {
+        switch authorizationStatus {
+        case .authorized, .provisional:
+            return "Intent can send you session reminders and completion notifications."
+        case .denied:
+            return "To enable notifications, go to Settings > Notifications > Intent."
+        case .notDetermined:
+            return "Allow notifications to receive session reminders."
+        @unknown default:
+            return ""
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    private func loadSettings() async {
+        await notificationService.loadSettings()
+        settings = notificationService.currentSettings
+    }
+
+    private func saveSettings() async {
+        await notificationService.updateSettings(settings)
+    }
+
+    private func requestPermissions() async {
+        let granted = await notificationService.requestPermissions()
+        authorizationStatus = notificationService.authorizationStatus
+
+        if !granted {
+            showingPermissionAlert = true
+        }
+    }
+
+    private func openAppSettings() {
+        guard let settingsUrl = URL(string: UIApplication.openSettingsURLString),
+              UIApplication.shared.canOpenURL(settingsUrl) else { return }
+        UIApplication.shared.open(settingsUrl)
+    }
+
+}
+
+// MARK: - Supporting Views
+
+struct NotificationToggleRow: View {
+    let type: NotificationType
+    let isOn: Binding<Bool>
+
+    var body: some View {
+        HStack {
+            Image(systemName: type.systemImage)
+                .foregroundColor(AppConstants.Colors.accent)
+                .frame(width: 20)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(type.displayName)
+                    .foregroundColor(AppConstants.Colors.text)
+
+                Text(type.description)
+                    .font(.caption)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+            }
+
+            Spacer()
+
+            Toggle("", isOn: isOn)
+                .tint(AppConstants.Colors.accent)
+        }
     }
 }
 
@@ -830,7 +1055,7 @@ struct AboutView: View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Intentions")
+                    Text("Intent")
                         .font(.title2)
                         .fontWeight(.semibold)
                     
@@ -850,78 +1075,6 @@ struct AboutView: View {
     }
 }
 
-// MARK: - Debug Extension
-
-#if DEBUG
-extension SettingsView {
-    private var debugSection: some View {
-        Section("Debug Tools") {
-            Button(action: {
-                CrashReporting.testCrash()
-            }) {
-                SettingsRow(
-                    title: "Test Crash",
-                    subtitle: "Trigger a test crash to verify logging",
-                    icon: "exclamationmark.triangle"
-                )
-            }
-            .foregroundColor(.red)
-
-            Button(action: {
-                CrashReporting.logCritical("Test critical log entry", context: "Settings Debug")
-            }) {
-                SettingsRow(
-                    title: "Test Error Log",
-                    subtitle: "Generate a test error log entry",
-                    icon: "info.circle"
-                )
-            }
-            .foregroundColor(AppConstants.Colors.text)
-
-            Button(action: {
-                openAnalyticsSettings()
-            }) {
-                SettingsRow(
-                    title: "Open Analytics Settings",
-                    subtitle: "Go to device analytics to check for logs",
-                    icon: "gear"
-                )
-            }
-            .foregroundColor(AppConstants.Colors.text)
-
-            Button(action: {
-                // Test app state functionality
-                print("🧪 DEBUG: Testing app state")
-                print("🧪 DEBUG: hasActiveSession: \(hasActiveSession)")
-                print("🧪 DEBUG: Debug functionality working")
-            }) {
-                SettingsRow(
-                    title: "Test App State",
-                    subtitle: "Debug current app state",
-                    icon: "paintbrush"
-                )
-            }
-            .foregroundColor(AppConstants.Colors.text)
-
-            VStack {
-                Text("Debug mode active")
-                    .font(.caption)
-                    .foregroundColor(AppConstants.Colors.textSecondary)
-            }
-        }
-    }
-
-    private func openAnalyticsSettings() {
-        if let url = URL(string: "App-prefs:Privacy&path=ANALYTICS") {
-            Task { @MainActor in
-                if UIApplication.shared.canOpenURL(url) {
-                    UIApplication.shared.open(url)
-                }
-            }
-        }
-    }
-}
-#endif
 
 // MARK: - All Apps Discovery Test View
 

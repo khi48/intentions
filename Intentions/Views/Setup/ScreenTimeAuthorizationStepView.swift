@@ -65,7 +65,7 @@ struct ScreenTimeAuthorizationStepView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("Tap 'Grant Permission' below to allow Intentions to manage app access during focused sessions.")
+            Text("Tap 'Grant Permission' below to allow Intent to manage app access during focused sessions.")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
@@ -188,7 +188,7 @@ struct ScreenTimeAuthorizationStepView: View {
             VStack(alignment: .leading, spacing: 8) {
                 instructionStep(number: 1, text: "Open the Settings app on your device")
                 instructionStep(number: 2, text: "Scroll down and tap 'Screen Time'")
-                instructionStep(number: 3, text: "Look for 'Intentions' in the app list")
+                instructionStep(number: 3, text: "Look for 'Intent' in the app list")
                 instructionStep(number: 4, text: "Grant the requested permissions")
                 instructionStep(number: 5, text: "Return to this app and tap 'I've Updated Settings'")
             }

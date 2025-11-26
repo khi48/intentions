@@ -33,6 +33,10 @@ struct AppGroupEditorSheet: View {
     // Tap debouncing to prevent rapid double-taps causing presentation conflicts
     @State private var isProcessingSave = false
     @State private var lastPickerTapTime: Date = .distantPast
+
+    // Quick action creation
+    @State private var createQuickAction = true
+    @State private var quickActionsViewModel: QuickActionsViewModel? = nil
     
     private var isEditing: Bool { editingGroup != nil }
     
@@ -49,6 +53,11 @@ struct AppGroupEditorSheet: View {
 
                         // Website access section
                         websiteAccessSection
+
+                        // Quick action creation section (only when creating new group)
+                        if !isEditing {
+                            quickActionSection
+                        }
 
                         // App selection section
                         appSelectionSection
@@ -102,6 +111,15 @@ struct AppGroupEditorSheet: View {
             }
             .onAppear {
                 setupInitialValues()
+
+                // Initialize quick actions view model if needed
+                if quickActionsViewModel == nil {
+                    quickActionsViewModel = QuickActionsViewModel()
+                    quickActionsViewModel?.setDataService(viewModel.dataServiceAccess)
+                    Task {
+                        await quickActionsViewModel?.loadData()
+                    }
+                }
             }
         }
         .interactiveDismissDisabled(hasUnsavedChanges)
@@ -401,7 +419,37 @@ struct AppGroupEditorSheet: View {
             }
         }
     }
-    
+
+    // MARK: - Quick Action Section
+
+    private var quickActionSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Quick Action")
+                .font(.headline)
+                .foregroundColor(AppConstants.Colors.text)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle(isOn: $createQuickAction) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Create Quick Action")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(AppConstants.Colors.text)
+
+                        Text("Automatically create a quick action for this group to instantly start sessions")
+                            .font(.caption)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .toggleStyle(SwitchToggleStyle(tint: AppConstants.Colors.accent))
+            }
+            .padding()
+            .background(AppConstants.Colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
     // MARK: - Computed Properties
     
     private var isValidGroup: Bool {
@@ -568,6 +616,22 @@ struct AppGroupEditorSheet: View {
                 // Update viewModel manually to avoid error propagation
                 viewModel.addAppGroupDirectly(newGroup)
                 viewModel.notifyAppGroupsChanged()
+
+                // Create quick action if requested
+                if createQuickAction, let quickActionsViewModel = quickActionsViewModel {
+                    let quickAction = QuickAction(
+                        name: trimmedName,
+                        subtitle: nil,
+                        iconName: "bolt.fill",
+                        color: .blue,
+                        duration: AppConstants.Session.defaultDuration,
+                        appGroupIds: [newGroup.id]
+                    )
+
+                    await quickActionsViewModel.saveQuickAction(quickAction)
+                    print("✅ Created quick action: \(quickAction.name)")
+                }
+
                 viewModel.closeGroupEditor()
             }
             

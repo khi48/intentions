@@ -13,9 +13,10 @@ import FamilyControls
 /// Provides CRUD operations for user-created app groups
 struct AppGroupListView: View {
     @Bindable var viewModel: AppGroupsViewModel
-    
+
     // Tap debouncing for create group button
     @State private var lastCreateTapTime: Date = .distantPast
+
     
     var body: some View {
         NavigationStack {
@@ -243,8 +244,7 @@ struct AppGroupListView: View {
             }
         }
     }
-    
-    
+
     // MARK: - Computed Properties
     
     private var filteredAppGroups: [AppGroup] {
@@ -284,7 +284,7 @@ private struct AppGroupRowView: View {
                         .foregroundColor(AppConstants.Colors.text)
                         .lineLimit(1)
                 }
-                
+
                 Spacer()
             }
             

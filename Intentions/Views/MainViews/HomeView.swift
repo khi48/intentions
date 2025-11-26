@@ -86,7 +86,7 @@ private struct WelcomeCard: View {
             Button(action: {
                 viewModel.showIntentionPrompt()
             }) {
-                Text("Set Intentions")
+                Text("Set Intent")
                     .font(.title2)
                     .fontWeight(.medium)
                     .foregroundColor(AppConstants.Colors.text)
@@ -137,37 +137,39 @@ private struct QuickActionsSection: View {
                 gettingStartedCard
             } else {
                 // Show available quick actions with drag-to-reorder
-                LazyVGrid(columns: [
-                    GridItem(.flexible()),
-                    GridItem(.flexible())
-                ], spacing: 16) {
-                    ForEach(Array(quickActionsViewModel.quickActions.prefix(4).enumerated()), id: \.element.id) { index, quickAction in
-                        QuickActionCard(
-                            title: quickAction.name,
-                            subtitle: quickAction.subtitle ?? quickAction.formattedDuration,
-                            icon: quickAction.iconName,
-                            color: quickAction.color
-                        ) {
-                            Task {
-                                await startQuickAction(quickAction)
+                VStack(spacing: 16) {
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 16) {
+                        ForEach(Array(quickActionsViewModel.quickActions.enumerated()), id: \.element.id) { index, quickAction in
+                            QuickActionCard(
+                                title: quickAction.name,
+                                subtitle: quickAction.subtitle ?? quickAction.formattedDuration,
+                                icon: quickAction.iconName,
+                                color: quickAction.color
+                            ) {
+                                Task {
+                                    await startQuickAction(quickAction)
+                                }
                             }
+                            .onDrag {
+                                draggingQuickAction = quickAction
+                                return NSItemProvider(object: quickAction.id.uuidString as NSString)
+                            } preview: {
+                                // Custom drag preview - empty view to hide the default preview
+                                Color.clear
+                                    .frame(width: 1, height: 1)
+                            }
+                            .onDrop(of: [.text], delegate: QuickActionDragRelocateDelegate(
+                                item: quickAction,
+                                quickActionsViewModel: quickActionsViewModel,
+                                current: $draggingQuickAction
+                            ))
                         }
-                        .onDrag {
-                            draggingQuickAction = quickAction
-                            return NSItemProvider(object: quickAction.id.uuidString as NSString)
-                        } preview: {
-                            // Custom drag preview - empty view to hide the default preview
-                            Color.clear
-                                .frame(width: 1, height: 1)
-                        }
-                        .onDrop(of: [.text], delegate: QuickActionDragRelocateDelegate(
-                            item: quickAction,
-                            quickActionsViewModel: quickActionsViewModel,
-                            current: $draggingQuickAction
-                        ))
                     }
+                    .animation(.default, value: quickActionsViewModel.quickActions)
                 }
-                .animation(.default, value: quickActionsViewModel.quickActions)
             }
         }
         .onDrop(of: [.text], delegate: QuickActionDropOutsideDelegate(current: $draggingQuickAction))

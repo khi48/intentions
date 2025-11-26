@@ -114,9 +114,25 @@ final class ContentViewModel: Sendable {
                     }
                 }
                 
+                // Initialize notification service and request permissions if needed
+                // Do this early in app startup to establish notification capabilities
+                await NotificationService.shared.checkAuthorizationStatus()
+
+                // Request notification permissions on first launch if not determined
+                let notificationStatus = NotificationService.shared.authorizationStatus
+                if notificationStatus == .notDetermined {
+                    print("🔔 ContentViewModel: Requesting notification permissions on app startup")
+                    let granted = await NotificationService.shared.requestPermissions()
+                    if granted {
+                        print("✅ ContentViewModel: Notification permissions granted")
+                    } else {
+                        print("❌ ContentViewModel: Notification permissions denied")
+                    }
+                }
+
                 // Load schedule settings
                 await loadScheduleSettings()
-                
+
                 // Load any existing active session
                 await loadActiveSession()
                 
@@ -125,13 +141,9 @@ final class ContentViewModel: Sendable {
                     await cleanupOldSessions()
                 }
                 
-                // Only configure Screen Time service if authorized (setup completion is checked elsewhere)
+                // Only configure Screen Time service if authorized AND setup is complete
                 if authorizationStatus == .approved {
-                    print("🔧 ContentViewModel: Authorized - will initialize ScreenTimeService after setup completion")
-
-                    // Apply blocking only if schedule is currently active (after cleanup)
-                    // Note: ScreenTimeService initialization happens in initializeScreenTimeServiceAfterSetup()
-                    await applyScheduleBasedBlocking()
+                    print("🔧 ContentViewModel: Authorized - waiting for setup completion to initialize")
 
                     // Test widget communication after a brief delay to avoid App Group cache issues
                     try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
@@ -184,13 +196,50 @@ final class ContentViewModel: Sendable {
         do {
             let sessions = try await dataService.loadIntentionSessions()
             let activeSessions = sessions.filter { $0.isActive }
-            
+
             if activeSessions.count > 1 {
                 print("Multiple active sessions detected - cleaning up duplicates")
             }
 
-            // Use the first active session (if any)
-            activeSession = activeSessions.first
+            // Check if DeviceActivityMonitor extension expired a session while app was closed
+            if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions"),
+               sharedDefaults.bool(forKey: "intentions.session.expired") {
+                print("🔔 Extension expired a session - cleaning up and applying default blocking")
+                // Clear the flag
+                sharedDefaults.set(false, forKey: "intentions.session.expired")
+                sharedDefaults.synchronize()
+
+                // Mark any active sessions as completed
+                for session in activeSessions {
+                    session.complete()
+                    try await dataService.saveIntentionSession(session)
+                }
+
+                activeSession = nil
+
+                // Apply default blocking since session expired
+                await applyDefaultBlocking()
+                return
+            }
+
+            // Check if the active session has expired while app was in background/closed
+            if let loadedSession = activeSessions.first {
+                if loadedSession.isExpired {
+                    print("🕐 Session expired while app was in background - ending session")
+                    // Session expired while app wasn't running - complete it now
+                    loadedSession.complete()
+                    try await dataService.saveIntentionSession(loadedSession)
+                    activeSession = nil
+
+                    // Apply default blocking since session expired
+                    await applyDefaultBlocking()
+                } else {
+                    // Session is still active
+                    activeSession = loadedSession
+                }
+            } else {
+                activeSession = nil
+            }
         } catch {
             // Non-critical error - just log it
             print("Failed to load active session: \(error)")
@@ -276,16 +325,43 @@ final class ContentViewModel: Sendable {
     func startSession(_ session: IntentionSession) async {
         await withLoading {
             do {
-                // Save session to persistence
+                // If there's an existing active session, cancel its timers FIRST
+                // This prevents the old session's expiration callback from re-blocking apps
+                if let existingSession = activeSession, existingSession.isActive {
+                    print("🔄 START SESSION: Cancelling timers for existing session \(existingSession.id.uuidString.prefix(8))")
+
+                    // Cancel the old session's timers WITHOUT triggering re-blocking
+                    await screenTimeService.cancelSessionTimers()
+
+                    // Now complete the session and save
+                    print("🔄 START SESSION: Completing existing session")
+                    existingSession.complete()
+                    try await dataService.saveIntentionSession(existingSession)
+
+                    // Clear the session state to force re-application
+                    activeSession = nil
+                    currentlyAppliedSessionId = nil
+
+                    // Explicitly block all apps to ensure clean slate between sessions
+                    // This prevents cumulative ManagedSettingsStore issues
+                    print("🔄 START SESSION: Blocking all apps before applying new session")
+                    try await screenTimeService.blockAllApps()
+
+                    // Brief delay to ensure blocking takes effect
+                    try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                    print("🔄 START SESSION: Ready to apply new session")
+                }
+
+                // Save new session to persistence
                 try await dataService.saveIntentionSession(session)
-                
+
                 // Apply session-based blocking using unified pipeline
                 await applySessionBlocking(for: session)
-                
+
                 // Update local state
                 activeSession = session
                 showingIntentionPrompt = false
-                
+
             } catch {
                 await handleError(error)
             }
@@ -295,26 +371,64 @@ final class ContentViewModel: Sendable {
     /// End the current session using unified blocking pipeline
     func endCurrentSession() async {
         guard let session = activeSession else { return }
-        
+
         await withLoading {
             do {
                 // Complete the session
                 session.complete()
                 try await dataService.saveIntentionSession(session)
-                
+
                 // Clear local state
                 activeSession = nil
                 currentlyAppliedSessionId = nil
 
                 // Apply default blocking state (revert to block-all or allow-all based on schedule)
                 await applyDefaultBlocking()
-                
+
             } catch {
                 await handleError(error)
             }
         }
     }
-    
+
+    /// Handle automatic session expiration (called by ScreenTimeService background task)
+    /// This is triggered when the session timer expires automatically
+    private func handleSessionExpiration() async {
+        print("⏰ SESSION EXPIRED: Automatic expiration triggered by background task")
+
+        guard let session = activeSession else {
+            print("⚠️ SESSION EXPIRED: No active session found - already expired")
+            return
+        }
+
+        print("⏰ SESSION EXPIRED: Completing session \(session.id.uuidString.prefix(8))")
+
+        do {
+            // Complete the session
+            session.complete()
+            try await dataService.saveIntentionSession(session)
+
+            // Clear local state
+            activeSession = nil
+            currentlyAppliedSessionId = nil
+
+            print("✅ SESSION EXPIRED: Session marked as complete and cleared from state")
+
+            // Apply default blocking state (revert to block-all or allow-all based on schedule)
+            await applyDefaultBlocking()
+
+            // Send notification to user
+            await NotificationService.shared.sendSessionExpiredNotification()
+
+            print("✅ SESSION EXPIRED: Re-blocking applied and notification sent")
+
+        } catch {
+            print("❌ SESSION EXPIRED: Error completing session: \(error)")
+            // Still apply default blocking even if save fails
+            await applyDefaultBlocking()
+        }
+    }
+
     /// Extend the current session by additional time
     func extendCurrentSession(by extensionTime: TimeInterval) async {
         guard let session = activeSession else { return }
@@ -366,6 +480,13 @@ final class ContentViewModel: Sendable {
     /// Apply session-based blocking - allows only the apps/categories specified in the session
     /// This is the core method used by both IntentionPrompt and QuickActions
     private func applySessionBlocking(for session: IntentionSession) async {
+        // Check if ScreenTimeService is initialized before using it
+        guard screenTimeService.isReady else {
+            print("❌ APPLY SESSION: ScreenTimeService not initialized - cannot start session")
+            await handleError(AppError.serviceUnavailable("Screen Time service is not ready. Please complete setup first."))
+            return
+        }
+
         // Prevent re-applying the same session repeatedly
         if currentlyAppliedSessionId == session.id {
             print("🔄 SESSION ALREADY APPLIED: Session \(session.id.uuidString.prefix(8)) already applied - skipping duplicate")
@@ -398,12 +519,11 @@ final class ContentViewModel: Sendable {
             }
 
             // Apply Screen Time restrictions to allow only the specified apps/categories
+            // NOTE: allowApps() handles cleanup internally - no need for explicit cleanup() call
             if !allApplications.isEmpty || !allCategories.isEmpty {
-                // First clean up any previous session state
-                await screenTimeService.cleanup()
-
-                // Then allow only the session apps - this blocks everything else
-                try await screenTimeService.allowApps(allApplications, categories: allCategories, allowWebsites: allowWebsites, duration: session.duration)
+                // Allow only the session apps - this blocks everything else
+                // Pass session ID for tracking and validation in DeviceActivity extension
+                try await screenTimeService.allowApps(allApplications, categories: allCategories, allowWebsites: allowWebsites, duration: session.duration, sessionId: session.id)
             } else {
                 // Fallback to default blocking
                 await applyDefaultBlocking()
@@ -420,6 +540,8 @@ final class ContentViewModel: Sendable {
     /// Used when no session is active or when session ends
     /// IMPORTANT: If a session is active, preserves session blocking regardless of schedule settings
     private func applyDefaultBlocking() async {
+        print("🔧 DEFAULT BLOCKING: Starting applyDefaultBlocking()")
+
         // Prevent infinite loops from recursive calls
         guard !isApplyingDefaultBlocking else {
             print("⚠️ LOOP PREVENTION: applyDefaultBlocking already in progress - skipping recursive call")
@@ -428,7 +550,7 @@ final class ContentViewModel: Sendable {
 
         // Check if ScreenTimeService is initialized before using it
         guard screenTimeService.isReady else {
-            print("⏳ ScreenTimeService not initialized yet - skipping default blocking")
+            print("⏳ DEFAULT BLOCKING: ScreenTimeService not initialized yet - skipping")
             return
         }
 
@@ -440,16 +562,14 @@ final class ContentViewModel: Sendable {
             // CRITICAL: If there's an active session, preserve its blocking state
             // This prevents users from bypassing active sessions by disabling Intentions
             if let activeSession = activeSession, activeSession.isActive {
-                print("🔒 Active session detected - preserving session blocking despite schedule change")
+                print("🔒 DEFAULT BLOCKING: Active session detected - preserving session blocking")
                 await applySessionBlocking(for: activeSession)
                 return
             }
 
             // Clear any previously applied session since we're applying default blocking
             currentlyAppliedSessionId = nil
-
-            // Clean up any previous session state first
-            await screenTimeService.cleanup()
+            print("🔧 DEFAULT BLOCKING: Cleared session tracking (no active session)")
 
             // Clean up any stale sessions in the database
             do {
@@ -459,28 +579,36 @@ final class ContentViewModel: Sendable {
                 }
 
                 if !staleSessions.isEmpty {
+                    print("🧹 DEFAULT BLOCKING: Cleaning up \(staleSessions.count) stale sessions")
                     for staleSession in staleSessions {
                         staleSession.complete()
                         try await dataService.saveIntentionSession(staleSession)
                     }
                 }
             } catch {
-                print("Error cleaning stale sessions: \(error)")
+                print("❌ DEFAULT BLOCKING: Error cleaning stale sessions: \(error)")
             }
 
             // Apply blocking based on schedule only when no session is active
+            // NOTE: blockAllApps() and allowAllAccess() handle cleanup internally - no need for explicit cleanup() call
             let currentlyActive = scheduleSettings.isCurrentlyActive
+
+            print("🔧 DEFAULT BLOCKING: Schedule settings - enabled: \(scheduleSettings.isEnabled), currentlyActive: \(currentlyActive)")
 
             if scheduleSettings.isEnabled && currentlyActive {
                 // Schedule is active - block all apps (default behavior)
+                print("🚫 DEFAULT BLOCKING: Blocking all apps (schedule active)")
                 try await screenTimeService.blockAllApps()
+                print("✅ DEFAULT BLOCKING: Successfully blocked all apps")
             } else {
                 // Schedule is inactive - allow all access
+                print("✅ DEFAULT BLOCKING: Allowing all access (schedule inactive)")
                 try await screenTimeService.allowAllAccess()
+                print("✅ DEFAULT BLOCKING: Successfully allowed all access")
             }
 
         } catch {
-            print("Failed to apply default blocking: \(error)")
+            print("❌ DEFAULT BLOCKING: Failed to apply default blocking: \(error)")
         }
     }
     
@@ -542,20 +670,30 @@ final class ContentViewModel: Sendable {
         }
     }
     
-    /// Initialize ScreenTimeService after setup completion - THE ONLY place initialization should happen
+    /// Initialize and configure ScreenTimeService after setup completion
+    /// This is THE ONLY place where ScreenTimeService should be initialized
     private func initializeScreenTimeServiceAfterSetup() async {
+        print("🔍 INIT CHECK: initializeScreenTimeServiceAfterSetup() called")
+        print("🔍 INIT CHECK: authorizationStatus = \(authorizationStatus)")
+        print("🔍 INIT CHECK: setupState = \(String(describing: setupCoordinator.setupState))")
+        print("🔍 INIT CHECK: isSetupSufficient = \(setupCoordinator.setupState?.isSetupSufficient ?? false)")
+        print("🔍 INIT CHECK: screenTimeService.isReady = \(screenTimeService.isReady)")
+
         await withLoading {
             do {
                 // Refresh authorization status
                 authorizationStatus = await screenTimeService.authorizationStatus()
+                print("🔍 INIT CHECK: Refreshed authorizationStatus = \(authorizationStatus)")
 
-                // Only initialize if setup is complete and authorized
+                // Only initialize and configure if authorized and setup is complete
                 if authorizationStatus == .approved && setupCoordinator.setupState?.isSetupSufficient == true {
+                    // Initialize the service if not already done
                     if !screenTimeService.isReady {
                         print("🔧 ContentViewModel: Initializing ScreenTimeService after setup completion")
                         try await screenTimeService.initialize()
+                        print("✅ ContentViewModel: ScreenTimeService initialized successfully")
                     } else {
-                        print("✅ ContentViewModel: ScreenTimeService already initialized after setup completion")
+                        print("✅ ContentViewModel: ScreenTimeService already initialized")
                     }
 
                     // Configure category mapping service for intelligent blocking
@@ -563,16 +701,24 @@ final class ContentViewModel: Sendable {
 
                     // Configure restore callback for session expiration
                     await screenTimeService.setRestoreDefaultStateCallback { [weak self] in
-                        await self?.applyDefaultBlocking()
+                        await self?.handleSessionExpiration()
                     }
 
-                    // Apply blocking based on current schedule
-                    await applyScheduleBasedBlocking()
+                    // IMPORTANT: Do NOT call applyScheduleBasedBlocking() here
+                    // If there's an active session, it's already been loaded and applied
+                    // If there's no active session, the ManagedSettingsStore should already be in the correct state
+                    // Calling this would re-trigger allowApps() which resets timers!
+                    print("🔧 ContentViewModel: ScreenTimeService initialized - NOT applying blocking (would interfere with active session)")
+                } else if authorizationStatus != .approved {
+                    print("⏳ ContentViewModel: Not authorized - skipping ScreenTimeService initialization")
+                    print("   Current status: \(authorizationStatus)")
                 } else {
-                    print("⏳ ContentViewModel: Setup not complete or not authorized - skipping ScreenTimeService initialization")
+                    print("⏳ ContentViewModel: Setup not complete - skipping ScreenTimeService initialization")
+                    print("   isSetupSufficient: \(setupCoordinator.setupState?.isSetupSufficient ?? false)")
                 }
 
             } catch {
+                print("❌ ContentViewModel: Error during initialization: \(error)")
                 await handleError(error)
             }
         }

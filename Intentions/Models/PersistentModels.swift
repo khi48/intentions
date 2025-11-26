@@ -98,6 +98,7 @@ final class PersistentIntentionSession {
     var isActive: Bool
     var wasCompleted: Bool
     var createdAt: Date
+    var sourceData: Data? // Stores encoded SessionSource (optional for backward compatibility)
     
     init(
         id: UUID,
@@ -109,7 +110,8 @@ final class PersistentIntentionSession {
         endTime: Date,
         isActive: Bool,
         wasCompleted: Bool,
-        createdAt: Date
+        createdAt: Date,
+        sourceData: Data? = nil
     ) {
         self.id = id
         self.requestedAppGroupsData = requestedAppGroupsData
@@ -121,11 +123,13 @@ final class PersistentIntentionSession {
         self.isActive = isActive
         self.wasCompleted = wasCompleted
         self.createdAt = createdAt
+        self.sourceData = sourceData
     }
     
     convenience init(from session: IntentionSession) {
         let appGroupsData = (try? JSONEncoder().encode(session.requestedAppGroups)) ?? Data()
         let applicationsData = (try? JSONEncoder().encode(session.requestedApplications)) ?? Data()
+        let sourceData = (try? JSONEncoder().encode(session.source)) ?? Data()
 
         self.init(
             id: session.id,
@@ -137,13 +141,15 @@ final class PersistentIntentionSession {
             endTime: session.endTime,
             isActive: session.isActive,
             wasCompleted: session.wasCompleted,
-            createdAt: session.createdAt
+            createdAt: session.createdAt,
+            sourceData: sourceData
         )
     }
     
     func update(from session: IntentionSession) {
         self.requestedAppGroupsData = (try? JSONEncoder().encode(session.requestedAppGroups)) ?? Data()
         self.requestedApplicationsData = (try? JSONEncoder().encode(session.requestedApplications)) ?? Data()
+        self.sourceData = (try? JSONEncoder().encode(session.source)) ?? Data()
         self.allowAllWebsites = session.allowAllWebsites
         self.duration = session.duration
         self.startTime = session.startTime
@@ -156,11 +162,19 @@ final class PersistentIntentionSession {
     func toIntentionSession() -> IntentionSession? {
         let requestedAppGroups = (try? JSONDecoder().decode([UUID].self, from: requestedAppGroupsData)) ?? []
         let requestedApplications = (try? JSONDecoder().decode(Set<ApplicationToken>.self, from: requestedApplicationsData)) ?? Set()
-        
+
+        // Decode source if available, otherwise default to .manual for backward compatibility
+        let source: SessionSource
+        if let sourceData = sourceData, !sourceData.isEmpty {
+            source = (try? JSONDecoder().decode(SessionSource.self, from: sourceData)) ?? .manual
+        } else {
+            source = .manual
+        }
+
         // Reconstruct the appropriate SessionState based on stored properties
         let totalElapsed = endTime.timeIntervalSince(startTime)
         let state: SessionState
-        
+
         if wasCompleted {
             state = .completed(totalElapsed: totalElapsed, completedAt: endTime)
         } else if isActive {
@@ -169,7 +183,7 @@ final class PersistentIntentionSession {
             // Session was cancelled or paused
             state = .cancelled(totalElapsed: totalElapsed, cancelledAt: endTime)
         }
-        
+
         // Use factory method to create session with preserved ID
         do {
             let session = try IntentionSession.fromPersistence(
@@ -179,7 +193,8 @@ final class PersistentIntentionSession {
                 allowAllWebsites: allowAllWebsites,
                 duration: duration,
                 createdAt: createdAt,
-                state: state
+                state: state,
+                source: source
             )
             return session
         } catch {

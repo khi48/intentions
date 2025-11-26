@@ -10,13 +10,16 @@ import SwiftUI
 /// Setup step for category mapping configuration
 /// This integrates with the existing CategoryMappingSetupView
 struct CategoryMappingStepView: View {
-    
+
     @State private var setupCoordinator: SetupCoordinator
     @State private var showingCategoryMapping: Bool = false
-    @State private var categoryMappingService = CategoryMappingService()
-    
+    // Use the SHARED categoryMappingService from the coordinator, not a new instance
+    private var categoryMappingService: CategoryMappingService {
+        setupCoordinator.categoryMappingService
+    }
+
     let onComplete: () async -> Void
-    
+
     init(setupCoordinator: SetupCoordinator, onComplete: @escaping () async -> Void) {
         self._setupCoordinator = State(initialValue: setupCoordinator)
         self.onComplete = onComplete
@@ -44,11 +47,10 @@ struct CategoryMappingStepView: View {
             print("   - Will show Continue button: \(categoryMappingService.isTrulySetupCompleted)")
         }
         .fullScreenCover(isPresented: $showingCategoryMapping) {
-            CategoryMappingSetupView { completedMappingService in
-                // Update our local service with the completed one
-                categoryMappingService = completedMappingService
+            CategoryMappingSetupView(mappingService: categoryMappingService) {
+                // Use the shared service directly - no copying needed!
                 showingCategoryMapping = false
-                
+
                 Task {
                     await completeStep()
                 }
@@ -74,10 +76,11 @@ struct CategoryMappingStepView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("Configure which apps belong to which categories for intelligent blocking during focused sessions. You must map all categories to proceed. Category mapping allows Intentions to intelligently prioritize which apps to block first, focusing on blocking the most distracting apps in each category.")
+            Text("Configure which apps belong to which categories for intelligent blocking during focused sessions. You must map all categories to proceed.")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal)
         }
     }
@@ -202,6 +205,7 @@ struct CategoryMappingStepView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding()
                         .background(AppConstants.Colors.surface)

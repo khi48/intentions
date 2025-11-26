@@ -43,6 +43,12 @@ enum SessionState: Codable, Sendable {
     }
 }
 
+/// Session source tracking
+enum SessionSource: Codable, Sendable {
+    case quickAction(QuickAction)  // Store full quick action snapshot
+    case manual
+}
+
 @Observable
 final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
     let id: UUID
@@ -53,6 +59,7 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
     var duration: TimeInterval
     var createdAt: Date
     var state: SessionState
+    var source: SessionSource
     
     // Computed properties for backward compatibility
     var startTime: Date {
@@ -97,7 +104,7 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
         return min(1.0, elapsed / duration)
     }
     
-    init(appGroups: [UUID] = [], applications: Set<ApplicationToken> = [], categories: Set<ActivityCategoryToken> = [], allowAllWebsites: Bool = false, duration: TimeInterval) throws {
+    init(appGroups: [UUID] = [], applications: Set<ApplicationToken> = [], categories: Set<ActivityCategoryToken> = [], allowAllWebsites: Bool = false, duration: TimeInterval, source: SessionSource = .manual) throws {
         // Validate duration
         guard duration >= AppConstants.Session.minimumDuration else {
             throw AppError.validationFailed("duration", reason: "Session duration must be at least \(AppConstants.Session.minimumDuration.formattedDuration)")
@@ -114,10 +121,11 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
         self.duration = duration
         self.createdAt = Date()
         self.state = .active(startedAt: Date())
+        self.source = source
     }
     
     // Private initializer for persistence reconstruction with existing ID
-    private init(id: UUID, appGroups: [UUID], applications: Set<ApplicationToken>, allowAllWebsites: Bool, duration: TimeInterval, createdAt: Date) throws {
+    private init(id: UUID, appGroups: [UUID], applications: Set<ApplicationToken>, allowAllWebsites: Bool, duration: TimeInterval, createdAt: Date, source: SessionSource = .manual) throws {
         // Validate duration for reconstructed sessions too
         guard duration >= AppConstants.Session.minimumDuration else {
             throw AppError.validationFailed("duration", reason: "Session duration must be at least \(AppConstants.Session.minimumDuration.formattedDuration)")
@@ -133,6 +141,7 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
         self.duration = duration
         self.createdAt = createdAt
         self.state = .active(startedAt: Date()) // Will be overridden by caller
+        self.source = source
     }
     
     // Static factory method for persistence reconstruction
@@ -143,7 +152,8 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
         allowAllWebsites: Bool = false,
         duration: TimeInterval,
         createdAt: Date,
-        state: SessionState
+        state: SessionState,
+        source: SessionSource = .manual
     ) throws -> IntentionSession {
         let session = try IntentionSession(
             id: id,
@@ -151,7 +161,8 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
             applications: applications,
             allowAllWebsites: allowAllWebsites,
             duration: duration,
-            createdAt: createdAt
+            createdAt: createdAt,
+            source: source
         )
         session.state = state
         return session
@@ -182,7 +193,7 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
     
     // Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, requestedAppGroups, requestedApplications, duration, createdAt, state
+        case id, requestedAppGroups, requestedApplications, duration, createdAt, state, source
         // Legacy keys for backward compatibility
         case startTime, endTime, isActive, wasCompleted
     }
@@ -203,7 +214,7 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
             let startTime = try container.decode(Date.self, forKey: .startTime)
             let isActive = try container.decode(Bool.self, forKey: .isActive)
             let wasCompleted = try container.decode(Bool.self, forKey: .wasCompleted)
-            
+
             if isActive {
                 state = .active(startedAt: startTime)
             } else if wasCompleted {
@@ -214,6 +225,9 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
                 state = .cancelled(totalElapsed: elapsed, cancelledAt: Date())
             }
         }
+
+        // Decode source with backward compatibility
+        source = try container.decodeIfPresent(SessionSource.self, forKey: .source) ?? .manual
     }
     
     func encode(to encoder: Encoder) throws {
@@ -224,7 +238,8 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
         try container.encode(duration, forKey: .duration)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(state, forKey: .state)
-        
+        try container.encode(source, forKey: .source)
+
         // Encode legacy format for backward compatibility
         try container.encode(startTime, forKey: .startTime)
         try container.encode(endTime, forKey: .endTime)

@@ -21,10 +21,10 @@ enum AppConstants {
     enum Session {
         /// Default session duration (5 minutes)
         static let defaultDuration: TimeInterval = 5 * 60
-        
-        /// Minimum allowed session duration (5 minutes)
-        static let minimumDuration: TimeInterval = 5 * 60
-        
+
+        /// Minimum allowed session duration (1 minute)
+        static let minimumDuration: TimeInterval = 1 * 60
+
         /// Maximum allowed session duration (2 hours)
         static let maximumDuration: TimeInterval = 2 * 60 * 60
         

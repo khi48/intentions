@@ -25,8 +25,9 @@ protocol ScreenTimeManaging: Sendable {
     ///   - categories: Set of ActivityCategoryTokens to allow (default empty)
     ///   - allowWebsites: Whether to allow access to all websites (default false)
     ///   - duration: How long to allow access (in seconds)
+    ///   - sessionId: UUID of the session for tracking and validation
     /// - Throws: AppError if allowing apps fails
-    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken>, allowWebsites: Bool, duration: TimeInterval) async throws
+    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken>, allowWebsites: Bool, duration: TimeInterval, sessionId: UUID) async throws
     
     /// Get currently allowed apps
     /// - Returns: Set of ApplicationTokens that are currently allowed
@@ -64,7 +65,11 @@ protocol ScreenTimeManaging: Sendable {
     /// Set callback to restore default state when sessions end
     /// - Parameter callback: Async closure to call when sessions expire or end
     func setRestoreDefaultStateCallback(_ callback: @escaping @Sendable () async -> Void) async
-    
+
+    /// Cancel session timers without triggering re-blocking
+    /// Used when starting a new session to prevent the old session's timer from firing
+    func cancelSessionTimers() async
+
     /// Clean up all resources and reset service state
     /// Cancels running tasks, clears settings, and resets internal state
     func cleanup() async

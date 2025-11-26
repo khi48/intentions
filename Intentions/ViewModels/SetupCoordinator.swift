@@ -29,10 +29,10 @@ final class SetupCoordinator: Sendable {
     var errorMessage: String?
     
     // MARK: - Dependencies
-    
+
     private let stateManager: SetupStateManager
     private let screenTimeService: ScreenTimeManaging
-    private let categoryMappingService: CategoryMappingService
+    let categoryMappingService: CategoryMappingService  // Public for access by setup views
     
     // MARK: - Initialization
     

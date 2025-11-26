@@ -28,7 +28,7 @@ enum AppError: LocalizedError, Sendable, Equatable {
     var errorDescription: String? {
         switch self {
         case .screenTimeAuthorizationFailed:
-            return "Screen Time authorization was denied. Please enable it in Settings to use Intentions."
+            return "Screen Time authorization was denied. Please enable it in Settings to use Intent."
         case .screenTimeAuthorizationRequired(let message):
             return message
         case .screenTimeNotAvailable:
@@ -55,7 +55,7 @@ enum AppError: LocalizedError, Sendable, Equatable {
     var recoverySuggestion: String? {
         switch self {
         case .screenTimeAuthorizationFailed:
-            return "Go to Settings > Screen Time > Content & Privacy Restrictions and enable access for Intentions."
+            return "Go to Settings > Screen Time > Content & Privacy Restrictions and enable access for Intent."
         case .screenTimeAuthorizationRequired:
             return "Please grant Screen Time permissions to use this feature."
         case .screenTimeNotAvailable:

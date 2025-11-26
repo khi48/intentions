@@ -98,19 +98,20 @@ actor MockScreenTimeService: ScreenTimeManaging {
         print("Mock: All apps blocked")
     }
     
-    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken> = [], allowWebsites: Bool = false, duration: TimeInterval) async throws {
+    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken> = [], allowWebsites: Bool = false, duration: TimeInterval, sessionId: UUID) async throws {
         let status = await authorizationStatus()
         guard status == .approved else {
             throw AppError.screenTimeAuthorizationFailed
         }
-        
+
         guard duration > 0 else {
             throw AppError.invalidConfiguration("Duration must be greater than 0")
         }
-        
+
         mockCurrentlyAllowedApps = tokens
 
         print("Mock: Allowed \(tokens.count) apps, \(categories.count) categories. Websites: \(allowWebsites ? "Allowed" : "Blocked")")
+        print("Mock: Session ID = \(sessionId.uuidString)")
 
         // Mock session expiration
         mockSessionTask?.cancel()
@@ -118,7 +119,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
             do {
                 try await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
                 guard !Task.isCancelled else { return }
-                
+
                 try? await self?.blockAllApps()
                 print("Mock: Session expired")
             } catch {
@@ -126,7 +127,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
                 return
             }
         }
-        
+
         print("Mock: Allowed \(tokens.count) apps and \(categories.count) categories for \(duration) seconds")
     }
     
@@ -169,7 +170,14 @@ actor MockScreenTimeService: ScreenTimeManaging {
         // Mock implementation - just log it
         print("Mock: Default state restore callback configured")
     }
-    
+
+    func cancelSessionTimers() async {
+        // Cancel the mock session task
+        mockSessionTask?.cancel()
+        mockSessionTask = nil
+        print("Mock: Session timers cancelled")
+    }
+
     func cleanup() async {
         // Cancel any running session task
         mockSessionTask?.cancel()

@@ -24,34 +24,27 @@ protocol DataPersisting: Sendable {
 @ModelActor
 actor DataModelActor {
     func saveAppGroup(_ group: AppGroup) throws {
-        print("💾 MODEL ACTOR: Saving app group '\(group.name)'")
-        
         // Check if group already exists and update it
         let descriptor = FetchDescriptor<PersistentAppGroup>()
         let allGroups = try modelContext.fetch(descriptor)
         let existingGroups = allGroups.filter { $0.id == group.id }
-        
+
         if let existingGroup = existingGroups.first {
-            print("🔄 MODEL ACTOR: Updating existing group")
             existingGroup.update(from: group)
         } else {
-            print("➕ MODEL ACTOR: Inserting new group")
             let persistentGroup = PersistentAppGroup(from: group)
             modelContext.insert(persistentGroup)
         }
-        
+
         try modelContext.save()
-        print("✅ MODEL ACTOR: Successfully saved app group '\(group.name)'")
     }
     
     func loadAppGroups() throws -> [AppGroup] {
-        print("📖 MODEL ACTOR: Loading app groups from SwiftData")
         let descriptor = FetchDescriptor<PersistentAppGroup>(
             sortBy: [SortDescriptor(\.name)]
         )
         let persistentGroups = try modelContext.fetch(descriptor)
         let appGroups = persistentGroups.compactMap { $0.toAppGroup() }
-        print("✅ MODEL ACTOR: Successfully loaded \(appGroups.count) app groups")
         return appGroups
     }
     
@@ -59,11 +52,10 @@ actor DataModelActor {
         let descriptor = FetchDescriptor<PersistentAppGroup>()
         let allGroups = try modelContext.fetch(descriptor)
         let matchingGroups = allGroups.filter { $0.id == id }
-        
+
         if let group = matchingGroups.first {
             modelContext.delete(group)
             try modelContext.save()
-            print("✅ MODEL ACTOR: Successfully deleted app group")
         } else {
             throw AppError.persistenceError("AppGroup with ID \(id) not found")
         }

@@ -225,11 +225,11 @@ struct SetupFlowView: View {
                         .foregroundColor(AppConstants.Colors.text)
                 }
                 
-                Text("Add Intentions Widget")
+                Text("Add Intent Widget")
                     .font(.title2)
                     .fontWeight(.semibold)
-                
-                Text("Add the Intentions widget to your lock screen or home screen to quickly see if your apps are currently blocked or accessible.")
+
+                Text("Add the Intent widget to your lock screen or home screen to quickly see if your apps are currently blocked or accessible.")
                     .font(.body)
                     .multilineTextAlignment(.center)
                     .foregroundColor(.secondary)
@@ -270,7 +270,7 @@ struct SetupFlowView: View {
             .background(Color(.systemGray6))
             .cornerRadius(12)
             
-            Button("Start Using Intentions") {
+            Button("Start Using Intent") {
                 print("📱 STATE: Widget setup completed, finishing setup")
                 onComplete()
             }

@@ -53,18 +53,18 @@ final class ScreenTimeUIAdapter<Service: ScreenTimeManaging> {
         await updateStatusInfo()
     }
     
-    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken> = [], allowWebsites: Bool = false, duration: TimeInterval) async {
+    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken> = [], allowWebsites: Bool = false, duration: TimeInterval, sessionId: UUID) async {
         isLoading = true
         lastError = nil
 
         do {
-            try await service.allowApps(tokens, categories: categories, allowWebsites: allowWebsites, duration: duration)
+            try await service.allowApps(tokens, categories: categories, allowWebsites: allowWebsites, duration: duration, sessionId: sessionId)
         } catch let error as AppError {
             lastError = error
         } catch {
             lastError = .appBlockingFailed(error.localizedDescription)
         }
-        
+
         isLoading = false
         await updateStatusInfo()
     }

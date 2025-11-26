@@ -15,62 +15,77 @@ struct SessionStatusView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            // Session Header
-            sessionHeader
-            
+            // Session Context (quick action name or apps)
+            sessionContext
+
             // Time Display
             timeDisplay
-            
+
             // Progress Bar
             progressBar
-            
-            // Session Apps (if available)
-            if !viewModel.sessionApps.isEmpty {
-                sessionAppsSection
-            }
-            
+
             // Action Buttons
             actionButtons
         }
         .padding()
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .sheet(isPresented: $viewModel.showingExtendDialog) {
-            ExtendSessionSheet(
-                viewModel: viewModel,
-                onExtend: { minutes in
-                    await viewModel.extendSession(by: minutes)
+    }
+    
+    // MARK: - Session Context
+
+    private var sessionContext: some View {
+        VStack(spacing: 12) {
+            if let session = viewModel.session {
+                if case .quickAction(let quickAction) = session.source {
+                    HStack(spacing: 12) {
+                        Image(systemName: quickAction.iconName)
+                            .foregroundColor(.gray)
+                            .font(.title)
+                            .frame(width: 28, height: 28)
+
+                        Text(quickAction.name)
+                            .font(.title2)
+                            .fontWeight(.medium)
+                            .foregroundColor(.gray)
+
+                        Spacer()
+                    }
+                } else if !session.requestedApplications.isEmpty {
+                    HStack(spacing: 12) {
+                        Text("Apps Allowed")
+                            .font(.title2)
+                            .fontWeight(.medium)
+                            .foregroundColor(.gray)
+
+                        let tokens = Array(session.requestedApplications)
+                        let maxPreviewIcons = 3
+
+                        HStack(spacing: -2) {
+                            ForEach(tokens.prefix(maxPreviewIcons).enumerated().map { $0 }, id: \.offset) { index, token in
+                                Label(token)
+                                    .labelStyle(.iconOnly)
+                                    .grayscale(1.0)
+                                    .frame(width: 20, height: 20)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                                    .zIndex(Double(maxPreviewIcons - index))
+                            }
+
+                            if tokens.count > maxPreviewIcons {
+                                Text("+\(tokens.count - maxPreviewIcons)")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                                    .padding(.leading, 4)
+                            }
+                        }
+
+                        Spacer()
+                    }
                 }
-            )
-        }
-    }
-    
-    // MARK: - Session Header
-    
-    private var sessionHeader: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Active Session")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                
-                Text("Focus time in progress")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
             }
-            
-            Spacer()
-            
-            // Session status indicator with pulse animation
-            Circle()
-                .fill(AppConstants.Colors.textSecondary)
-                .frame(width: 12, height: 12)
-                .scaleEffect(viewModel.isSessionActive ? 1.0 : 0.8)
-                .opacity(viewModel.isSessionActive ? 1.0 : 0.6)
-                .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: viewModel.isSessionActive)
         }
     }
-    
+
     // MARK: - Time Display
     
     private var timeDisplay: some View {
@@ -81,33 +96,10 @@ struct SessionStatusView: View {
                     .font(.largeTitle.monospacedDigit())
                     .fontWeight(.bold)
                     .foregroundStyle(.primary)
-                
+
                 Text("remaining")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-            }
-            
-            // Elapsed vs Total
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Elapsed")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(viewModel.formattedElapsedTime)
-                        .font(.subheadline.monospacedDigit())
-                        .fontWeight(.medium)
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("Total")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(viewModel.formattedTotalDuration)
-                        .font(.subheadline.monospacedDigit())
-                        .fontWeight(.medium)
-                }
             }
         }
     }
@@ -128,7 +120,7 @@ struct SessionStatusView: View {
                 Spacer()
                 
                 if viewModel.progress > 0.8 {
-                    Text("Almost done! 🎯")
+                    Text("Almost done!")
                         .font(.caption)
                         .foregroundStyle(AppConstants.Colors.textSecondary)
                 }
@@ -214,41 +206,27 @@ struct SessionStatusView: View {
     }
     
     // MARK: - Action Buttons
-    
+
     private var actionButtons: some View {
-        HStack(spacing: 16) {
-            // Extend Button
-            Button(action: {
-                viewModel.showExtendDialog()
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "clock.arrow.circlepath")
-                    Text("Extend")
-                }
+        Button(action: {
+            Task {
+                await onEndSession()
             }
-            .buttonStyle(.bordered)
-            .disabled(viewModel.isLoading)
-            
-            // End Session Button
-            Button(action: {
-                Task {
-                    await onEndSession()
+        }) {
+            HStack(spacing: 8) {
+                if viewModel.isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "stop.circle")
                 }
-            }) {
-                HStack(spacing: 8) {
-                    if viewModel.isLoading {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else {
-                        Image(systemName: "stop.circle")
-                    }
-                    Text("End Session")
-                }
+                Text("End Session")
             }
-            .buttonStyle(.bordered)
-            .foregroundColor(AppConstants.Colors.text)
-            .disabled(viewModel.isLoading)
+            .frame(maxWidth: .infinity)
         }
+        .buttonStyle(.bordered)
+        .foregroundColor(.gray)
+        .disabled(viewModel.isLoading)
     }
 }
 
