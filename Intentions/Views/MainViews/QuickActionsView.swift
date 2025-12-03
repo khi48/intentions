@@ -80,6 +80,10 @@ struct QuickActionsView: View {
                     },
                     onCancel: {
                         editorMode = nil
+                    },
+                    onDelete: { quickAction in
+                        await viewModel.deleteQuickAction(quickAction)
+                        editorMode = nil
                     }
                 )
             }

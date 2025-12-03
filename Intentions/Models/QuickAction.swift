@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 @preconcurrency import FamilyControls
+import ManagedSettings
 
 /// Represents a quick action that users can create for fast session initiation
 /// Quick actions are pre-configured sessions with specific app groups, durations, and settings
@@ -33,15 +34,18 @@ struct QuickAction: Identifiable, Codable, Sendable {
     /// Session duration in seconds
     var duration: TimeInterval
     
-    /// Associated app group IDs for this quick action
+    /// Associated app group IDs for this quick action (legacy, kept for backward compatibility)
     var appGroupIds: Set<UUID>
-    
-    /// Additional individual applications (not in groups) - temporarily disabled
-    // var individualApplications: Set<ApplicationToken>
 
-    /// Additional individual categories (not in groups) - temporarily disabled
-    // var individualCategories: Set<ActivityCategoryToken>
-    
+    /// Individual applications selected for this quick action
+    var individualApplications: Set<ApplicationToken>
+
+    /// Individual categories selected for this quick action
+    var individualCategories: Set<ActivityCategoryToken>
+
+    /// Whether to allow access to all websites during this session
+    var allowAllWebsites: Bool
+
     /// Whether this quick action is enabled/active
     var isEnabled: Bool
     
@@ -91,9 +95,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
     
     /// Whether this quick action has any content (apps or categories)
     var hasContent: Bool {
-        !appGroupIds.isEmpty
-        // TODO: Add individual app/category support when fully implemented
-        // || !individualApplications.isEmpty || !individualCategories.isEmpty
+        !appGroupIds.isEmpty || !individualApplications.isEmpty || !individualCategories.isEmpty
     }
     
     // MARK: - Initialization
@@ -112,10 +114,10 @@ struct QuickAction: Identifiable, Codable, Sendable {
         iconName: String = "star.fill",
         color: Color = .blue,
         duration: TimeInterval = AppConstants.Session.defaultDuration,
-        appGroupIds: Set<UUID> = []
-        // TODO: Add individual app/category support when fully implemented
-        // individualApplications: Set<ApplicationToken> = [],
-        // individualCategories: Set<ActivityCategoryToken> = []
+        appGroupIds: Set<UUID> = [],
+        individualApplications: Set<ApplicationToken> = [],
+        individualCategories: Set<ActivityCategoryToken> = [],
+        allowAllWebsites: Bool = false
     ) {
         self.id = UUID()
         self.name = name
@@ -124,9 +126,9 @@ struct QuickAction: Identifiable, Codable, Sendable {
         self._colorHex = color.toHex() ?? "#007AFF"
         self.duration = duration
         self.appGroupIds = appGroupIds
-        // TODO: Add individual app/category support when fully implemented
-        // self.individualApplications = individualApplications
-        // self.individualCategories = individualCategories
+        self.individualApplications = individualApplications
+        self.individualCategories = individualCategories
+        self.allowAllWebsites = allowAllWebsites
         self.isEnabled = true
         self.createdAt = Date()
         self.lastModified = Date()
@@ -140,8 +142,8 @@ struct QuickAction: Identifiable, Codable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case id, name, subtitle, iconName, _colorHex, duration
         case appGroupIds
-        // TODO: Add individual app/category support when fully implemented
-        // case individualApplications, individualCategories
+        case individualApplications, individualCategories
+        case allowAllWebsites
         case isEnabled, createdAt, lastModified, usageCount, lastUsed, sortOrder
     }
     
@@ -156,10 +158,12 @@ struct QuickAction: Identifiable, Codable, Sendable {
         duration = try container.decode(TimeInterval.self, forKey: .duration)
         appGroupIds = try container.decode(Set<UUID>.self, forKey: .appGroupIds)
 
-        // TODO: Add individual app/category support when fully implemented
         // Handle backward compatibility for individual tokens
-        // individualApplications = try container.decodeIfPresent(Set<ApplicationToken>.self, forKey: .individualApplications) ?? []
-        // individualCategories = try container.decodeIfPresent(Set<ActivityCategoryToken>.self, forKey: .individualCategories) ?? []
+        individualApplications = try container.decodeIfPresent(Set<ApplicationToken>.self, forKey: .individualApplications) ?? []
+        individualCategories = try container.decodeIfPresent(Set<ActivityCategoryToken>.self, forKey: .individualCategories) ?? []
+
+        // Handle backward compatibility for allowAllWebsites
+        allowAllWebsites = try container.decodeIfPresent(Bool.self, forKey: .allowAllWebsites) ?? false
 
         isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
@@ -179,9 +183,9 @@ struct QuickAction: Identifiable, Codable, Sendable {
         try container.encode(_colorHex, forKey: ._colorHex)
         try container.encode(duration, forKey: .duration)
         try container.encode(appGroupIds, forKey: .appGroupIds)
-        // TODO: Add individual app/category support when fully implemented
-        // try container.encode(individualApplications, forKey: .individualApplications)
-        // try container.encode(individualCategories, forKey: .individualCategories)
+        try container.encode(individualApplications, forKey: .individualApplications)
+        try container.encode(individualCategories, forKey: .individualCategories)
+        try container.encode(allowAllWebsites, forKey: .allowAllWebsites)
 
         try container.encode(isEnabled, forKey: .isEnabled)
         try container.encode(createdAt, forKey: .createdAt)
@@ -200,10 +204,10 @@ struct QuickAction: Identifiable, Codable, Sendable {
         iconName: String? = nil,
         color: Color? = nil,
         duration: TimeInterval? = nil,
-        appGroupIds: Set<UUID>? = nil
-        // TODO: Add individual app/category support when fully implemented
-        // individualApplications: Set<ApplicationToken>? = nil,
-        // individualCategories: Set<ActivityCategoryToken>? = nil
+        appGroupIds: Set<UUID>? = nil,
+        individualApplications: Set<ApplicationToken>? = nil,
+        individualCategories: Set<ActivityCategoryToken>? = nil,
+        allowAllWebsites: Bool? = nil
     ) {
         if let name = name { self.name = name }
         if let subtitle = subtitle { self.subtitle = subtitle }
@@ -211,9 +215,9 @@ struct QuickAction: Identifiable, Codable, Sendable {
         if let color = color { self.setColor(color) }
         if let duration = duration { self.duration = duration }
         if let appGroupIds = appGroupIds { self.appGroupIds = appGroupIds }
-        // TODO: Add individual app/category support when fully implemented
-        // if let individualApplications = individualApplications { self.individualApplications = individualApplications }
-        // if let individualCategories = individualCategories { self.individualCategories = individualCategories }
+        if let individualApplications = individualApplications { self.individualApplications = individualApplications }
+        if let individualCategories = individualCategories { self.individualCategories = individualCategories }
+        if let allowAllWebsites = allowAllWebsites { self.allowAllWebsites = allowAllWebsites }
 
         lastModified = Date()
     }
@@ -244,16 +248,18 @@ struct QuickAction: Identifiable, Codable, Sendable {
             }
         }
 
-        // Validate that we have at least one valid app group
+        // Validate that we have at least one valid source (app group, individual app, or category)
         // Empty quick actions should not create sessions that unlock everything
-        guard !resolvedGroupIds.isEmpty else {
-            throw AppError.validationFailed("appGroups", reason: "Quick action must have at least one valid app group to create a session")
+        guard !resolvedGroupIds.isEmpty || !individualApplications.isEmpty || !individualCategories.isEmpty else {
+            throw AppError.validationFailed("content", reason: "Quick action must have at least one app, category, or app group to create a session")
         }
 
-        // Create session with comprehensive blocking - collect tokens from app groups
-        // TODO: Include individual applications and categories when fully implemented
+        // Create session with comprehensive blocking - collect tokens from app groups and individual selections
         return try IntentionSession(
             appGroups: resolvedGroupIds,
+            applications: individualApplications,
+            categories: individualCategories,
+            allowAllWebsites: allowAllWebsites,
             duration: duration,
             source: .quickAction(self)  // Pass the full QuickAction object
         )

@@ -267,10 +267,20 @@ final class CategoryMappingService: Sendable {
 
     /// Retry validation of setup completion after app initialization delay
     /// This addresses the iOS ApplicationToken loading delay issue
+    /// Only reloads if mappings are currently empty (to avoid redundant loading)
     func retrySetupValidation() {
         guard isSetupCompleted else { return }
 
-        print("🔄 RETRY: Validating category mapping setup after initialization delay...")
+        // Check if we already have mappings loaded
+        let currentMappedApps = categoryToAppsMapping.values.reduce(0) { $0 + $1.count }
+
+        if currentMappedApps > 0 {
+            print("✅ RETRY SKIPPED: Category mappings already loaded - \(currentMappedApps) apps present")
+            return
+        }
+
+        // Mappings are empty - this could be a transient iOS loading issue
+        print("🔄 RETRY: Mappings empty, reloading after initialization delay...")
         loadCategoryMappings()
 
         let totalMappedApps = categoryToAppsMapping.values.reduce(0) { $0 + $1.count }
@@ -291,7 +301,7 @@ final class CategoryMappingService: Sendable {
 
             print("❌ FORCED RESET: User will need to complete category mapping again")
         } else {
-            print("✅ RETRY SUCCESS: Category mappings validated - \(totalMappedApps) apps found")
+            print("✅ RETRY SUCCESS: Category mappings loaded after delay - \(totalMappedApps) apps found")
         }
     }
     

@@ -10,6 +10,7 @@ import Foundation
 import DeviceActivity
 import ManagedSettings
 import FamilyControls
+import OSLog
 
 /// Monitor extension that handles session expiration events
 /// This runs even when the main app is not active
@@ -17,21 +18,22 @@ import FamilyControls
 class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     let store = ManagedSettingsStore()
+    let logger = Logger(subsystem: "oh.Intentions", category: "DeviceActivityMonitor")
 
     /// Called when a scheduled interval starts
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
 
         let timestamp = Date()
-        print("🟢 MONITOR EXTENSION: intervalDidStart called at \(timestamp)")
-        print("🟢 MONITOR EXTENSION: Activity name: \(activity.rawValue)")
+        logger.notice("🟢 MONITOR EXTENSION: intervalDidStart called at \(timestamp, privacy: .public)")
+        logger.notice("🟢 MONITOR EXTENSION: Activity name: \(activity.rawValue, privacy: .public)")
 
         // Log to shared UserDefaults for debugging
         if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") {
             sharedDefaults.set(timestamp, forKey: "intentions.lastIntervalStart")
             sharedDefaults.set(activity.rawValue, forKey: "intentions.lastIntervalStartActivity")
             sharedDefaults.synchronize()
-            print("🟢 MONITOR EXTENSION: Logged start to UserDefaults")
+            logger.info("🟢 MONITOR EXTENSION: Logged start to UserDefaults")
         }
     }
 
@@ -41,43 +43,85 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         super.intervalDidEnd(for: activity)
 
         let timestamp = Date()
-        print("🔴 MONITOR EXTENSION: intervalDidEnd called at \(timestamp)")
-        print("🔴 MONITOR EXTENSION: Activity name: \(activity.rawValue)")
+        logger.error("🔴 MONITOR EXTENSION: intervalDidEnd called at \(timestamp, privacy: .public)")
+        logger.error("🔴 MONITOR EXTENSION: Activity name: \(activity.rawValue, privacy: .public)")
 
-        // Log to shared UserDefaults for debugging
-        if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") {
-            sharedDefaults.set(timestamp, forKey: "intentions.lastIntervalEnd")
-            sharedDefaults.set(activity.rawValue, forKey: "intentions.lastIntervalEndActivity")
-
-            // Check what was scheduled
-            if let scheduledActivity = sharedDefaults.string(forKey: "intentions.lastScheduledActivity") {
-                print("🔴 MONITOR EXTENSION: Expected activity: \(scheduledActivity)")
-                print("🔴 MONITOR EXTENSION: Actual activity: \(activity.rawValue)")
-                print("🔴 MONITOR EXTENSION: Match: \(scheduledActivity == activity.rawValue)")
-            }
-
-            if let scheduledEndTime = sharedDefaults.object(forKey: "intentions.lastScheduledEndTime") as? Date {
-                print("🔴 MONITOR EXTENSION: Scheduled end time was: \(scheduledEndTime)")
-                let delay = timestamp.timeIntervalSince(scheduledEndTime)
-                print("🔴 MONITOR EXTENSION: Triggered \(delay) seconds after scheduled time")
-            }
-
-            sharedDefaults.synchronize()
+        // STEP 1: VALIDATE BEFORE ACTING - Check if this is a legitimate expiration
+        guard let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") else {
+            logger.error("❌ MONITOR EXTENSION: Cannot access UserDefaults - aborting")
+            return
         }
 
-        // Check if this is an Intentions session that ended
-        if activity.rawValue.hasPrefix("intentions.session.") {
-            print("🔴 MONITOR EXTENSION: Confirmed this is an Intentions session")
+        // Log for debugging
+        sharedDefaults.set(timestamp, forKey: "intentions.lastIntervalEnd")
+        sharedDefaults.set(activity.rawValue, forKey: "intentions.lastIntervalEndActivity")
 
-            // Extract session ID from activity name (format: "intentions.session.{UUID}")
-            let sessionId = String(activity.rawValue.dropFirst("intentions.session.".count))
-            print("🔴 MONITOR EXTENSION: Extracted session ID: \(sessionId)")
+        // Validate 1: Check activity name matches what was scheduled
+        if let scheduledActivity = sharedDefaults.string(forKey: "intentions.lastScheduledActivity") {
+            logger.notice("🔴 MONITOR EXTENSION: Expected activity: \(scheduledActivity, privacy: .public)")
+            logger.notice("🔴 MONITOR EXTENSION: Actual activity: \(activity.rawValue, privacy: .public)")
 
-            // Restore default blocking state with validation
-            restoreDefaultBlocking(activitySessionId: sessionId)
-        } else {
-            print("⚠️ MONITOR EXTENSION: Activity name does NOT match intentions.session.* pattern")
+            if scheduledActivity != activity.rawValue {
+                logger.warning("⚠️ MONITOR EXTENSION: Activity mismatch - this is a stale event, IGNORING")
+                return
+            }
+            logger.notice("✅ MONITOR EXTENSION: Activity matches")
         }
+
+        // Validate 2: Check if this fired at the correct time (not too early)
+        guard let scheduledEndTime = sharedDefaults.object(forKey: "intentions.lastScheduledEndTime") as? Date else {
+            logger.warning("⚠️ MONITOR EXTENSION: No scheduled end time found - cannot validate timing, IGNORING")
+            return
+        }
+
+        logger.notice("🔴 MONITOR EXTENSION: Scheduled end time was: \(scheduledEndTime, privacy: .public)")
+        let delay = timestamp.timeIntervalSince(scheduledEndTime)
+        logger.notice("🔴 MONITOR EXTENSION: Triggered \(delay, privacy: .public) seconds after scheduled time")
+
+        // CRITICAL: Only process if this is a legitimate expiration (not an early trigger)
+        // Negative delay means iOS fired intervalDidEnd early (e.g., when app reopens)
+        // Allow small tolerance for timing variations (5 seconds early is acceptable)
+        if delay < -5.0 {
+            logger.warning("⚠️ MONITOR EXTENSION: intervalDidEnd fired TOO EARLY (\(delay, privacy: .public)s before scheduled time)")
+            logger.warning("⚠️ MONITOR EXTENSION: This is likely due to app lifecycle - ABORTING, not blocking apps")
+            return // Do NOT process early triggers
+        }
+
+        logger.info("✅ MONITOR EXTENSION: Timing validation passed - this is a legitimate expiration")
+
+        // Validate 3: Check if this is an Intentions session
+        guard activity.rawValue.hasPrefix("intentions.session.") else {
+            logger.warning("⚠️ MONITOR EXTENSION: Activity name does NOT match intentions.session.* pattern - IGNORING")
+            return
+        }
+
+        logger.notice("✅ MONITOR EXTENSION: Confirmed this is an Intentions session")
+
+        // Validate 4: Extract and validate session ID
+        let sessionId = String(activity.rawValue.dropFirst("intentions.session.".count))
+        logger.notice("🔴 MONITOR EXTENSION: Extracted session ID: \(sessionId, privacy: .public)")
+
+        // Validate 5: Check if this session is still the current active session
+        guard let currentSessionId = sharedDefaults.string(forKey: "intentions.currentSessionId") else {
+            logger.warning("⚠️ MONITOR EXTENSION: No current session ID in UserDefaults - session was cancelled, IGNORING")
+            return
+        }
+
+        guard currentSessionId == sessionId else {
+            logger.warning("⚠️ MONITOR EXTENSION: Session ID mismatch!")
+            logger.warning("⚠️   Extension wants to expire: \(sessionId, privacy: .public)")
+            logger.warning("⚠️   Current active session: \(currentSessionId, privacy: .public)")
+            logger.warning("⚠️ MONITOR EXTENSION: This is an old session - ABORTING, not blocking apps")
+            return
+        }
+
+        logger.info("✅ MONITOR EXTENSION: Session ID validation passed")
+        logger.notice("🎯 MONITOR EXTENSION: ALL VALIDATIONS PASSED - proceeding to block apps")
+
+        sharedDefaults.synchronize()
+
+        // STEP 2: ALL VALIDATIONS PASSED - Now restore blocking
+        restoreDefaultBlocking(activitySessionId: sessionId)
     }
 
     /// Called when a threshold event is reached
@@ -86,38 +130,65 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         super.eventDidReachThreshold(event, activity: activity)
 
         let timestamp = Date()
-        print("⚡ MONITOR EXTENSION: eventDidReachThreshold called at \(timestamp)")
-        print("⚡ MONITOR EXTENSION: Event name: \(event.rawValue)")
-        print("⚡ MONITOR EXTENSION: Activity name: \(activity.rawValue)")
+        logger.error("⚡ MONITOR EXTENSION: eventDidReachThreshold called at \(timestamp, privacy: .public)")
+        logger.error("⚡ MONITOR EXTENSION: Event name: \(event.rawValue, privacy: .public)")
+        logger.error("⚡ MONITOR EXTENSION: Activity name: \(activity.rawValue, privacy: .public)")
 
-        // Log to shared UserDefaults for debugging
-        if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") {
-            sharedDefaults.set(timestamp, forKey: "intentions.lastThresholdReached")
-            sharedDefaults.set(event.rawValue, forKey: "intentions.lastThresholdEvent")
-            sharedDefaults.set(activity.rawValue, forKey: "intentions.lastThresholdActivity")
-
-            // Check what was scheduled
-            let scheduledDuration = sharedDefaults.double(forKey: "intentions.lastScheduledDuration")
-            if scheduledDuration > 0 {
-                print("⚡ MONITOR EXTENSION: Scheduled duration was: \(scheduledDuration) seconds")
-            }
-
-            sharedDefaults.synchronize()
+        // STEP 1: VALIDATE BEFORE ACTING
+        guard let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") else {
+            logger.error("❌ MONITOR EXTENSION: Cannot access UserDefaults - aborting")
+            return
         }
 
-        // Check if this is the Intentions session expiration threshold
-        if event.rawValue == "intentions.session.threshold" && activity.rawValue.hasPrefix("intentions.session.") {
-            print("⚡ MONITOR EXTENSION: Confirmed this is the session expiration threshold!")
+        // Log for debugging
+        sharedDefaults.set(timestamp, forKey: "intentions.lastThresholdReached")
+        sharedDefaults.set(event.rawValue, forKey: "intentions.lastThresholdEvent")
+        sharedDefaults.set(activity.rawValue, forKey: "intentions.lastThresholdActivity")
 
-            // Extract session ID from activity name (format: "intentions.session.{UUID}")
-            let sessionId = String(activity.rawValue.dropFirst("intentions.session.".count))
-            print("⚡ MONITOR EXTENSION: Extracted session ID: \(sessionId)")
-
-            // Restore default blocking state with validation
-            restoreDefaultBlocking(activitySessionId: sessionId)
-        } else {
-            print("⚠️ MONITOR EXTENSION: Event name does NOT match expected threshold pattern")
+        let scheduledDuration = sharedDefaults.double(forKey: "intentions.lastScheduledDuration")
+        if scheduledDuration > 0 {
+            logger.notice("⚡ MONITOR EXTENSION: Scheduled duration was: \(scheduledDuration, privacy: .public) seconds")
         }
+
+        // Validate 1: Check if this is the correct event type
+        guard event.rawValue == "intentions.session.threshold" else {
+            logger.warning("⚠️ MONITOR EXTENSION: Event does NOT match 'intentions.session.threshold' - IGNORING")
+            return
+        }
+
+        // Validate 2: Check if this is an Intentions session
+        guard activity.rawValue.hasPrefix("intentions.session.") else {
+            logger.warning("⚠️ MONITOR EXTENSION: Activity does NOT match 'intentions.session.*' pattern - IGNORING")
+            return
+        }
+
+        logger.notice("✅ MONITOR EXTENSION: Confirmed this is the session expiration threshold")
+
+        // Validate 3: Extract and validate session ID
+        let sessionId = String(activity.rawValue.dropFirst("intentions.session.".count))
+        logger.notice("⚡ MONITOR EXTENSION: Extracted session ID: \(sessionId, privacy: .public)")
+
+        // Validate 4: Check if this session is still the current active session
+        guard let currentSessionId = sharedDefaults.string(forKey: "intentions.currentSessionId") else {
+            logger.warning("⚠️ MONITOR EXTENSION: No current session ID in UserDefaults - session was cancelled, IGNORING")
+            return
+        }
+
+        guard currentSessionId == sessionId else {
+            logger.warning("⚠️ MONITOR EXTENSION: Session ID mismatch!")
+            logger.warning("⚠️   Extension wants to expire: \(sessionId, privacy: .public)")
+            logger.warning("⚠️   Current active session: \(currentSessionId, privacy: .public)")
+            logger.warning("⚠️ MONITOR EXTENSION: This is an old session - ABORTING, not blocking apps")
+            return
+        }
+
+        logger.info("✅ MONITOR EXTENSION: Session ID validation passed")
+        logger.notice("🎯 MONITOR EXTENSION: ALL VALIDATIONS PASSED - proceeding to block apps")
+
+        sharedDefaults.synchronize()
+
+        // STEP 2: ALL VALIDATIONS PASSED - Now restore blocking
+        restoreDefaultBlocking(activitySessionId: sessionId)
     }
 
     /// Called when a monitored application is blocked or unblocked
@@ -144,50 +215,27 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     /// Restore default blocking - remove session exceptions to block all apps again
     /// - Parameter activitySessionId: The session ID extracted from the activity name
+    /// - Note: This method assumes ALL validations have already been performed by the caller
     private func restoreDefaultBlocking(activitySessionId: String) {
         let timestamp = Date()
-        print("🔒 RESTORE BLOCKING: Starting at \(timestamp)")
-        print("🔒 RESTORE BLOCKING: Activity session ID = \(activitySessionId)")
-
-        // CRITICAL VALIDATION: Check if this session is still the current active session
-        // If the session has been replaced, we should NOT block apps
-        if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") {
-            if let currentSessionId = sharedDefaults.string(forKey: "intentions.currentSessionId") {
-                print("🔒 RESTORE BLOCKING: Current session ID from UserDefaults = \(currentSessionId)")
-
-                if currentSessionId != activitySessionId {
-                    print("⚠️ RESTORE BLOCKING: Session ID mismatch! This is an OLD session - SKIPPING blocking")
-                    print("⚠️ RESTORE BLOCKING: Activity wants to expire: \(activitySessionId)")
-                    print("⚠️ RESTORE BLOCKING: Current active session: \(currentSessionId)")
-                    return // Do NOT block - this is an old cancelled session
-                } else {
-                    print("✅ RESTORE BLOCKING: Session ID matches - proceeding with blocking")
-                }
-            } else {
-                print("⚠️ RESTORE BLOCKING: No current session ID in UserDefaults - session may have been cancelled")
-                print("⚠️ RESTORE BLOCKING: SKIPPING blocking to be safe")
-                return // Do NOT block - session was cancelled
-            }
-        } else {
-            print("❌ RESTORE BLOCKING: Failed to access shared UserDefaults - cannot validate session")
-            return // Do NOT block if we can't validate
-        }
+        logger.notice("🔒 RESTORE BLOCKING: Starting at \(timestamp, privacy: .public)")
+        logger.notice("🔒 RESTORE BLOCKING: Activity session ID = \(activitySessionId, privacy: .public)")
 
         // During session, we used .all(except:tokens) to allow specific apps
         // Now we just need to remove the exception and restore full .all() blocking
         // No need to clear - ManagedSettingsStore is cumulative
 
         // Block all web content
-        print("🔒 RESTORE BLOCKING: Setting webContent.blockedByFilter to .all()")
+        logger.info("🔒 RESTORE BLOCKING: Setting webContent.blockedByFilter to .all()")
         store.webContent.blockedByFilter = .all()
-        print("🔒 RESTORE BLOCKING: Web content blocking applied")
+        logger.info("🔒 RESTORE BLOCKING: Web content blocking applied")
 
         // Block all app categories (removing any session exceptions)
-        print("🔒 RESTORE BLOCKING: Setting shield.applicationCategories to .all()")
+        logger.info("🔒 RESTORE BLOCKING: Setting shield.applicationCategories to .all()")
         store.shield.applicationCategories = .all()
-        print("🔒 RESTORE BLOCKING: App category blocking applied")
+        logger.info("🔒 RESTORE BLOCKING: App category blocking applied")
 
-        print("✅ RESTORE BLOCKING: Default blocking fully restored at \(timestamp)")
+        logger.notice("✅ RESTORE BLOCKING: Default blocking fully restored at \(timestamp, privacy: .public)")
 
         // Update shared UserDefaults to notify the main app that the session ended
         // This allows the app to update its UI when reopened
@@ -196,15 +244,15 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             sharedDefaults.set(timestamp, forKey: "intentions.session.expirationTime")
             sharedDefaults.set("DeviceActivityMonitor", forKey: "intentions.session.expiredBy")
             sharedDefaults.synchronize()
-            print("✅ RESTORE BLOCKING: Notified main app via UserDefaults")
+            logger.info("✅ RESTORE BLOCKING: Notified main app via UserDefaults")
 
             // Log current state for debugging
             let webBlocking = sharedDefaults.bool(forKey: "intentions.session.expired")
-            print("✅ RESTORE BLOCKING: Verified UserDefaults - expired flag: \(webBlocking)")
+            logger.info("✅ RESTORE BLOCKING: Verified UserDefaults - expired flag: \(webBlocking)")
         } else {
-            print("❌ RESTORE BLOCKING: Failed to access shared UserDefaults!")
+            logger.error("❌ RESTORE BLOCKING: Failed to access shared UserDefaults!")
         }
 
-        print("🎉 RESTORE BLOCKING: Complete!")
+        logger.notice("🎉 RESTORE BLOCKING: Complete!")
     }
 }

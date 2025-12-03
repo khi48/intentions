@@ -2,6 +2,7 @@
 // Core Screen Time Service Implementation
 
 import Foundation
+import OSLog
 @preconcurrency import FamilyControls
 @preconcurrency import ManagedSettings
 @preconcurrency import DeviceActivity
@@ -10,9 +11,12 @@ import WidgetKit
 /// Implementation of Screen Time management using Apple's Family Controls framework
 /// Uses actor isolation for thread safety without blocking the main thread
 actor ScreenTimeService: ScreenTimeManaging {
-    
+
     // MARK: - Properties
-    
+
+    /// Logger for Console.app debugging
+    private nonisolated let logger = Logger(subsystem: "oh.Intentions", category: "ScreenTimeService")
+
     /// The managed settings store for applying restrictions
     private let managedSettingsStore = ManagedSettingsStore()
     
@@ -51,6 +55,7 @@ actor ScreenTimeService: ScreenTimeManaging {
     }
     
     deinit {
+        logger.info("🧹 DEINIT: ScreenTimeService being deallocated - clearing all settings")
         // Cancel any running session expiration tasks
         sessionExpirationTask?.cancel()
         // Clean up managed settings store
@@ -128,7 +133,8 @@ actor ScreenTimeService: ScreenTimeManaging {
     // MARK: - App Management
     
     /// Block all apps by default - core concept of Intentions app
-    /// Users must explicitly select which apps to temporarily allow
+    /// Uses comprehensive blocking: category-based blocking + web content blocking
+    /// This is the DEFAULT STATE when no session is active during protected hours
     func blockAllApps() async throws {
         try ensureInitialized()
 
@@ -137,7 +143,7 @@ actor ScreenTimeService: ScreenTimeManaging {
             throw AppError.screenTimeAuthorizationFailed
         }
 
-        print("🚫 BLOCK ALL: Starting to block all apps")
+        logger.notice("🚫 BLOCK ALL: Starting comprehensive default blocking")
 
         // Clear allowed apps tracking - nothing is allowed initially
         currentlyAllowedApps.removeAll()
@@ -149,25 +155,42 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Cancel any DeviceActivity schedule
         cancelDeviceActivitySchedule()
 
-        // INTENTIONS CORE CONCEPT: Block everything by default
+        // INTENTIONS CORE CONCEPT: Block everything by default during protected hours
         // IMPORTANT: ManagedSettingsStore is cumulative, so we must explicitly clear
-        // any previously set individual app shields from sessions
+        // any previously set shields from sessions BEFORE applying new blocking
 
-        // Clear any individual app shields that may have been set during sessions
-        print("🚫 BLOCK ALL: Clearing individual app shields")
+        // CRITICAL: Clear ALL shields first to remove any session exceptions
+        logger.info("🚫 BLOCK ALL: Step 1 - Clearing ALL existing shields to remove session exceptions")
         managedSettingsStore.shield.applications = nil
+        managedSettingsStore.shield.applicationCategories = nil
+        managedSettingsStore.shield.webDomains = nil
+        managedSettingsStore.webContent.blockedByFilter = nil
 
-        // Block all web content by default - this covers browsers and web-based apps
-        print("🚫 BLOCK ALL: Blocking web content")
-        managedSettingsStore.shield.webDomains = nil  // Clear specific domain shields first
-        managedSettingsStore.webContent.blockedByFilter = .all()
+        // Brief delay to ensure clearing takes effect before applying new blocking
+        try? await Task.sleep(nanoseconds: 50_000_000) // 0.05 seconds
 
-        // Block major distracting app categories by default
-        // Users will need to explicitly allow categories they need via FamilyActivityPicker
-        print("🚫 BLOCK ALL: Blocking all app categories")
+        // COMPREHENSIVE BLOCKING STRATEGY:
+        // We use a multi-layered approach to ensure ALL apps are blocked:
+        // 1. Category-based blocking (.all()) - blocks most apps by category
+        // 2. Web content blocking (.all()) - blocks browsers and web-based apps
+
+        logger.info("🚫 BLOCK ALL: Step 2 - Applying category-based blocking (.all())")
         managedSettingsStore.shield.applicationCategories = .all()
 
-        print("✅ BLOCK ALL: All blocking settings applied successfully")
+        logger.info("🚫 BLOCK ALL: Step 3 - Applying web content blocking (.all())")
+        managedSettingsStore.webContent.blockedByFilter = .all()
+
+        // Brief delay to ensure all settings propagate to iOS
+        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+
+        // DIAGNOSTIC: Verify settings after applying
+        logger.info("🔍 BLOCK ALL: Verification - shield.applicationCategories is set: \(self.managedSettingsStore.shield.applicationCategories != nil)")
+        logger.info("🔍 BLOCK ALL: Verification - webContent.blockedByFilter is set: \(self.managedSettingsStore.webContent.blockedByFilter != nil)")
+        logger.info("🔍 BLOCK ALL: Verification - shield.applications is: \(self.managedSettingsStore.shield.applications?.count ?? 0) apps")
+
+        logger.notice("✅ BLOCK ALL: Comprehensive default blocking applied successfully")
+        logger.info("   - Category blocking: .all()")
+        logger.info("   - Web content blocking: .all()")
 
         // Update widget with blocking status
         updateWidgetBlockingStatus(isBlocking: true)
@@ -222,8 +245,16 @@ actor ScreenTimeService: ScreenTimeManaging {
         // We need this to restore the proper state when the session ends
         preSessionBlockingState = !currentlyAllowedApps.isEmpty || managedSettingsStore.shield.applications != nil || managedSettingsStore.shield.applicationCategories != nil
 
-        // ManagedSettingsStore is cumulative - we can directly set values without clearing
-        // This eliminates the flickering caused by clear+delay operations
+        // CRITICAL: Clear previous session's shields to prevent cumulative effects
+        // ManagedSettingsStore can be cumulative, so we MUST clear old settings first
+        print("🔧 ALLOW APPS: Clearing previous shields to prevent cumulative blocking")
+        managedSettingsStore.shield.applications = nil
+        managedSettingsStore.shield.applicationCategories = nil
+        managedSettingsStore.shield.webDomains = nil
+        managedSettingsStore.webContent.blockedByFilter = nil
+
+        // Brief delay to ensure clearing takes effect before applying new settings
+        try? await Task.sleep(nanoseconds: 50_000_000) // 0.05 seconds
 
         print("🔧 ALLOW APPS: Starting to apply blocking restrictions")
         print("🔧 ALLOW APPS: Tokens count: \(tokens.count), Categories count: \(categories.count)")
@@ -359,12 +390,14 @@ actor ScreenTimeService: ScreenTimeManaging {
     
     func allowAllAccess() async throws {
         try ensureInitialized()
-        
+
         let status = await authorizationStatus()
         guard status == .approved else {
             throw AppError.screenTimeAuthorizationFailed
         }
-        
+
+        logger.notice("🧹 ALLOW ALL ACCESS: Clearing all settings to remove all restrictions")
+
         // Cancel session expiration task
         sessionExpirationTask?.cancel()
         sessionExpirationTask = nil
@@ -388,6 +421,8 @@ actor ScreenTimeService: ScreenTimeManaging {
     
     /// Clean up all resources and reset service state
     func cleanup() async {
+        logger.notice("🧹 CLEANUP: Clearing all settings during cleanup")
+
         // Cancel any running tasks
         sessionExpirationTask?.cancel()
         sessionExpirationTask = nil
@@ -397,10 +432,10 @@ actor ScreenTimeService: ScreenTimeManaging {
 
         // Clear current state tracking
         currentlyAllowedApps.removeAll()
-        
+
         // Standard clear all settings
         managedSettingsStore.clearAllSettings()
-        
+
         // Explicitly clear specific shield types
         managedSettingsStore.shield.applications = nil
         managedSettingsStore.shield.applicationCategories = nil
@@ -409,7 +444,7 @@ actor ScreenTimeService: ScreenTimeManaging {
         managedSettingsStore.application.denyAppRemoval = nil
         managedSettingsStore.gameCenter.denyMultiplayerGaming = nil
         managedSettingsStore.gameCenter.denyAddingFriends = nil
-        
+
         // Brief delay to ensure clearing takes effect
         do {
             try await Task.sleep(nanoseconds: 200_000_000)
