@@ -50,14 +50,15 @@ final class SetupCoordinator: Sendable {
     
     /// Validate current setup state and determine if setup flow is needed
     /// This is called on app launch and when returning from background
-    func validateSetupRequirements() async {
+    /// - Parameter cachedAuthStatus: Optional cached authorization status to avoid redundant checks
+    func validateSetupRequirements(cachedAuthStatus: AuthorizationStatus? = nil) async {
         await withValidation {
             // Load existing setup state
             let savedState = await stateManager.loadSetupState()
-            
-            // Get current system status
-            let currentStatus = await getCurrentSystemStatus()
-            
+
+            // Get current system status (use cached auth status if provided)
+            let currentStatus = await getCurrentSystemStatus(cachedAuthStatus: cachedAuthStatus)
+
             // If no saved state exists, create one based on current system status
             let actualState: SetupState
             if let savedState = savedState {
@@ -72,13 +73,13 @@ final class SetupCoordinator: Sendable {
                 // Save the initial state immediately
                 await stateManager.saveSetupState(actualState)
             }
-            
+
             // Determine if setup is required
             let setupRequired = await determineSetupRequired(
                 savedState: actualState,
                 currentStatus: currentStatus
             )
-            
+
             // Update state
             setupState = actualState
             shouldShowSetup = setupRequired
@@ -145,22 +146,32 @@ final class SetupCoordinator: Sendable {
     }
     
     /// Get current system status by checking all requirements
-    private func getCurrentSystemStatus() async -> SystemStatus {
-        var authStatus = await screenTimeService.authorizationStatus()
-        
-        // If authorization status is "Not Determined", double-check after a brief delay
-        // This handles cases where the system needs time to return the correct status
-        if authStatus == .notDetermined {
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-            let recheckStatus = await screenTimeService.authorizationStatus()
-            if recheckStatus != .notDetermined {
-                authStatus = recheckStatus
+    /// - Parameter cachedAuthStatus: Optional cached authorization status to avoid redundant checks
+    private func getCurrentSystemStatus(cachedAuthStatus: AuthorizationStatus? = nil) async -> SystemStatus {
+        let authStatus: AuthorizationStatus
+
+        // Use cached status if provided, otherwise check fresh
+        if let cached = cachedAuthStatus {
+            authStatus = cached
+        } else {
+            var freshStatus = await screenTimeService.authorizationStatus()
+
+            // If authorization status is "Not Determined", double-check after a brief delay
+            // This handles cases where the system needs time to return the correct status
+            if freshStatus == .notDetermined {
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                let recheckStatus = await screenTimeService.authorizationStatus()
+                if recheckStatus != .notDetermined {
+                    freshStatus = recheckStatus
+                }
             }
+
+            authStatus = freshStatus
         }
-        
+
         let screenTimeAuth = authStatus == .approved
         let categoryMappingComplete = categoryMappingService.isTrulySetupCompleted
-        
+
         return SystemStatus(
             screenTimeAuthorized: screenTimeAuth,
             categoryMappingCompleted: categoryMappingComplete,

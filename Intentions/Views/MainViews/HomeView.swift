@@ -15,14 +15,12 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Current session status or welcome message
+                    // Current session status
                     if let session = viewModel.activeSession {
                         ActiveSessionCard(session: session, viewModel: viewModel)
-                    } else {
-                        WelcomeCard(viewModel: viewModel)
                     }
 
-                    // Quick actions
+                    // Quick actions (now the main way to start sessions)
                     QuickActionsSection(viewModel: viewModel)
 
                     Spacer(minLength: 100)
@@ -76,43 +74,42 @@ private struct ActiveSessionCard: View {
     }
 }
 
-/// Welcome card for when no session is active
-private struct WelcomeCard: View {
-    let viewModel: ContentViewModel
-    
-    var body: some View {
-        VStack {
-            // Minimal central button
-            Button(action: {
-                viewModel.showIntentionPrompt()
-            }) {
-                Text("Set Intent")
-                    .font(.title2)
-                    .fontWeight(.medium)
-                    .foregroundColor(AppConstants.Colors.text)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
-                    .background(AppConstants.Colors.buttonPrimary)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding()
-    }
-}
-
 /// Quick actions section
 private struct QuickActionsSection: View {
     let viewModel: ContentViewModel
     @ObservedObject private var quickActionsViewModel: QuickActionsViewModel
     @State private var draggingQuickAction: QuickAction?
+    @State private var editorMode: QuickActionEditorMode?
 
     init(viewModel: ContentViewModel) {
         self.viewModel = viewModel
         self.quickActionsViewModel = viewModel.sharedQuickActionsViewModel
     }
-    
+
+    /// Sheet presentation mode for QuickActionEditor
+    enum QuickActionEditorMode: Identifiable {
+        case create
+        case edit(QuickAction)
+
+        var id: String {
+            switch self {
+            case .create:
+                return "create"
+            case .edit(let action):
+                return "edit-\(action.id.uuidString)"
+            }
+        }
+
+        var quickAction: QuickAction? {
+            switch self {
+            case .create:
+                return nil
+            case .edit(let action):
+                return action
+            }
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -122,12 +119,12 @@ private struct QuickActionsSection: View {
 
                 Spacer()
 
-                if !quickActionsViewModel.quickActions.isEmpty {
-                    Button("View All") {
-                        viewModel.navigateToTab(.quickActions)
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(AppConstants.Colors.accent)
+                Button(action: {
+                    editorMode = .create
+                }) {
+                    Image(systemName: "plus")
+                        .font(.title3)
+                        .foregroundColor(AppConstants.Colors.accent)
                 }
             }
             .padding(.horizontal)
@@ -147,12 +144,20 @@ private struct QuickActionsSection: View {
                                 title: quickAction.name,
                                 subtitle: quickAction.subtitle ?? quickAction.formattedDuration,
                                 icon: quickAction.iconName,
-                                color: quickAction.color
-                            ) {
-                                Task {
-                                    await startQuickAction(quickAction)
+                                color: quickAction.color,
+                                isReady: viewModel.isScreenTimeServiceReady,
+                                onTap: {
+                                    Task {
+                                        await startQuickAction(quickAction)
+                                    }
+                                },
+                                onEdit: {
+                                    editorMode = .edit(quickAction)
+                                },
+                                onDelete: {
+                                    quickActionsViewModel.confirmDeleteQuickAction(quickAction)
                                 }
-                            }
+                            )
                             .onDrag {
                                 draggingQuickAction = quickAction
                                 return NSItemProvider(object: quickAction.id.uuidString as NSString)
@@ -183,6 +188,39 @@ private struct QuickActionsSection: View {
                 await loadQuickActions()
             }
         }
+        .sheet(item: $editorMode) { mode in
+            QuickActionEditorSheet(
+                dataService: viewModel.dataServiceProvider,
+                editingQuickAction: mode.quickAction,
+                availableAppGroups: quickActionsViewModel.availableAppGroups,
+                onSave: { quickAction in
+                    await quickActionsViewModel.saveQuickAction(quickAction)
+                    editorMode = nil
+                },
+                onCancel: {
+                    editorMode = nil
+                },
+                onDelete: { quickAction in
+                    await quickActionsViewModel.deleteQuickAction(quickAction)
+                    editorMode = nil
+                }
+            )
+        }
+        .alert("Delete Quick Action", isPresented: Binding(
+            get: { quickActionsViewModel.showingDeleteAlert },
+            set: { quickActionsViewModel.showingDeleteAlert = $0 }
+        )) {
+            Button("Cancel", role: .cancel) {
+                quickActionsViewModel.cancelDelete()
+            }
+            Button("Delete", role: .destructive) {
+                if let quickAction = quickActionsViewModel.quickActionToDelete {
+                    Task {
+                        await quickActionsViewModel.deleteQuickAction(quickAction)
+                    }
+                }
+            }
+        }
     }
     
     private var gettingStartedCard: some View {
@@ -193,16 +231,16 @@ private struct QuickActionsSection: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(AppConstants.Colors.text)
-                    
+
                     Text("Create quick actions for instant access to your favorite app groups and session types")
                         .font(.caption)
                         .foregroundColor(AppConstants.Colors.textSecondary)
                 }
-                
+
                 Spacer()
-                
+
                 Button("Create") {
-                    viewModel.navigateToTab(.quickActions)
+                    editorMode = .create
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -289,21 +327,24 @@ private struct QuickActionCard: View {
     let subtitle: String
     let icon: String
     let color: Color
-    let action: () -> Void
-    
+    let isReady: Bool
+    let onTap: () -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+
     var body: some View {
-        Button(action: action) {
+        Button(action: onTap) {
             VStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.system(size: 32))
                     .foregroundStyle(AppConstants.Colors.text)
-                
+
                 VStack(spacing: 4) {
                     Text(title)
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(AppConstants.Colors.text)
-                    
+
                     Text(subtitle)
                         .font(.caption)
                         .foregroundColor(AppConstants.Colors.textSecondary)
@@ -315,6 +356,17 @@ private struct QuickActionCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
+        .disabled(!isReady)
+        .opacity(isReady ? 1.0 : 0.6)
+        .animation(.easeInOut(duration: 0.3), value: isReady)
+        .contextMenu {
+            Button(action: onEdit) {
+                Label("Edit", systemImage: "pencil")
+            }
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 }
 

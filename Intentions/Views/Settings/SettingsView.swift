@@ -173,12 +173,14 @@ struct SettingsView: View {
     private let onViewModelReady: ((SettingsViewModel) -> Void)?
     private let setupCoordinator: SetupCoordinator?
     private let hasActiveSession: Bool
+    private let authorizationStatus: AuthorizationStatus
     @EnvironmentObject private var navigationManager: NavigationStateManager
 
     init(
         dataService: DataPersisting? = nil,
         setupCoordinator: SetupCoordinator? = nil,
         hasActiveSession: Bool = false,
+        authorizationStatus: AuthorizationStatus = .notDetermined,
         onScheduleSettingsChanged: ((ScheduleSettings) async -> Void)? = nil,
         onViewModelReady: ((SettingsViewModel) -> Void)? = nil
     ) {
@@ -186,6 +188,7 @@ struct SettingsView: View {
         self._viewModel = State(wrappedValue: SettingsViewModel(dataService: service))
         self.setupCoordinator = setupCoordinator
         self.hasActiveSession = hasActiveSession
+        self.authorizationStatus = authorizationStatus
         self.onScheduleSettingsChanged = onScheduleSettingsChanged
         self.onViewModelReady = onViewModelReady
     }
@@ -336,7 +339,7 @@ struct SettingsView: View {
             // Intentions State Toggle
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Intent State")
+                    Text("Protected Hours")
                         .font(.headline)
 
                     Text("Control when apps are blocked by default")
@@ -398,7 +401,7 @@ struct SettingsView: View {
                 .padding(.top, 4)
             }
         } header: {
-            Text("Intent State")
+            Text("Protected Hours")
         } footer: {
             if viewModel.scheduleSettings.isEnabled {
                 Text("Apps are blocked by default during the specified times and days. Outside these hours, all apps remain accessible unless you start a focused session.")
@@ -471,6 +474,148 @@ struct SettingsView: View {
             }
         } header: {
             Text("Setup")
+        }
+    }
+
+    // MARK: - Debug Diagnostic Section
+
+    private var debugSetupStateSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Diagnostic Information")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+
+                Divider()
+
+                // Authorization Status
+                HStack {
+                    Image(systemName: "checkmark.shield.fill")
+                        .foregroundColor(authorizationStatusColor)
+                        .frame(width: 20)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Authorization")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        Text(authorizationStatusText)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Setup State
+                if let setupState = setupCoordinator?.setupState {
+                    Divider()
+
+                    HStack {
+                        Image(systemName: "gearshape.fill")
+                            .foregroundColor(setupState.isSetupSufficient ? .green : .orange)
+                            .frame(width: 20)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Setup Complete")
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+                            Text(setupState.isSetupSufficient ? "Yes" : "No")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    // Detailed setup flags
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Setup Details:")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 4)
+
+                        setupDetailRow("Authorization", value: setupState.screenTimeAuthorized)
+                        setupDetailRow("Category Mapping", value: setupState.categoryMappingCompleted)
+                        setupDetailRow("System Health", value: setupState.systemHealthValidated)
+                    }
+                } else {
+                    Divider()
+
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                            .frame(width: 20)
+
+                        Text("Setup state not available")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Has Active Session
+                Divider()
+
+                HStack {
+                    Image(systemName: hasActiveSession ? "play.circle.fill" : "pause.circle.fill")
+                        .foregroundColor(hasActiveSession ? .blue : .gray)
+                        .frame(width: 20)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Active Session")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        Text(hasActiveSession ? "Yes" : "No")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(AppConstants.UI.cornerRadius)
+        } header: {
+            Text("Debug Diagnostics")
+        } footer: {
+            Text("This section shows the current state of app initialization. Use this to debug issues when the app isn't working as expected.")
+                .foregroundColor(AppConstants.Colors.textSecondary)
+        }
+    }
+
+    private func setupDetailRow(_ label: String, value: Bool) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: value ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .font(.caption2)
+                .foregroundColor(value ? .green : .red)
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value ? "Complete" : "Incomplete")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding(.leading, 8)
+    }
+
+    private var authorizationStatusColor: Color {
+        switch authorizationStatus {
+        case .approved:
+            return .green
+        case .denied:
+            return .red
+        case .notDetermined:
+            return .orange
+        @unknown default:
+            return .gray
+        }
+    }
+
+    private var authorizationStatusText: String {
+        switch authorizationStatus {
+        case .approved:
+            return "Approved"
+        case .denied:
+            return "Denied"
+        case .notDetermined:
+            return "Not Determined"
+        @unknown default:
+            return "Unknown"
         }
     }
 
@@ -623,7 +768,7 @@ struct ScheduleSettingsView: View {
             }
             .background(AppConstants.Colors.background)
             .scrollContentBackground(.hidden)
-            .navigationTitle("Intent State")
+            .navigationTitle("Protected Hours")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

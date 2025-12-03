@@ -93,32 +93,19 @@ private struct MainTabView: View {
                 }
             }
         )) {
-            // Home Tab - Main intention interface
+            // Home Tab - Main intention interface with Quick Actions
             HomeView(viewModel: viewModel)
                 .tabItem {
                     Label(AppTab.home.rawValue, systemImage: AppTab.home.systemImage)
                 }
                 .tag(AppTab.home)
-            
-            // Groups Tab - App group management
-            AppGroupsView(dataService: viewModel.dataServiceProvider, contentViewModel: viewModel)
-                .tabItem {
-                    Label(AppTab.groups.rawValue, systemImage: AppTab.groups.systemImage)
-                }
-                .tag(AppTab.groups)
-            
-            // Quick Actions Tab - Quick session management
-            QuickActionsView(dataService: viewModel.dataServiceProvider, contentViewModel: viewModel)
-                .tabItem {
-                    Label(AppTab.quickActions.rawValue, systemImage: AppTab.quickActions.systemImage)
-                }
-                .tag(AppTab.quickActions)
-            
+
             // Settings Tab
             SettingsView(
                 dataService: viewModel.dataServiceProvider,
                 setupCoordinator: viewModel.setupCoordinator,
                 hasActiveSession: viewModel.activeSession != nil,
+                authorizationStatus: viewModel.authorizationStatus,
                 onScheduleSettingsChanged: { settings in
                     await viewModel.updateScheduleSettings(settings)
                 },
