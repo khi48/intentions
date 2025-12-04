@@ -462,6 +462,9 @@ final class ContentViewModel: Sendable {
                 activeSession = session
                 showingIntentionPrompt = false
 
+                // Update widget data with session information
+                updateWidgetSessionData(session)
+
             } catch {
                 await handleError(error)
             }
@@ -489,6 +492,9 @@ final class ContentViewModel: Sendable {
                     sharedDefaults.synchronize()
                     print("✅ END SESSION: Cleared session ID from UserDefaults")
                 }
+
+                // Clear widget session data
+                clearWidgetSessionData()
 
                 // Apply default blocking state (revert to block-all or allow-all based on schedule)
                 await applyDefaultBlocking()
@@ -527,6 +533,9 @@ final class ContentViewModel: Sendable {
                 sharedDefaults.synchronize()
                 print("✅ SESSION EXPIRED: Cleared session ID from UserDefaults")
             }
+
+            // Clear widget session data
+            clearWidgetSessionData()
 
             print("✅ SESSION EXPIRED: Session marked as complete and cleared from state")
 
@@ -960,6 +969,59 @@ final class ContentViewModel: Sendable {
         UserDefaults.standard.set(testStatus, forKey: "intentions.widget.blockingStatus")
         UserDefaults.standard.set(testDate, forKey: "intentions.widget.lastUpdate")
         UserDefaults.standard.synchronize()
+    }
+
+    /// Update widget with session information
+    private func updateWidgetSessionData(_ session: IntentionSession) {
+        let appGroupId = "group.oh.Intentions"
+
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupId) else {
+            print("⚠️ ContentViewModel: Failed to access App Group for widget update")
+            return
+        }
+
+        // Derive session title from source
+        let sessionTitle: String
+        switch session.source {
+        case .quickAction(let quickAction):
+            sessionTitle = quickAction.name
+        case .manual:
+            sessionTitle = "Session"
+        }
+
+        // Write session information for widget
+        sharedDefaults.set(sessionTitle, forKey: "intentions.widget.sessionTitle")
+        sharedDefaults.set(session.endTime, forKey: "intentions.widget.sessionEndTime")
+        sharedDefaults.set(false, forKey: "intentions.widget.blockingStatus") // Session active means not blocking all
+        sharedDefaults.set(Date(), forKey: "intentions.widget.lastUpdate")
+        sharedDefaults.synchronize()
+
+        print("📱 WIDGET UPDATE: Updated widget with session '\(sessionTitle)', ends at \(session.endTime)")
+
+        // Reload widget timelines to show updated information
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Clear widget session data when session ends
+    private func clearWidgetSessionData() {
+        let appGroupId = "group.oh.Intentions"
+
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupId) else {
+            print("⚠️ ContentViewModel: Failed to access App Group for widget update")
+            return
+        }
+
+        // Clear session-specific data
+        sharedDefaults.removeObject(forKey: "intentions.widget.sessionTitle")
+        sharedDefaults.removeObject(forKey: "intentions.widget.sessionEndTime")
+        // Update blocking status - will be set based on schedule by applyDefaultBlocking
+        sharedDefaults.set(Date(), forKey: "intentions.widget.lastUpdate")
+        sharedDefaults.synchronize()
+
+        print("📱 WIDGET UPDATE: Cleared session data from widget")
+
+        // Reload widget timelines
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }
 
