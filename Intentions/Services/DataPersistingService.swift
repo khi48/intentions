@@ -8,10 +8,6 @@ protocol DataPersisting: Sendable {
     func save<T: Codable & Sendable>(_ object: T, forKey key: String) async throws
     func load<T: Codable & Sendable>(_ type: T.Type, forKey key: String) async throws -> T?
     func delete(forKey key: String) async throws
-    func saveAppGroup(_ group: AppGroup) async throws
-    func loadAppGroups() async throws -> [AppGroup]
-    func deleteAppGroup(_ id: UUID) async throws
-    func removeOrphanedAppGroupReferences(_ deletedGroupId: UUID) async throws
     func saveScheduleSettings(_ settings: ScheduleSettings) async throws
     func loadScheduleSettings() async throws -> ScheduleSettings?
     func saveIntentionSession(_ session: IntentionSession) async throws
@@ -21,45 +17,10 @@ protocol DataPersisting: Sendable {
 }
 
 // MARK: - Model Actor for Thread-Safe SwiftData Access
+// Note: Currently unused but kept for future expansion
 @ModelActor
 actor DataModelActor {
-    func saveAppGroup(_ group: AppGroup) throws {
-        // Check if group already exists and update it
-        let descriptor = FetchDescriptor<PersistentAppGroup>()
-        let allGroups = try modelContext.fetch(descriptor)
-        let existingGroups = allGroups.filter { $0.id == group.id }
-
-        if let existingGroup = existingGroups.first {
-            existingGroup.update(from: group)
-        } else {
-            let persistentGroup = PersistentAppGroup(from: group)
-            modelContext.insert(persistentGroup)
-        }
-
-        try modelContext.save()
-    }
-    
-    func loadAppGroups() throws -> [AppGroup] {
-        let descriptor = FetchDescriptor<PersistentAppGroup>(
-            sortBy: [SortDescriptor(\.name)]
-        )
-        let persistentGroups = try modelContext.fetch(descriptor)
-        let appGroups = persistentGroups.compactMap { $0.toAppGroup() }
-        return appGroups
-    }
-    
-    func deleteAppGroup(_ id: UUID) throws {
-        let descriptor = FetchDescriptor<PersistentAppGroup>()
-        let allGroups = try modelContext.fetch(descriptor)
-        let matchingGroups = allGroups.filter { $0.id == id }
-
-        if let group = matchingGroups.first {
-            modelContext.delete(group)
-            try modelContext.save()
-        } else {
-            throw AppError.persistenceError("AppGroup with ID \(id) not found")
-        }
-    }
+    // Reserved for future use with additional models
 }
 
 // MARK: - Data Persistence Service Implementation
@@ -100,7 +61,6 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         print("🚀 DATA PERSISTENCE: Initializing DataPersistenceService")
         
         let schema = Schema([
-            PersistentAppGroup.self,
             PersistentIntentionSession.self,
             PersistentScheduleSettings.self
         ])
@@ -249,69 +209,6 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
                 self.userDefaults.removeObject(forKey: prefixedKey)
                 continuation.resume()
             }
-        }
-    }
-    
-    // MARK: - App Group Methods
-    func saveAppGroup(_ group: AppGroup) async throws {
-        do {
-            try await dataActor.saveAppGroup(group)
-        } catch {
-            print("❌ DATA PERSISTENCE: Failed to save app group: \(error)")
-            throw AppError.persistenceError("Failed to save AppGroup \(group.name): \(error.localizedDescription)")
-        }
-    }
-    
-    func loadAppGroups() async throws -> [AppGroup] {
-        do {
-            return try await dataActor.loadAppGroups()
-        } catch {
-            print("❌ DATA PERSISTENCE: Failed to load app groups: \(error)")
-            throw AppError.persistenceError("Failed to load AppGroups: \(error.localizedDescription)")
-        }
-    }
-    
-    func deleteAppGroup(_ id: UUID) async throws {
-        do {
-            try await dataActor.deleteAppGroup(id)
-        } catch {
-            print("❌ DATA PERSISTENCE: Failed to delete app group: \(error)")
-            throw AppError.persistenceError("Failed to delete AppGroup: \(error.localizedDescription)")
-        }
-    }
-
-    func removeOrphanedAppGroupReferences(_ deletedGroupId: UUID) async throws {
-        do {
-            // Load existing quick actions
-            let quickActions = try await load([QuickAction].self, forKey: "quickActions") ?? []
-
-            // Filter out the deleted group ID from all quick actions
-            var updatedQuickActions: [QuickAction] = []
-            var orphanedReferencesFound = false
-
-            for var quickAction in quickActions {
-                let originalCount = quickAction.appGroupIds.count
-                quickAction.appGroupIds.remove(deletedGroupId)
-
-                if quickAction.appGroupIds.count != originalCount {
-                    orphanedReferencesFound = true
-                    print("🧹 CLEANUP: Removed orphaned group reference from quick action '\(quickAction.name)'")
-                }
-
-                updatedQuickActions.append(quickAction)
-            }
-
-            // Save updated quick actions if any changes were made
-            if orphanedReferencesFound {
-                try await save(updatedQuickActions, forKey: "quickActions")
-                print("✅ CLEANUP: Successfully cleaned up orphaned app group references")
-            } else {
-                print("ℹ️ CLEANUP: No orphaned app group references found in quick actions")
-            }
-
-        } catch {
-            print("❌ CLEANUP: Failed to remove orphaned app group references: \(error)")
-            throw AppError.persistenceError("Failed to clean up orphaned references: \(error.localizedDescription)")
         }
     }
     

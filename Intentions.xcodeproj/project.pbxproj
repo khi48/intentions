@@ -8,8 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		206592142DFF50FD00B93819 /* ScreenTimeStatusInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 206592132DFF50FD00B93819 /* ScreenTimeStatusInfoTests.swift */; };
-		2071C4942DE43AC600DF737F /* IntentionsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4932DE43AC600DF737F /* IntentionsApp.swift */; };
-		2071C4962DE43AC600DF737F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4952DE43AC600DF737F /* ContentView.swift */; };
 		2071C4982DE43AC800DF737F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2071C4972DE43AC800DF737F /* Assets.xcassets */; };
 		2071C49B2DE43AC800DF737F /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2071C49A2DE43AC800DF737F /* Preview Assets.xcassets */; };
 		2071C4A52DE43AC800DF737F /* IntentionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4A42DE43AC800DF737F /* IntentionsTests.swift */; };
@@ -26,7 +24,6 @@
 		207E14842E9B6AC000730900 /* NotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207E14832E9B6AC000730900 /* NotificationSettings.swift */; };
 		207E148B2E9F5D8500730900 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E148A2E9F5D8500730900 /* DeviceActivity.framework */; };
 		207E14932E9F5D8600730900 /* IntentionsDeviceActivityMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 207E14892E9F5D8500730900 /* IntentionsDeviceActivityMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		2085A8E12DF559940011EB9A /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8E02DF559910011EB9A /* AppGroup.swift */; };
 		2085A8E32DF55A060011EB9A /* IntentionsSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8E22DF55A060011EB9A /* IntentionsSession.swift */; };
 		2085A8E52DF55A2A0011EB9A /* ScheduleSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8E42DF55A250011EB9A /* ScheduleSettings.swift */; };
 		2085A8E72DF55A470011EB9A /* DiscoveredApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8E62DF55A410011EB9A /* DiscoveredApp.swift */; };
@@ -58,30 +55,23 @@
 		20EB265D2E1EF9A800FC4BE4 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB265C2E1EF9A800FC4BE4 /* Constants.swift */; };
 		20EB265F2E21A34600FC4BE4 /* ContentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB265E2E21A34600FC4BE4 /* ContentViewModel.swift */; };
 		20EB26632E21A3E900FC4BE4 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26612E21A3E900FC4BE4 /* HomeView.swift */; };
-		20EB26642E21A3E900FC4BE4 /* IntentionPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26622E21A3E900FC4BE4 /* IntentionPromptView.swift */; };
-		20EB26652E21A3E900FC4BE4 /* AppGroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26602E21A3E900FC4BE4 /* AppGroupsView.swift */; };
 		20EB26672E21A3F300FC4BE4 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26662E21A3F300FC4BE4 /* SettingsView.swift */; };
 		20EB266A2E22F25A00FC4BE4 /* ContentViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26682E22F25A00FC4BE4 /* ContentViewModelTests.swift */; };
 		20EB26872E258CDB00FC4BE4 /* IntentionPromptViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26852E258CDB00FC4BE4 /* IntentionPromptViewModelTests.swift */; };
 		20EB26882E258CDB00FC4BE4 /* SettingsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26862E258CDB00FC4BE4 /* SettingsViewModelTests.swift */; };
 		20EB268B2E258CE600FC4BE4 /* SettingsIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26892E258CE600FC4BE4 /* SettingsIntegrationTests.swift */; };
-		20EB268E2E258D5700FC4BE4 /* IntentionPromptViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB268C2E258D5700FC4BE4 /* IntentionPromptViewModel.swift */; };
 		20EB268F2E258D5700FC4BE4 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB268D2E258D5700FC4BE4 /* SettingsViewModel.swift */; };
 		20EB269D2E316F2A00FC4BE4 /* SettingsSupportingViewsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB269B2E316F2A00FC4BE4 /* SettingsSupportingViewsTests.swift */; };
 		20EB26A12E31743F00FC4BE4 /* IntentionPromptSupportingViewsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26A02E31743F00FC4BE4 /* IntentionPromptSupportingViewsTests.swift */; };
 		20EB26A22E31743F00FC4BE4 /* ContentViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB269E2E31743F00FC4BE4 /* ContentViewTests.swift */; };
 		20EB26A32E31743F00FC4BE4 /* HomeViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB269F2E31743F00FC4BE4 /* HomeViewTests.swift */; };
-		20EB26A72E32BF9100FC4BE4 /* AppGroupsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26A42E32BF9100FC4BE4 /* AppGroupsViewModel.swift */; };
 		20EB26A82E32BF9100FC4BE4 /* SessionStatusViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26A62E32BF9100FC4BE4 /* SessionStatusViewModel.swift */; };
-		20EB26A92E32BF9100FC4BE4 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26A52E32BF9100FC4BE4 /* HomeViewModel.swift */; };
 		20EB26AD2E32BF9D00FC4BE4 /* HomeViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26AB2E32BF9D00FC4BE4 /* HomeViewModelTests.swift */; };
 		20EB26AE2E32BF9D00FC4BE4 /* SessionStatusViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26AC2E32BF9D00FC4BE4 /* SessionStatusViewModelTests.swift */; };
 		20EB26AF2E32BF9D00FC4BE4 /* AppGroupsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26AA2E32BF9D00FC4BE4 /* AppGroupsViewModelTests.swift */; };
 		20EB26B22E389F4900FC4BE4 /* IsolatedFamilyActivityPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26B02E389F4900FC4BE4 /* IsolatedFamilyActivityPicker.swift */; };
 		20EB26F42E488A1400FC4BE4 /* CategoryMappingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26F32E488A1400FC4BE4 /* CategoryMappingService.swift */; };
 		20EB27002E4D5FAA00FC4BE4 /* SessionStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26FF2E4D5FAA00FC4BE4 /* SessionStatusView.swift */; };
-		20EB27032E603C5100FC4BE4 /* AppGroupEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27012E603C5100FC4BE4 /* AppGroupEditorSheet.swift */; };
-		20EB27042E603C5100FC4BE4 /* AppGroupListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27022E603C5100FC4BE4 /* AppGroupListView.swift */; };
 		20EB27062E695DA000FC4BE4 /* QuickAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27052E695DA000FC4BE4 /* QuickAction.swift */; };
 		20EB27092E695DB000FC4BE4 /* QuickActionEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27072E695DB000FC4BE4 /* QuickActionEditorSheet.swift */; };
 		20EB270A2E695DB000FC4BE4 /* QuickActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27082E695DB000FC4BE4 /* QuickActionsView.swift */; };
@@ -162,8 +152,6 @@
 /* Begin PBXFileReference section */
 		206592132DFF50FD00B93819 /* ScreenTimeStatusInfoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeStatusInfoTests.swift; sourceTree = "<group>"; };
 		2071C4902DE43AC600DF737F /* Intentions.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Intentions.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		2071C4932DE43AC600DF737F /* IntentionsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsApp.swift; sourceTree = "<group>"; };
-		2071C4952DE43AC600DF737F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		2071C4972DE43AC800DF737F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2071C49A2DE43AC800DF737F /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		2071C4A02DE43AC800DF737F /* IntentionsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = IntentionsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -181,7 +169,6 @@
 		207E14832E9B6AC000730900 /* NotificationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettings.swift; sourceTree = "<group>"; };
 		207E14892E9F5D8500730900 /* IntentionsDeviceActivityMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = IntentionsDeviceActivityMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		207E148A2E9F5D8500730900 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
-		2085A8E02DF559910011EB9A /* AppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroup.swift; sourceTree = "<group>"; };
 		2085A8E22DF55A060011EB9A /* IntentionsSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsSession.swift; sourceTree = "<group>"; };
 		2085A8E42DF55A250011EB9A /* ScheduleSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleSettings.swift; sourceTree = "<group>"; };
 		2085A8E62DF55A410011EB9A /* DiscoveredApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveredApp.swift; sourceTree = "<group>"; };
@@ -213,22 +200,17 @@
 		20EB265A2E146E4400FC4BE4 /* MockDataPersistenceServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataPersistenceServiceTests.swift; sourceTree = "<group>"; };
 		20EB265C2E1EF9A800FC4BE4 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		20EB265E2E21A34600FC4BE4 /* ContentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewModel.swift; sourceTree = "<group>"; };
-		20EB26602E21A3E900FC4BE4 /* AppGroupsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupsView.swift; sourceTree = "<group>"; };
 		20EB26612E21A3E900FC4BE4 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		20EB26622E21A3E900FC4BE4 /* IntentionPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionPromptView.swift; sourceTree = "<group>"; };
 		20EB26662E21A3F300FC4BE4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		20EB26682E22F25A00FC4BE4 /* ContentViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewModelTests.swift; sourceTree = "<group>"; };
 		20EB26852E258CDB00FC4BE4 /* IntentionPromptViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionPromptViewModelTests.swift; sourceTree = "<group>"; };
 		20EB26862E258CDB00FC4BE4 /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
 		20EB26892E258CE600FC4BE4 /* SettingsIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsIntegrationTests.swift; sourceTree = "<group>"; };
-		20EB268C2E258D5700FC4BE4 /* IntentionPromptViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionPromptViewModel.swift; sourceTree = "<group>"; };
 		20EB268D2E258D5700FC4BE4 /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
 		20EB269B2E316F2A00FC4BE4 /* SettingsSupportingViewsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSupportingViewsTests.swift; sourceTree = "<group>"; };
 		20EB269E2E31743F00FC4BE4 /* ContentViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewTests.swift; sourceTree = "<group>"; };
 		20EB269F2E31743F00FC4BE4 /* HomeViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewTests.swift; sourceTree = "<group>"; };
 		20EB26A02E31743F00FC4BE4 /* IntentionPromptSupportingViewsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionPromptSupportingViewsTests.swift; sourceTree = "<group>"; };
-		20EB26A42E32BF9100FC4BE4 /* AppGroupsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupsViewModel.swift; sourceTree = "<group>"; };
-		20EB26A52E32BF9100FC4BE4 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
 		20EB26A62E32BF9100FC4BE4 /* SessionStatusViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStatusViewModel.swift; sourceTree = "<group>"; };
 		20EB26AA2E32BF9D00FC4BE4 /* AppGroupsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupsViewModelTests.swift; sourceTree = "<group>"; };
 		20EB26AB2E32BF9D00FC4BE4 /* HomeViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModelTests.swift; sourceTree = "<group>"; };
@@ -236,8 +218,6 @@
 		20EB26B02E389F4900FC4BE4 /* IsolatedFamilyActivityPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsolatedFamilyActivityPicker.swift; sourceTree = "<group>"; };
 		20EB26F32E488A1400FC4BE4 /* CategoryMappingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingService.swift; sourceTree = "<group>"; };
 		20EB26FF2E4D5FAA00FC4BE4 /* SessionStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStatusView.swift; sourceTree = "<group>"; };
-		20EB27012E603C5100FC4BE4 /* AppGroupEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupEditorSheet.swift; sourceTree = "<group>"; };
-		20EB27022E603C5100FC4BE4 /* AppGroupListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupListView.swift; sourceTree = "<group>"; };
 		20EB27052E695DA000FC4BE4 /* QuickAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAction.swift; sourceTree = "<group>"; };
 		20EB27072E695DB000FC4BE4 /* QuickActionEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionEditorSheet.swift; sourceTree = "<group>"; };
 		20EB27082E695DB000FC4BE4 /* QuickActionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsView.swift; sourceTree = "<group>"; };
@@ -461,7 +441,6 @@
 				2085A8E82DF55AA90011EB9A /* AppError.swift */,
 				2085A8E62DF55A410011EB9A /* DiscoveredApp.swift */,
 				2085A8E42DF55A250011EB9A /* ScheduleSettings.swift */,
-				2085A8E02DF559910011EB9A /* AppGroup.swift */,
 				2085A8E22DF55A060011EB9A /* IntentionsSession.swift */,
 			);
 			path = Models;
@@ -484,8 +463,6 @@
 		2085A8D42DF54F480011EB9A /* App */ = {
 			isa = PBXGroup;
 			children = (
-				2071C4932DE43AC600DF737F /* IntentionsApp.swift */,
-				2071C4952DE43AC600DF737F /* ContentView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -504,10 +481,7 @@
 				20EB272F2E6D06B500FC4BE4 /* SetupCoordinator.swift */,
 				20EB270B2E695DC400FC4BE4 /* NavigationStateManager.swift */,
 				20EB270C2E695DC400FC4BE4 /* QuickActionsViewModel.swift */,
-				20EB26A42E32BF9100FC4BE4 /* AppGroupsViewModel.swift */,
-				20EB26A52E32BF9100FC4BE4 /* HomeViewModel.swift */,
 				20EB26A62E32BF9100FC4BE4 /* SessionStatusViewModel.swift */,
-				20EB268C2E258D5700FC4BE4 /* IntentionPromptViewModel.swift */,
 				20EB268D2E258D5700FC4BE4 /* SettingsViewModel.swift */,
 				20EB265E2E21A34600FC4BE4 /* ContentViewModel.swift */,
 			);
@@ -519,11 +493,7 @@
 			children = (
 				20EB27072E695DB000FC4BE4 /* QuickActionEditorSheet.swift */,
 				20EB27082E695DB000FC4BE4 /* QuickActionsView.swift */,
-				20EB27012E603C5100FC4BE4 /* AppGroupEditorSheet.swift */,
-				20EB27022E603C5100FC4BE4 /* AppGroupListView.swift */,
-				20EB26602E21A3E900FC4BE4 /* AppGroupsView.swift */,
 				20EB26612E21A3E900FC4BE4 /* HomeView.swift */,
-				20EB26622E21A3E900FC4BE4 /* IntentionPromptView.swift */,
 			);
 			path = MainViews;
 			sourceTree = "<group>";
@@ -965,7 +935,6 @@
 				20EB27092E695DB000FC4BE4 /* QuickActionEditorSheet.swift in Sources */,
 				20EB270A2E695DB000FC4BE4 /* QuickActionsView.swift in Sources */,
 				20EB272E2E6D066100FC4BE4 /* SetupState.swift in Sources */,
-				2071C4962DE43AC600DF737F /* ContentView.swift in Sources */,
 				2085A8E72DF55A470011EB9A /* DiscoveredApp.swift in Sources */,
 				20EB27352E6D06DC00FC4BE4 /* ScreenTimeAuthorizationStepView.swift in Sources */,
 				20EB27372E6D06DC00FC4BE4 /* SetupFlowView.swift in Sources */,
@@ -974,7 +943,6 @@
 				20D0E4FE2E7BF73900C8BB70 /* CategoryMappingSetupView.swift in Sources */,
 				2085A9022DF6D2EB0011EB9A /* MockScreenTimeService.swift in Sources */,
 				2085A8E32DF55A060011EB9A /* IntentionsSession.swift in Sources */,
-				2071C4942DE43AC600DF737F /* IntentionsApp.swift in Sources */,
 				20EB26512E13228E00FC4BE4 /* PersistentModels.swift in Sources */,
 				20EB26552E1322A400FC4BE4 /* MockDataPersistenceService.swift in Sources */,
 				2085A8F72DF5857E0011EB9A /* ScreenTimeManaging.swift in Sources */,
@@ -984,22 +952,14 @@
 				207E14802E9B6A4E00730900 /* NotificationService.swift in Sources */,
 				20EB27302E6D06B500FC4BE4 /* SetupCoordinator.swift in Sources */,
 				20EB265F2E21A34600FC4BE4 /* ContentViewModel.swift in Sources */,
-				20EB268E2E258D5700FC4BE4 /* IntentionPromptViewModel.swift in Sources */,
 				20EB273F2E6EE46500FC4BE4 /* SetupLandingView.swift in Sources */,
 				20EB268F2E258D5700FC4BE4 /* SettingsViewModel.swift in Sources */,
 				2085A8F92DF585A90011EB9A /* ScreenTimeService.swift in Sources */,
 				20EB27002E4D5FAA00FC4BE4 /* SessionStatusView.swift in Sources */,
-				2085A8E12DF559940011EB9A /* AppGroup.swift in Sources */,
 				2085A8E92DF55AA90011EB9A /* AppError.swift in Sources */,
-				20EB27032E603C5100FC4BE4 /* AppGroupEditorSheet.swift in Sources */,
 				20D0E5002E7BF74700C8BB70 /* DisableBlockingConfirmationView.swift in Sources */,
-				20EB27042E603C5100FC4BE4 /* AppGroupListView.swift in Sources */,
-				20EB26A72E32BF9100FC4BE4 /* AppGroupsViewModel.swift in Sources */,
 				20EB26A82E32BF9100FC4BE4 /* SessionStatusViewModel.swift in Sources */,
-				20EB26A92E32BF9100FC4BE4 /* HomeViewModel.swift in Sources */,
 				20EB26632E21A3E900FC4BE4 /* HomeView.swift in Sources */,
-				20EB26642E21A3E900FC4BE4 /* IntentionPromptView.swift in Sources */,
-				20EB26652E21A3E900FC4BE4 /* AppGroupsView.swift in Sources */,
 				20EB26672E21A3F300FC4BE4 /* SettingsView.swift in Sources */,
 				207E14842E9B6AC000730900 /* NotificationSettings.swift in Sources */,
 			);

@@ -7,22 +7,18 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
     
     // In-memory storage for testing
     private var keyValueStore: [String: Data] = [:]
-    private var appGroups: [UUID: AppGroup] = [:]
     private var intentionSessions: [UUID: IntentionSession] = [:]
     private var scheduleSettings: ScheduleSettings?
-    
+
     // Error simulation flags
     var shouldThrowError = false
     var shouldThrowSaveError = false
     var shouldThrowLoadError = false
     var shouldThrowDeleteError = false
     var errorToThrow: Error?
-    
+
     // Method call tracking for testing
     var methodCalls: [String] = []
-    
-    // Mock data for testing
-    var mockAppGroups: [AppGroup] = []
     
     // Convenience aliases for testing
     var shouldFailSave: Bool {
@@ -138,74 +134,6 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
         }
     }
     
-    // MARK: - App Group Methods
-    
-    func saveAppGroup(_ group: AppGroup) async throws {
-        trackMethodCall("saveAppGroup")
-        try throwErrorIfNeeded()
-        
-        if shouldThrowSaveError {
-            throw AppError.persistenceError("Mock save error for AppGroup: \(group.name)")
-        }
-        
-        return try await withCheckedContinuation { continuation in
-            queue.async(flags: .barrier) {
-                self.appGroups[group.id] = group
-                continuation.resume()
-            }
-        }
-    }
-    
-    func loadAppGroups() async throws -> [AppGroup] {
-        trackMethodCall("loadAppGroups")
-        try throwErrorIfNeeded()
-        
-        if shouldThrowLoadError {
-            throw AppError.persistenceError("Mock load error for AppGroups")
-        }
-        
-        return try await withCheckedContinuation { continuation in
-            queue.async {
-                // Return mock data if available, otherwise return stored data
-                if !self.mockAppGroups.isEmpty {
-                    continuation.resume(returning: self.mockAppGroups)
-                } else {
-                    let groups = Array(self.appGroups.values).sorted { $0.name < $1.name }
-                    continuation.resume(returning: groups)
-                }
-            }
-        }
-    }
-    
-    func deleteAppGroup(_ id: UUID) async throws {
-        trackMethodCall("deleteAppGroup")
-        try throwErrorIfNeeded()
-        
-        if shouldThrowDeleteError {
-            throw AppError.persistenceError("Mock delete error for AppGroup: \(id)")
-        }
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            queue.async(flags: .barrier) {
-                guard self.appGroups[id] != nil else {
-                    continuation.resume(throwing: AppError.dataNotFound("AppGroup with ID \(id)"))
-                    return
-                }
-                
-                self.appGroups.removeValue(forKey: id)
-                continuation.resume()
-            }
-        }
-    }
-
-    func removeOrphanedAppGroupReferences(_ deletedGroupId: UUID) async throws {
-        trackMethodCall("removeOrphanedAppGroupReferences")
-        try throwErrorIfNeeded()
-
-        // Mock implementation - for testing purposes only
-        print("MOCK: Cleaned up orphaned app group references for \(deletedGroupId)")
-    }
-    
     // MARK: - Schedule Settings Methods
     
     func saveScheduleSettings(_ settings: ScheduleSettings) async throws {
@@ -307,10 +235,9 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
     // MARK: - Test Helper Methods
     
     func reset() async {
-        await withCheckedContinuation { continuation in
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             queue.async(flags: .barrier) {
                 self.keyValueStore.removeAll()
-                self.appGroups.removeAll()
                 self.intentionSessions.removeAll()
                 self.scheduleSettings = nil
                 self.shouldThrowError = false
@@ -319,16 +246,7 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
                 self.shouldThrowDeleteError = false
                 self.errorToThrow = nil
                 self.methodCalls.removeAll()
-                self.mockAppGroups.removeAll()
                 continuation.resume()
-            }
-        }
-    }
-    
-    func getStoredAppGroupCount() async -> Int {
-        await withCheckedContinuation { continuation in
-            queue.async {
-                continuation.resume(returning: self.appGroups.count)
             }
         }
     }
@@ -348,15 +266,7 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
             }
         }
     }
-    
-    func getAppGroup(id: UUID) async -> AppGroup? {
-        await withCheckedContinuation { continuation in
-            queue.async {
-                continuation.resume(returning: self.appGroups[id])
-            }
-        }
-    }
-    
+
     func getSession(id: UUID) async -> IntentionSession? {
         await withCheckedContinuation { continuation in
             queue.async {

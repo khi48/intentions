@@ -22,10 +22,7 @@ final class QuickActionsViewModel: ObservableObject, Sendable {
     
     /// All quick actions
     @Published private(set) var quickActions: [QuickAction] = []
-    
-    /// Available app groups for quick action creation
-    @Published private(set) var availableAppGroups: [AppGroup] = []
-    
+
     /// Whether showing delete confirmation alert
     @Published var showingDeleteAlert: Bool = false
     
@@ -55,10 +52,7 @@ final class QuickActionsViewModel: ObservableObject, Sendable {
                 // Load quick actions
                 let actions = try await dataService.load([QuickAction].self, forKey: "quickActions") ?? []
                 quickActions = actions.sorted { $0.sortOrder < $1.sortOrder }
-                
-                // Load available app groups
-                availableAppGroups = try await dataService.loadAppGroups()
-                
+
             } catch {
                 await handleError(error)
             }
@@ -257,14 +251,10 @@ final class QuickActionsViewModel: ObservableObject, Sendable {
 // MARK: - Extensions
 
 extension QuickActionsViewModel {
-    
-    /// Get quick actions filtered by availability (have valid app groups)
+
+    /// Get quick actions filtered by availability (enabled only)
     func getAvailableQuickActions() -> [QuickAction] {
-        return quickActions.filter { quickAction in
-            quickAction.isEnabled && (
-                quickAction.appGroupIds.isEmpty || // No groups required
-                !quickAction.appGroupIds.isDisjoint(with: Set(availableAppGroups.map(\.id))) // Has valid groups
-            )
-        }.sorted { $0.sortOrder < $1.sortOrder }
+        return quickActions.filter { $0.isEnabled }
+            .sorted { $0.sortOrder < $1.sortOrder }
     }
 }

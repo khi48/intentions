@@ -13,7 +13,6 @@ import SwiftUI
 struct QuickActionEditorSheet: View {
     let dataService: DataPersisting
     let editingQuickAction: QuickAction?
-    let availableAppGroups: [AppGroup]
     let onSave: (QuickAction) async -> Void
     let onCancel: () -> Void
     let onDelete: ((QuickAction) async -> Void)?
@@ -789,7 +788,6 @@ private struct StableFamilyControlsName: View {
     QuickActionEditorSheet(
         dataService: MockDataPersistenceService(),
         editingQuickAction: nil,
-        availableAppGroups: [],
         onSave: { _ in },
         onCancel: {},
         onDelete: nil
