@@ -1019,9 +1019,12 @@ final class ContentViewModel: Sendable {
         sharedDefaults.synchronize()
 
         print("📱 WIDGET UPDATE: Cleared session data from widget")
+        print("📱 WIDGET UPDATE: Blocking status NOT changed here - will be updated by blockAllApps/allowAllAccess")
 
-        // Reload widget timelines
-        WidgetCenter.shared.reloadAllTimelines()
+        // IMPORTANT: DO NOT reload widget here - let applyDefaultBlocking() handle it
+        // This prevents race condition where widget reads stale "isBlocking: false" from session
+        // before blockAllApps() has a chance to set "isBlocking: true"
+        print("📱 WIDGET UPDATE: Skipping widget reload - will be reloaded by blockAllApps/allowAllAccess")
     }
 }
 
