@@ -1235,6 +1235,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Intentions/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Intent;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -1245,7 +1246,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
@@ -1265,6 +1266,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Intentions/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Intent;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -1275,7 +1277,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
@@ -1293,7 +1295,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACH_O_TYPE = mh_bundle;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.IntentionsTests;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.IntentTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
@@ -1312,7 +1314,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACH_O_TYPE = mh_bundle;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.IntentionsTests;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.IntentTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
@@ -1328,7 +1330,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.IntentionsUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.IntentUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
@@ -1344,7 +1346,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.IntentionsUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.IntentUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
@@ -1361,7 +1363,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsShieldConfiguration/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = IntentionsShieldConfiguration;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentShieldConfiguration;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1370,7 +1372,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsShieldConfiguration;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.IntentShieldConfiguration;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1387,7 +1389,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsShieldConfiguration/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = IntentionsShieldConfiguration;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentShieldConfiguration;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1396,7 +1398,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsShieldConfiguration;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.IntentShieldConfiguration;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1413,7 +1415,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsShieldAction/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = IntentionsShieldAction;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentShieldAction;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1422,7 +1424,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsShieldAction;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.IntentShieldAction;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1439,7 +1441,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsShieldAction/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = IntentionsShieldAction;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentShieldAction;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1448,7 +1450,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsShieldAction;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.IntentShieldAction;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1465,7 +1467,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsDeviceActivityMonitor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = IntentionsDeviceActivityMonitor;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentDeviceActivityMonitor;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1474,7 +1476,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsDeviceActivityMonitor;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.IntentDeviceActivityMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1491,7 +1493,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsDeviceActivityMonitor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = IntentionsDeviceActivityMonitor;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentDeviceActivityMonitor;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1500,7 +1502,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsDeviceActivityMonitor;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.IntentDeviceActivityMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1519,7 +1521,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = IntentionsWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1528,7 +1530,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsWidget;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.IntentWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1547,7 +1549,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = IntentionsWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = IntentWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1556,7 +1558,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.Intentions.IntentionsWidget;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.IntentWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;

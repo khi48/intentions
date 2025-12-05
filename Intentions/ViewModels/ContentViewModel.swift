@@ -208,7 +208,7 @@ final class ContentViewModel: Sendable {
         logger.info("===== LOAD SESSION START =====")
 
         // DIAGNOSTIC: Check the flag status IMMEDIATELY
-        if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") {
+        if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") {
             let flagExists = sharedDefaults.bool(forKey: "intentions.session.expired")
             let flagTime = sharedDefaults.object(forKey: "intentions.session.expirationTime") as? Date
             let currentSessionId = sharedDefaults.string(forKey: "intentions.currentSessionId")
@@ -465,6 +465,10 @@ final class ContentViewModel: Sendable {
                 // Update widget data with session information
                 updateWidgetSessionData(session)
 
+                // Schedule notifications for the session
+                print("🔔 START SESSION: Scheduling session notifications")
+                await NotificationService.shared.scheduleSessionNotifications(for: session)
+
             } catch {
                 await handleError(error)
             }
@@ -487,11 +491,15 @@ final class ContentViewModel: Sendable {
 
                 // CRITICAL: Clear session ID from UserDefaults to prevent stale session IDs
                 // This ensures the DeviceActivityMonitor extension knows the session was manually stopped
-                if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") {
+                if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") {
                     sharedDefaults.removeObject(forKey: "intentions.currentSessionId")
                     sharedDefaults.synchronize()
                     print("✅ END SESSION: Cleared session ID from UserDefaults")
                 }
+
+                // Cancel any scheduled notifications
+                print("🔔 END SESSION: Cancelling session notifications")
+                await NotificationService.shared.cancelSessionNotifications()
 
                 // Clear widget session data
                 clearWidgetSessionData()
@@ -528,11 +536,15 @@ final class ContentViewModel: Sendable {
 
             // CRITICAL: Clear session ID from UserDefaults to prevent stale session IDs
             // This ensures subsequent app launches know the session has expired
-            if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") {
+            if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") {
                 sharedDefaults.removeObject(forKey: "intentions.currentSessionId")
                 sharedDefaults.synchronize()
                 print("✅ SESSION EXPIRED: Cleared session ID from UserDefaults")
             }
+
+            // Cancel any scheduled notifications
+            print("🔔 SESSION EXPIRED: Cancelling session notifications")
+            await NotificationService.shared.cancelSessionNotifications()
 
             // Clear widget session data
             clearWidgetSessionData()
@@ -942,7 +954,7 @@ final class ContentViewModel: Sendable {
     
     /// Test widget communication by manually writing data
     private func testWidgetCommunication() async {
-        let appGroupId = "group.oh.Intentions"
+        let appGroupId = "group.oh.Intent"
 
         // Force CFPreferences synchronization before creating UserDefaults
         CFPreferencesSynchronize(appGroupId as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
@@ -973,7 +985,7 @@ final class ContentViewModel: Sendable {
 
     /// Update widget with session information
     private func updateWidgetSessionData(_ session: IntentionSession) {
-        let appGroupId = "group.oh.Intentions"
+        let appGroupId = "group.oh.Intent"
 
         guard let sharedDefaults = UserDefaults(suiteName: appGroupId) else {
             print("⚠️ ContentViewModel: Failed to access App Group for widget update")
@@ -1004,7 +1016,7 @@ final class ContentViewModel: Sendable {
 
     /// Clear widget session data when session ends
     private func clearWidgetSessionData() {
-        let appGroupId = "group.oh.Intentions"
+        let appGroupId = "group.oh.Intent"
 
         guard let sharedDefaults = UserDefaults(suiteName: appGroupId) else {
             print("⚠️ ContentViewModel: Failed to access App Group for widget update")
@@ -1014,12 +1026,16 @@ final class ContentViewModel: Sendable {
         // Clear session-specific data
         sharedDefaults.removeObject(forKey: "intentions.widget.sessionTitle")
         sharedDefaults.removeObject(forKey: "intentions.widget.sessionEndTime")
-        // Update blocking status - will be set based on schedule by applyDefaultBlocking
+
+        // CRITICAL: Set blocking status based on current schedule IMMEDIATELY
+        // Don't wait for blockAllApps() - the widget might read the old "false" value
+        let shouldBeBlocking = scheduleSettings.isEnabled && scheduleSettings.isCurrentlyActive
+        sharedDefaults.set(shouldBeBlocking, forKey: "intentions.widget.blockingStatus")
         sharedDefaults.set(Date(), forKey: "intentions.widget.lastUpdate")
         sharedDefaults.synchronize()
 
         print("📱 WIDGET UPDATE: Cleared session data from widget")
-        print("📱 WIDGET UPDATE: Blocking status NOT changed here - will be updated by blockAllApps/allowAllAccess")
+        print("📱 WIDGET UPDATE: Set blocking status to \(shouldBeBlocking) based on schedule")
 
         // IMPORTANT: DO NOT reload widget here - let applyDefaultBlocking() handle it
         // This prevents race condition where widget reads stale "isBlocking: false" from session

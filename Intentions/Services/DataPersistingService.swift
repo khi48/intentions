@@ -76,7 +76,7 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
     /// Get the App Group container URL for shared data storage
     /// Creates the directory if it doesn't exist
     private static func getAppGroupContainerURL() -> URL {
-        let appGroupID = "group.oh.Intentions"
+        let appGroupID = "group.oh.Intent"
 
         // Try to get App Group container URL
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
@@ -126,7 +126,7 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         let modelConfiguration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
-            groupContainer: .identifier("group.oh.Intentions")
+            groupContainer: .identifier("group.oh.Intent")
             // Temporarily disable CloudKit to isolate the issue
             // cloudKitDatabase: .private("IntentionsAppDatabase")
         )

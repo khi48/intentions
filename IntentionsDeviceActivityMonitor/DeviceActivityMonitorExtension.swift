@@ -18,7 +18,7 @@ import OSLog
 class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     let store = ManagedSettingsStore()
-    let logger = Logger(subsystem: "oh.Intentions", category: "DeviceActivityMonitor")
+    let logger = Logger(subsystem: "oh.Intent", category: "DeviceActivityMonitor")
 
     /// Called when a scheduled interval starts
     override func intervalDidStart(for activity: DeviceActivityName) {
@@ -29,7 +29,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         logger.notice("🟢 MONITOR EXTENSION: Activity name: \(activity.rawValue, privacy: .public)")
 
         // Log to shared UserDefaults for debugging
-        if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") {
+        if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") {
             sharedDefaults.set(timestamp, forKey: "intentions.lastIntervalStart")
             sharedDefaults.set(activity.rawValue, forKey: "intentions.lastIntervalStartActivity")
             sharedDefaults.synchronize()
@@ -47,7 +47,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         logger.error("🔴 MONITOR EXTENSION: Activity name: \(activity.rawValue, privacy: .public)")
 
         // STEP 1: VALIDATE BEFORE ACTING - Check if this is a legitimate expiration
-        guard let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") else {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") else {
             logger.error("❌ MONITOR EXTENSION: Cannot access UserDefaults - aborting")
             return
         }
@@ -135,7 +135,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         logger.error("⚡ MONITOR EXTENSION: Activity name: \(activity.rawValue, privacy: .public)")
 
         // STEP 1: VALIDATE BEFORE ACTING
-        guard let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") else {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") else {
             logger.error("❌ MONITOR EXTENSION: Cannot access UserDefaults - aborting")
             return
         }
@@ -239,7 +239,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
         // Update shared UserDefaults to notify the main app that the session ended
         // This allows the app to update its UI when reopened
-        if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") {
+        if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") {
             sharedDefaults.set(true, forKey: "intentions.session.expired")
             sharedDefaults.set(timestamp, forKey: "intentions.session.expirationTime")
             sharedDefaults.set("DeviceActivityMonitor", forKey: "intentions.session.expiredBy")

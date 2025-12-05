@@ -6,7 +6,7 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.oh.Intentions</string>
+		<string>group.oh.Intent</string>
 	</array>
 </dict>
 </plist>

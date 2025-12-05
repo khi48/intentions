@@ -15,7 +15,7 @@ actor ScreenTimeService: ScreenTimeManaging {
     // MARK: - Properties
 
     /// Logger for Console.app debugging
-    private nonisolated let logger = Logger(subsystem: "oh.Intentions", category: "ScreenTimeService")
+    private nonisolated let logger = Logger(subsystem: "oh.Intent", category: "ScreenTimeService")
 
     /// The managed settings store for applying restrictions
     private let managedSettingsStore = ManagedSettingsStore()
@@ -145,6 +145,11 @@ actor ScreenTimeService: ScreenTimeManaging {
 
         logger.notice("🚫 BLOCK ALL: Starting comprehensive default blocking")
 
+        // CRITICAL: Update widget FIRST, before clearing shields
+        // This prevents the widget from reading "no blocking" state during the clear/reblock window
+        logger.info("🚫 BLOCK ALL: Step 0 - Updating widget to 'Blocked' BEFORE clearing shields")
+        updateWidgetBlockingStatus(isBlocking: true)
+
         // Clear allowed apps tracking - nothing is allowed initially
         currentlyAllowedApps.removeAll()
 
@@ -191,9 +196,7 @@ actor ScreenTimeService: ScreenTimeManaging {
         logger.notice("✅ BLOCK ALL: Comprehensive default blocking applied successfully")
         logger.info("   - Category blocking: .all()")
         logger.info("   - Web content blocking: .all()")
-
-        // Update widget with blocking status
-        updateWidgetBlockingStatus(isBlocking: true)
+        logger.info("   - Widget was updated at the START to prevent race condition")
     }
     
     /// Get all discoverable applications for comprehensive blocking
@@ -501,7 +504,7 @@ actor ScreenTimeService: ScreenTimeManaging {
 
         // CRITICAL: Clear the current session ID from UserDefaults
         // This prevents the extension from executing if it fires after cancellation
-        if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") {
+        if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") {
             sharedDefaults.removeObject(forKey: "intentions.currentSessionId")
             sharedDefaults.synchronize()
             print("✅ CANCEL TIMERS: Cleared current session ID from UserDefaults")
@@ -691,7 +694,7 @@ actor ScreenTimeService: ScreenTimeManaging {
             print("✅ DEVICE ACTIVITY: Activity name: \(activityName)")
 
             // Write to shared UserDefaults so we can verify in extension
-            if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intentions") {
+            if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") {
                 sharedDefaults.set(activityName.rawValue, forKey: "intentions.lastScheduledActivity")
                 sharedDefaults.set(endDate, forKey: "intentions.lastScheduledEndTime")
                 sharedDefaults.set(Date(), forKey: "intentions.lastScheduleTime")
@@ -722,7 +725,7 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// Update widget with current blocking status
     private func updateWidgetBlockingStatus(isBlocking: Bool) {
         // Use shared UserDefaults for communication with widget extension
-        let appGroupId = "group.oh.Intentions"
+        let appGroupId = "group.oh.Intent"
 
         // Debug: Check current user context in main app
         let currentUser = getuid()
@@ -749,6 +752,7 @@ actor ScreenTimeService: ScreenTimeManaging {
         print("🔍 Main App UserDefaults Suite: Access successful")
 
         // Set the data
+        print("📱 WIDGET STATUS UPDATE: Setting isBlocking = \(isBlocking)")
         sharedDefaults.set(isBlocking, forKey: "intentions.widget.blockingStatus")
         sharedDefaults.set(Date(), forKey: "intentions.widget.lastUpdate")
 
@@ -759,9 +763,11 @@ actor ScreenTimeService: ScreenTimeManaging {
         UserDefaults.standard.set(isBlocking, forKey: "intentions.widget.blockingStatus")
         UserDefaults.standard.set(Date(), forKey: "intentions.widget.lastUpdate")
 
+        print("📱 WIDGET STATUS UPDATE: Reloading widget timelines...")
         // Force widget timeline refresh with multiple strategies
         WidgetCenter.shared.reloadAllTimelines()
         WidgetCenter.shared.reloadTimelines(ofKind: "IntentionsWidget")
+        print("📱 WIDGET STATUS UPDATE: Complete - widget should now show \(isBlocking ? "Blocked" : "Open")")
     }
 
     // MARK: - Memory Monitoring

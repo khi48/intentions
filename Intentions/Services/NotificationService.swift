@@ -109,10 +109,14 @@ final class NotificationService: NSObject, @unchecked Sendable {
 
     /// Schedule notifications for an active session
     func scheduleSessionNotifications(for session: IntentionSession) async {
+        print("🔔 NOTIFICATION: scheduleSessionNotifications called for session \(session.id.uuidString.prefix(8))")
+        print("🔔 NOTIFICATION: Settings - enabled: \(settings.isEnabled), authorized: \(isAuthorized)")
+        print("🔔 NOTIFICATION: Authorization status: \(authorizationStatus.rawValue)")
+
         guard settings.isEnabled && isAuthorized else {
+            print("⚠️ NOTIFICATION: Cannot schedule - notifications not enabled or not authorized")
             return
         }
-
 
         // Cancel any existing session notifications first
         await cancelSessionNotifications()
@@ -120,28 +124,42 @@ final class NotificationService: NSObject, @unchecked Sendable {
         let sessionId = session.id.uuidString
         let remainingTime = session.remainingTime
 
+        print("🔔 NOTIFICATION: Scheduling notifications for session, remaining time: \(remainingTime)s")
+
         // Schedule warning notifications
         if settings.sessionWarningsEnabled {
+            print("🔔 NOTIFICATION: Scheduling warning notifications...")
             await scheduleWarningNotifications(sessionId: sessionId, remainingTime: remainingTime)
         }
 
         // Schedule completion notification
         if settings.sessionCompletionEnabled {
+            print("🔔 NOTIFICATION: Scheduling completion notification...")
             await scheduleCompletionNotification(sessionId: sessionId, remainingTime: remainingTime)
         }
+
+        // Debug: Check what was actually scheduled
+        await debugPendingNotifications()
     }
 
     private func scheduleWarningNotifications(sessionId: String, remainingTime: TimeInterval) async {
+        print("🔔 WARNING: Scheduling warnings for \(settings.sortedWarningIntervals)")
         for warningMinutes in settings.sortedWarningIntervals {
             let warningSeconds = TimeInterval(warningMinutes * 60)
 
             // Only schedule if there's enough time left
-            guard remainingTime > warningSeconds else { continue }
+            guard remainingTime > warningSeconds else {
+                print("⚠️ WARNING: Skipping \(warningMinutes)min warning - not enough time (\(remainingTime)s remaining)")
+                continue
+            }
 
             let triggerTime = remainingTime - warningSeconds
 
             // Ensure trigger time is at least 1 second to avoid crash
-            guard triggerTime > 0 else { continue }
+            guard triggerTime > 0 else {
+                print("⚠️ WARNING: Skipping \(warningMinutes)min warning - trigger time too short")
+                continue
+            }
 
             let isCritical = warningMinutes <= 1
 
@@ -162,7 +180,9 @@ final class NotificationService: NSObject, @unchecked Sendable {
 
             do {
                 try await notificationCenter.add(request)
+                print("✅ WARNING: Scheduled \(warningMinutes)min warning to fire in \(triggerTime)s")
             } catch {
+                print("❌ WARNING: Failed to schedule \(warningMinutes)min warning: \(error)")
             }
         }
     }
@@ -171,7 +191,7 @@ final class NotificationService: NSObject, @unchecked Sendable {
         // Ensure remaining time is at least 1 second to avoid crash
         // UNTimeIntervalNotificationTrigger requires timeInterval >= 1.0
         guard remainingTime >= 1.0 else {
-            print("⚠️ NOTIFICATION: Skipping completion notification - remainingTime too short: \(remainingTime)")
+            print("⚠️ COMPLETION: Skipping completion notification - remainingTime too short: \(remainingTime)s")
             return
         }
 
@@ -188,7 +208,9 @@ final class NotificationService: NSObject, @unchecked Sendable {
 
         do {
             try await notificationCenter.add(request)
+            print("✅ COMPLETION: Scheduled completion notification to fire in \(remainingTime)s (\(Int(remainingTime/60))m)")
         } catch {
+            print("❌ COMPLETION: Failed to schedule completion notification: \(error)")
         }
     }
 
@@ -257,6 +279,14 @@ final class NotificationService: NSObject, @unchecked Sendable {
 
     func debugPendingNotifications() async {
         let pendingRequests = await notificationCenter.pendingNotificationRequests()
+        print("🔔 NOTIFICATION DEBUG: \(pendingRequests.count) pending notifications")
+        for request in pendingRequests {
+            if let trigger = request.trigger as? UNTimeIntervalNotificationTrigger {
+                print("   - \(request.identifier): fires in \(trigger.timeInterval)s (\(Int(trigger.timeInterval/60))m)")
+                print("     Title: \(request.content.title)")
+                print("     Body: \(request.content.body)")
+            }
+        }
     }
 }
 

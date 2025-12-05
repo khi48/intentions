@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Intentions** is an iOS app designed to promote mindful phone usage by blocking all apps by default. When users unlock their phone, they must explicitly state their intention (which apps they need and for how long) to gain access to specific apps. This creates friction that encourages intentional app usage rather than mindless scrolling.
+**Intent** is an iOS app designed to promote mindful phone usage by blocking all apps by default. When users unlock their phone, they must explicitly state their intention (which apps they need and for how long) to gain access to specific apps. This creates friction that encourages intentional app usage rather than mindless scrolling.
 
 ### Core Concept & Workflow
 1. **Default State**: All apps are blocked using Apple's Screen Time API

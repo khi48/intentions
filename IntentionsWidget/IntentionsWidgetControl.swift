@@ -14,7 +14,7 @@ import WidgetKit
 struct IntentionsWidgetControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(
-            kind: "oh.Intentions.IntentionsWidget.Control",
+            kind: "oh.Intent.IntentWidget.Control",
             provider: Provider()
         ) { value in
             ControlWidgetToggle(

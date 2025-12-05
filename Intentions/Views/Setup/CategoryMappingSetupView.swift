@@ -388,10 +388,10 @@ struct CategorySetupCard: View {
                         .font(.system(size: 56))
                         .foregroundColor(AppConstants.Colors.text)
                 } else {
-                    // Apple icons as circular greyscale images
+                    // Apple icons as rounded square greyscale images
                     CategoryIconView(category: category)
                         .frame(width: 56, height: 56)
-                        .clipShape(Circle())
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                         .grayscale(1.0)
                 }
                 
@@ -468,11 +468,8 @@ struct CategoryIconView: View {
     let category: CategoryMappingService.AppCategory
 
     var body: some View {
-        if category == .other {
-            // Custom grey square with darker grey dots for "other" category
-            OtherCategoryIcon()
-        } else if let customImageName = category.customImageName {
-            // Use extracted Apple FamilyActivityPicker icon if available
+        if let customImageName = category.customImageName {
+            // Use extracted Apple FamilyActivityPicker icon if available (includes "other" category now)
             Image(customImageName)
                 .resizable()
                 .aspectRatio(contentMode: .fit)

@@ -13,7 +13,7 @@ import SwiftUI
 private struct WidgetDataManager {
     // Widget Constants
     private enum Constants {
-        static let appGroupId = "group.oh.Intentions"
+        static let appGroupId = "group.oh.Intent"
         static let blockingStatusKey = "intentions.widget.blockingStatus"
         static let lastUpdateKey = "intentions.widget.lastUpdate"
         static let sessionTitleKey = "intentions.widget.sessionTitle"
