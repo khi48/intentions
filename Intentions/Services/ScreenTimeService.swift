@@ -66,9 +66,7 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// Must be called after creating the service before any other operations
     /// Blocking should be applied separately based on schedule settings
     func initialize() async throws {
-        print("🔧 ScreenTimeService.initialize() called - Current isInitialized: \(isInitialized)")
         guard !isInitialized else {
-            print("⚠️ ScreenTimeService already initialized - skipping duplicate initialization")
             return // Don't throw error, just return - this is idempotent
         }
 
@@ -90,7 +88,7 @@ actor ScreenTimeService: ScreenTimeManaging {
 
         // Mark as initialized - blocking will be applied separately by ContentViewModel
         isInitialized = true
-        print("✅ ScreenTimeService successfully initialized")
+        logger.info("ScreenTimeService initialized successfully")
     }
     
     /// Check if the service has been properly initialized
@@ -114,7 +112,7 @@ actor ScreenTimeService: ScreenTimeManaging {
             let status = await authorizationStatus()
             return status == .approved
         } catch {
-            print("Authorization failed: \(error)")
+            logger.error("Authorization failed: \(error.localizedDescription)")
             return false
         }
     }
@@ -222,9 +220,6 @@ actor ScreenTimeService: ScreenTimeManaging {
     func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken> = [], allowWebsites: Bool = false, duration: TimeInterval, sessionId: UUID) async throws {
         try ensureInitialized()
 
-        // Log memory at the start to catch high memory before operations
-        logMemoryUsage(context: "allowApps() - START")
-
         let status = await authorizationStatus()
         guard status == .approved else {
             throw AppError.screenTimeAuthorizationFailed
@@ -242,149 +237,83 @@ actor ScreenTimeService: ScreenTimeManaging {
             throw AppError.validationFailed("applications", reason: "At least one application or category must be specified")
         }
 
-        print("🔧 ALLOW APPS: Session ID = \(sessionId.uuidString)")
-
         // Capture current blocking state before starting session
-        // We need this to restore the proper state when the session ends
         preSessionBlockingState = !currentlyAllowedApps.isEmpty || managedSettingsStore.shield.applications != nil || managedSettingsStore.shield.applicationCategories != nil
 
         // CRITICAL: Clear previous session's shields to prevent cumulative effects
-        // ManagedSettingsStore can be cumulative, so we MUST clear old settings first
-        print("🔧 ALLOW APPS: Clearing previous shields to prevent cumulative blocking")
         managedSettingsStore.shield.applications = nil
         managedSettingsStore.shield.applicationCategories = nil
         managedSettingsStore.shield.webDomains = nil
         managedSettingsStore.webContent.blockedByFilter = nil
 
-        // Brief delay to ensure clearing takes effect before applying new settings
-        try? await Task.sleep(nanoseconds: 50_000_000) // 0.05 seconds
-
-        print("🔧 ALLOW APPS: Starting to apply blocking restrictions")
-        print("🔧 ALLOW APPS: Tokens count: \(tokens.count), Categories count: \(categories.count)")
-
-        // Log memory after collecting tokens
-        logMemoryUsage(context: "allowApps() - After token collection")
+        // Brief delay to ensure clearing takes effect
+        try? await Task.sleep(nanoseconds: 50_000_000)
 
         if let mappingService = categoryMappingService {
-            print("🔧 ALLOW APPS: Using CategoryMappingService for smart blocking")
-            // Use sophisticated blocking - determine which categories contain selected apps
             await applySmartCategoryBlocking(allowedCategoryTokens: categories, allowedAppTokens: tokens, mappingService: mappingService)
         } else {
-            print("🔧 ALLOW APPS: Using fallback blocking strategy")
-            // Fallback when no category mapping service is available
-            // Use .all(except:) to block everything EXCEPT the session apps
-            // This is more precise than re-blocking everything with .all()
+            // Fallback: Use .all(except:) to block everything EXCEPT the session apps
             if !tokens.isEmpty {
-                // Validate token set size to prevent memory issues
-                if tokens.count > 100 {
-                    print("⚠️ ALLOW APPS: Large token set (\(tokens.count) tokens) - potential memory pressure")
-                }
-
-                print("🔧 ALLOW APPS: Setting .all(except: \(tokens.count) tokens)")
-                // Block all app categories except these specific apps
-                // .all(except:) accepts ApplicationTokens to allow specific apps through
                 managedSettingsStore.shield.applicationCategories = .all(except: tokens)
                 managedSettingsStore.shield.applications = nil
-                print("✅ ALLOW APPS: Successfully set applicationCategories exception")
             } else {
-                print("🔧 ALLOW APPS: No tokens, keeping everything blocked with .all()")
-                // No specific apps selected - keep everything blocked
-                // Note: If categories are provided but no tokens, we still block everything
-                // The app would need to convert categories to tokens first
                 managedSettingsStore.shield.applicationCategories = .all()
                 managedSettingsStore.shield.applications = nil
-                print("✅ ALLOW APPS: Successfully set applicationCategories to .all()")
             }
         }
 
-        // Conditionally allow web content based on session preference
-        print("🔧 ALLOW APPS: Setting web content filter (allowWebsites: \(allowWebsites))")
+        // Conditionally allow web content
         if allowWebsites {
-            // Clear ALL web-related restrictions
-            managedSettingsStore.shield.webDomains = nil  // Clear specific domain shields
-            managedSettingsStore.webContent.blockedByFilter = nil  // Clear category-based web blocking
-            print("✅ ALLOW APPS: Web content and domains allowed")
+            managedSettingsStore.shield.webDomains = nil
+            managedSettingsStore.webContent.blockedByFilter = nil
         } else {
-            managedSettingsStore.shield.webDomains = nil  // Clear specific domain blocks
-            managedSettingsStore.webContent.blockedByFilter = .all()  // Block via category filter
-            print("✅ ALLOW APPS: Web content blocked via category filter")
+            managedSettingsStore.shield.webDomains = nil
+            managedSettingsStore.webContent.blockedByFilter = .all()
         }
 
-        // Update our tracking
+        // Update tracking
         currentlyAllowedApps = tokens
-        print("🔧 ALLOW APPS: Updated tracking - currently allowed apps: \(tokens.count)")
 
-        // Cancel any existing expiration task from previous session
+        // Cancel any existing expiration task
         if sessionExpirationTask != nil {
-            print("🔧 ALLOW APPS: Cancelling existing session expiration task")
             sessionExpirationTask?.cancel()
             sessionExpirationTask = nil
         }
 
-        // Log memory usage before DeviceActivity scheduling
-        logMemoryUsage(context: "Before DeviceActivity scheduling")
-
         do {
-            // Schedule DeviceActivity for background expiration
-            // This ensures blocking is restored even if app isn't running
-            // Note: May show "intervalTooShort" error for sessions < 15 min, but appears to work anyway
-            print("🔧 ALLOW APPS: Scheduling DeviceActivity expiration")
             try await scheduleDeviceActivityExpiration(duration: duration, sessionId: sessionId)
-            print("✅ ALLOW APPS: DeviceActivity scheduling completed")
-
-            // Log memory usage after DeviceActivity scheduling
-            logMemoryUsage(context: "After DeviceActivity scheduling")
         } catch {
-            print("❌ ALLOW APPS: DeviceActivity scheduling failed: \(error)")
+            logger.error("DeviceActivity scheduling failed: \(error.localizedDescription)")
             throw AppError.appBlockingFailed("Failed to schedule expiration: \(error.localizedDescription)")
         }
 
-        // Also keep in-app timer for immediate handling when app is active
+        // Keep in-app timer for immediate handling
         sessionExpirationTask = Task { [weak self] in
             do {
                 try await Task.sleep(nanoseconds: duration.nanoseconds)
 
-                // Check if task was cancelled
-                guard !Task.isCancelled else {
-                    print("⚠️ SESSION TIMER: Task was cancelled - exiting")
-                    return
-                }
-
-                // Check if session is being replaced
-                guard let self = self else {
-                    print("⚠️ SESSION TIMER: Self is nil - exiting")
-                    return
-                }
+                guard !Task.isCancelled else { return }
+                guard let self = self else { return }
 
                 let isReplacing = await self.isSessionBeingReplaced
-                guard !isReplacing else {
-                    print("⚠️ SESSION TIMER: Callback skipped - session being replaced")
-                    return
-                }
+                guard !isReplacing else { return }
 
-                print("⏰ SESSION TIMER: Executing expiration callback")
-
-                // Restore the original state before the session started
+                // Restore the original state
                 if let callback = await self.restoreDefaultStateCallback {
                     await callback()
                 } else {
-                    // Fallback to blockAllApps if no callback is set
                     try? await self.blockAllApps()
                 }
             } catch {
-                // Task.sleep can throw if cancelled
-                print("⚠️ SESSION TIMER: Task sleep interrupted - \(error)")
                 return
             }
         }
 
-        // Clear the session replacement flag - new session is now active
+        // Clear the session replacement flag
         isSessionBeingReplaced = false
 
-        // Brief delay to ensure ManagedSettingsStore changes propagate to iOS
-        try? await Task.sleep(nanoseconds: 50_000_000) // 0.05 seconds
-
-        print("✅ ALLOW APPS: Session setup complete with propagation delay")
+        // Brief delay to ensure changes propagate
+        try? await Task.sleep(nanoseconds: 50_000_000)
     }
     
     func getCurrentlyAllowedApps() async -> Set<ApplicationToken> {
@@ -486,31 +415,23 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// Cancel session timers without triggering re-blocking
     /// Used when starting a new session to prevent the old session's timer from firing
     func cancelSessionTimers() async {
-        print("🛑 CANCEL TIMERS: Cancelling session expiration task and DeviceActivity schedule")
-
         // Set flag to prevent any in-flight callbacks from executing
         isSessionBeingReplaced = true
-        print("🛑 CANCEL TIMERS: Set session replacement flag to prevent callbacks")
 
         // Cancel in-app timer
         if sessionExpirationTask != nil {
             sessionExpirationTask?.cancel()
             sessionExpirationTask = nil
-            print("✅ CANCEL TIMERS: In-app timer cancelled")
         }
 
         // Cancel DeviceActivity schedule
         cancelDeviceActivitySchedule()
 
         // CRITICAL: Clear the current session ID from UserDefaults
-        // This prevents the extension from executing if it fires after cancellation
         if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") {
             sharedDefaults.removeObject(forKey: "intentions.currentSessionId")
             sharedDefaults.synchronize()
-            print("✅ CANCEL TIMERS: Cleared current session ID from UserDefaults")
         }
-
-        print("✅ CANCEL TIMERS: All session timers cancelled successfully")
     }
 
     /// Remove all system apps (for testing/reset purposes)
@@ -555,50 +476,69 @@ actor ScreenTimeService: ScreenTimeManaging {
         allowedAppTokens: Set<ApplicationToken>,
         mappingService: CategoryMappingService
     ) async {
-        
+
+        logger.info("🔍 SMART BLOCKING: Starting analysis...")
+        logger.info("🔍 SMART BLOCKING: Allowed apps count: \(allowedAppTokens.count)")
+        logger.info("🔍 SMART BLOCKING: Allowed category tokens count: \(allowedCategoryTokens.count)")
+
+        // DIAGNOSTIC: Log which apps we're trying to allow
+        for (index, token) in allowedAppTokens.enumerated().prefix(5) {
+            logger.info("🔍 SMART BLOCKING: Allowed app #\(index + 1): hashValue=\(token.hashValue)")
+        }
+
         // Get the blocking strategy from category mapping service (MainActor context required)
         let (categoriesToBlockCompletely, appsToBlockWithinUsedCategories) = await MainActor.run {
             let blockingStrategy = mappingService.analyzeBlockingStrategy(for: allowedAppTokens)
             return (blockingStrategy.categoriesToBlock, blockingStrategy.appsToBlockInUsedCategories)
         }
-        
-        
+
+        logger.info("🔍 SMART BLOCKING: Categories to block completely: \(categoriesToBlockCompletely.map { $0.rawValue }.joined(separator: ", "))")
+        logger.info("🔍 SMART BLOCKING: Apps to block within used categories: \(appsToBlockWithinUsedCategories.count)")
+
         // Step 1: Block entire categories that have NO selected apps
         // This allows categories with selected apps to remain accessible
         if !categoriesToBlockCompletely.isEmpty {
             let categoryTokensToBlock = await MainActor.run {
                 mappingService.getCategoryTokensToBlock(for: categoriesToBlockCompletely)
             }
-            
+
             // Remove any explicitly allowed categories from the block list
             let finalCategoriesToBlock = categoryTokensToBlock.subtracting(allowedCategoryTokens)
-            
+
+            logger.info("🔍 SMART BLOCKING: Final category tokens to block: \(finalCategoriesToBlock.count)")
+
             if !finalCategoriesToBlock.isEmpty {
                 managedSettingsStore.shield.applicationCategories = .specific(finalCategoriesToBlock)
             } else {
                 managedSettingsStore.shield.applicationCategories = nil
             }
         } else {
+            logger.info("🔍 SMART BLOCKING: No categories to block completely")
             managedSettingsStore.shield.applicationCategories = nil
         }
-        
+
         // Step 2: Within categories that have selected apps, block the unselected individual apps
         // This allows the selected apps to work while blocking distracting apps in the same category
         if !appsToBlockWithinUsedCategories.isEmpty {
             let appsToBlock = appsToBlockWithinUsedCategories.subtracting(allowedAppTokens)
-            
+
+            logger.info("🔍 SMART BLOCKING: Individual apps to block: \(appsToBlock.count)")
+
             if !appsToBlock.isEmpty {
                 if appsToBlock.count <= 50 {
                     managedSettingsStore.shield.applications = appsToBlock
+                    logger.info("✅ SMART BLOCKING: Blocking \(appsToBlock.count) individual apps (within limit)")
                 } else {
                     let prioritizedApps = prioritizeAppsForBlocking(appsToBlock, limit: 50)
                     managedSettingsStore.shield.applications = prioritizedApps
-                    // Note: Some apps may remain unblocked due to API limit
+                    logger.warning("⚠️ SMART BLOCKING: Hit 50-app limit - blocking \(prioritizedApps.count) prioritized apps, \(appsToBlock.count - prioritizedApps.count) apps may remain unblocked")
                 }
             } else {
+                logger.info("🔍 SMART BLOCKING: No individual apps to block")
                 managedSettingsStore.shield.applications = nil
             }
         } else {
+            logger.info("🔍 SMART BLOCKING: No apps in used categories to block")
             managedSettingsStore.shield.applications = nil
         }
     }
@@ -616,97 +556,63 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// - Parameter duration: Session duration in seconds
     /// - Parameter sessionId: UUID of the session being scheduled
     private func scheduleDeviceActivityExpiration(duration: TimeInterval, sessionId: UUID) async throws {
-        print("🔵 DEVICE ACTIVITY: Starting to schedule session expiration")
-        print("🔵 DEVICE ACTIVITY: Session duration = \(duration) seconds (\(Int(duration/60)) minutes)")
-        print("🔵 DEVICE ACTIVITY: Session ID = \(sessionId.uuidString)")
-
-        // CRITICAL: Cancel any existing DeviceActivity FIRST to prevent old session timers from firing
-        // This must happen BEFORE creating the new activity
+        // Cancel any existing DeviceActivity FIRST
         if let oldActivityName = activeDeviceActivityName {
-            print("🔵 DEVICE ACTIVITY: Cancelling old activity: \(oldActivityName.rawValue)")
             deviceActivityCenter.stopMonitoring([oldActivityName])
             activeDeviceActivityName = nil
-
-            // Brief delay to ensure iOS processes the cancellation
-            try? await Task.sleep(nanoseconds: 50_000_000) // 0.05 seconds
-            print("✅ DEVICE ACTIVITY: Old activity cancelled with propagation delay")
+            try? await Task.sleep(nanoseconds: 50_000_000)
         }
 
         // Create a unique activity name for this session
-        // Include session ID in the activity name for validation in the extension
         let activityName = DeviceActivityName("intentions.session.\(sessionId.uuidString)")
         activeDeviceActivityName = activityName
-        print("🔵 DEVICE ACTIVITY: Created activity name: \(activityName)")
 
         // Calculate start and end times
         let now = Date()
         let endDate = now.addingTimeInterval(duration)
-
-        print("🔵 DEVICE ACTIVITY: Current time: \(now)")
-        print("🔵 DEVICE ACTIVITY: Session will end at: \(endDate)")
-        print("🔵 DEVICE ACTIVITY: Time until expiration: \(duration) seconds")
 
         // Create date components for the schedule
         let calendar = Calendar.current
         let components: Set<Calendar.Component> = [.year, .month, .day, .hour, .minute, .second]
         let startComponents = calendar.dateComponents(components, from: now)
 
-        // For the schedule end, use a time well beyond the session duration to avoid intervalTooShort
-        // We'll rely on the threshold event for the actual expiration trigger
-        let scheduledEndDate = now.addingTimeInterval(max(duration, 15 * 60) + 60) // Add 1 minute buffer
+        // Use extended end to avoid intervalTooShort
+        let scheduledEndDate = now.addingTimeInterval(max(duration, 15 * 60) + 60)
         let endComponents = calendar.dateComponents(components, from: scheduledEndDate)
 
-        print("🔵 DEVICE ACTIVITY: Start components: \(startComponents)")
-        print("🔵 DEVICE ACTIVITY: End components (extended): \(endComponents)")
-
-        // Create the schedule - this will trigger intervalDidEnd when it expires
         let schedule = DeviceActivitySchedule(
             intervalStart: startComponents,
             intervalEnd: endComponents,
-            repeats: false // One-time schedule for this session
+            repeats: false
         )
 
-        print("🔵 DEVICE ACTIVITY: Created schedule (repeats: false)")
-
-        // Create a threshold event that triggers at the exact session expiration time
-        // This is the workaround for short sessions - the threshold event fires even if intervalDidEnd doesn't
+        // Create threshold event for exact expiration
         let thresholdComponents = DateComponents(second: Int(duration))
         let thresholdEventName = DeviceActivityEvent.Name("intentions.session.threshold")
 
-        // Event monitors all apps/categories (we're using it just as a timer)
         let event = DeviceActivityEvent(
-            applications: Set<ApplicationToken>(), // Empty - we're not monitoring specific apps
-            categories: Set<ActivityCategoryToken>(), // Empty - just using as a timer
-            webDomains: Set<WebDomainToken>(), // Empty
+            applications: Set<ApplicationToken>(),
+            categories: Set<ActivityCategoryToken>(),
+            webDomains: Set<WebDomainToken>(),
             threshold: thresholdComponents
         )
 
         let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [thresholdEventName: event]
 
-        print("🔵 DEVICE ACTIVITY: Created threshold event at \(duration) seconds")
-
         do {
-            // Start monitoring with both schedule AND threshold event
-            print("🔵 DEVICE ACTIVITY: Calling deviceActivityCenter.startMonitoring() with threshold event...")
             try deviceActivityCenter.startMonitoring(activityName, during: schedule, events: events)
-            print("✅ DEVICE ACTIVITY: Successfully scheduled with threshold event!")
-            print("✅ DEVICE ACTIVITY: Extension will trigger via eventDidReachThreshold at \(endDate)")
-            print("✅ DEVICE ACTIVITY: Activity name: \(activityName)")
 
-            // Write to shared UserDefaults so we can verify in extension
+            // Write to shared UserDefaults for extension
             if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") {
                 sharedDefaults.set(activityName.rawValue, forKey: "intentions.lastScheduledActivity")
                 sharedDefaults.set(endDate, forKey: "intentions.lastScheduledEndTime")
                 sharedDefaults.set(Date(), forKey: "intentions.lastScheduleTime")
                 sharedDefaults.set(duration, forKey: "intentions.lastScheduledDuration")
-                // CRITICAL: Store current session ID for validation in extension
                 sharedDefaults.set(sessionId.uuidString, forKey: "intentions.currentSessionId")
                 sharedDefaults.synchronize()
-                print("✅ DEVICE ACTIVITY: Wrote schedule info to shared UserDefaults (including session ID)")
             }
         } catch {
-            print("❌ DEVICE ACTIVITY: Failed to schedule: \(error)")
-            print("❌ DEVICE ACTIVITY: Error details: \(error.localizedDescription)")
+            logger.error("DeviceActivity scheduling failed: \(error.localizedDescription)")
             // Don't throw - fall back to in-app timer only
         }
     }
@@ -716,7 +622,6 @@ actor ScreenTimeService: ScreenTimeManaging {
         if let activityName = activeDeviceActivityName {
             deviceActivityCenter.stopMonitoring([activityName])
             activeDeviceActivityName = nil
-            print("✅ DeviceActivity schedule cancelled")
         }
     }
 
@@ -724,23 +629,12 @@ actor ScreenTimeService: ScreenTimeManaging {
 
     /// Update widget with current blocking status
     private func updateWidgetBlockingStatus(isBlocking: Bool) {
-        // Use shared UserDefaults for communication with widget extension
         let appGroupId = "group.oh.Intent"
 
-        // Debug: Check current user context in main app
-        let currentUser = getuid()
-        let effectiveUser = geteuid()
-        print("🔍 Main App User Context - UID: \(currentUser), EUID: \(effectiveUser)")
-
-        // Debug: Check if we're in a sandbox
-        let isSandboxed = getenv("APP_SANDBOX_CONTAINER_ID") != nil
-        print("🔍 Main App Sandbox Status: \(isSandboxed ? "Sandboxed" : "Not Sandboxed")")
-
-        // Force CFPreferences synchronization before creating UserDefaults
+        // Force CFPreferences synchronization
         CFPreferencesSynchronize(appGroupId as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
 
         guard let sharedDefaults = UserDefaults(suiteName: appGroupId) else {
-            print("⚠️ ScreenTimeService: Failed to access App Group \(appGroupId), using standard UserDefaults")
             // Fallback to standard UserDefaults only
             UserDefaults.standard.set(isBlocking, forKey: "intentions.widget.blockingStatus")
             UserDefaults.standard.set(Date(), forKey: "intentions.widget.lastUpdate")
@@ -748,55 +642,18 @@ actor ScreenTimeService: ScreenTimeManaging {
             return
         }
 
-        // Debug: Check UserDefaults access (avoid dictionaryRepresentation which triggers kCFPreferencesAnyUser)
-        print("🔍 Main App UserDefaults Suite: Access successful")
-
         // Set the data
-        print("📱 WIDGET STATUS UPDATE: Setting isBlocking = \(isBlocking)")
         sharedDefaults.set(isBlocking, forKey: "intentions.widget.blockingStatus")
         sharedDefaults.set(Date(), forKey: "intentions.widget.lastUpdate")
-
-        // Force synchronization
         sharedDefaults.synchronize()
 
-        // Also try setting in standard UserDefaults as fallback
+        // Also set in standard UserDefaults as fallback
         UserDefaults.standard.set(isBlocking, forKey: "intentions.widget.blockingStatus")
         UserDefaults.standard.set(Date(), forKey: "intentions.widget.lastUpdate")
 
-        print("📱 WIDGET STATUS UPDATE: Reloading widget timelines...")
-        // Force widget timeline refresh with multiple strategies
+        // Force widget timeline refresh
         WidgetCenter.shared.reloadAllTimelines()
         WidgetCenter.shared.reloadTimelines(ofKind: "IntentionsWidget")
-        print("📱 WIDGET STATUS UPDATE: Complete - widget should now show \(isBlocking ? "Blocked" : "Open")")
-    }
-
-    // MARK: - Memory Monitoring
-
-    /// Log current memory usage for debugging potential SpringBoard crashes
-    private func logMemoryUsage(context: String) {
-        var info = mach_task_basic_info()
-        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size)/4
-
-        let kerr: kern_return_t = withUnsafeMutablePointer(to: &info) {
-            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
-                task_info(mach_task_self_,
-                         task_flavor_t(MACH_TASK_BASIC_INFO),
-                         $0,
-                         &count)
-            }
-        }
-
-        if kerr == KERN_SUCCESS {
-            let usedMemoryMB = Double(info.resident_size) / 1024.0 / 1024.0
-            print("📊 MEMORY [\(context)]: \(String(format: "%.2f", usedMemoryMB)) MB used")
-
-            // Warn if memory usage is high (> 150 MB could trigger jetsam on some devices)
-            if usedMemoryMB > 150.0 {
-                print("⚠️ MEMORY WARNING: High memory usage detected - SpringBoard crash risk!")
-            }
-        } else {
-            print("❌ MEMORY: Failed to get memory info (error: \(kerr))")
-        }
     }
 
 }

@@ -9,11 +9,15 @@ import Foundation
 import SwiftUI
 import ManagedSettings
 @preconcurrency import FamilyControls
+import OSLog
 
 /// Service for managing app-to-category mappings through extended setup process
 /// Maps ApplicationTokens to their respective categories by having users select categories individually
 @MainActor
 final class CategoryMappingService: Sendable {
+
+    // Logger for important state changes and errors
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Intentions", category: "CategoryMappingService")
     
     // MARK: - Category Definitions
     
@@ -177,76 +181,45 @@ final class CategoryMappingService: Sendable {
     /// Record the result of selecting a specific category
     /// This is called after user selects apps from a single category in FamilyActivityPicker
     func recordCategoryMapping(_ category: AppCategory, selection: FamilyActivitySelection) {
-        print("\n" + String(repeating: "=", count: 60))
-        // print("📂 CATEGORY MAPPING: Recording \(category.displayName)")
-        print(String(repeating: "=", count: 60))
-        
         // Extract app tokens from the selection
         let appTokens = Set(selection.applications.compactMap { $0.token })
         let categoryTokens = selection.categories.compactMap { $0.token }
 
-        print("📊 SELECTION ANALYSIS:")
-        print("   - Category: \(category.displayName)")
-        print("   - Individual apps found: \(appTokens.count)")
-        print("   - Category tokens found: \(categoryTokens.count)")
-        print("   - includeEntireCategory was: \(selection.includeEntireCategory)")
-        
         // Store the app mapping
         if !appTokens.isEmpty {
             categoryToAppsMapping[category] = appTokens
-            print("✅ APPS MAPPED: \(appTokens.count) apps mapped to \(category.displayName)")
-            
-            // Debug: Show some token examples
-            for (index, token) in appTokens.enumerated().prefix(3) {
-                print("   - App Token \(index + 1): \(token)")
-            }
-            if appTokens.count > 3 {
-                print("   - ... and \(appTokens.count - 3) more app tokens")
-            }
-        } else {
-            print("⚠️ NO APPS: No individual app tokens found for \(category.displayName)")
         }
-        
+
         // Store category token if available
         if let firstCategoryToken = categoryTokens.first {
             categoryToTokenMapping[category] = firstCategoryToken
-            print("✅ CATEGORY TOKEN: Stored category token for \(category.displayName)")
-        } else {
-            print("⚠️ NO CATEGORY TOKEN: No category token found for \(category.displayName)")
         }
-        
+
         // Mark category as completed
         setupProgress[category] = true
-        print("✅ PROGRESS: \(category.displayName) marked as completed")
-        print("📈 OVERALL PROGRESS: \(completedCategories.count)/\(AppCategory.allCases.count) categories completed")
-        
+
         // Check if setup is complete
         updateSetupCompletion()
-        
+
         // Save to storage
         saveToStorage()
-        
-        print(String(repeating: "=", count: 60) + "\n")
     }
     
     /// Check and update overall setup completion status
     private func updateSetupCompletion() {
         let wasCompleted = isSetupCompleted
-        
+
         // Require ALL categories to be mapped for complete setup
         let totalCategoriesCount = AppCategory.allCases.count
         let completedCategoriesCount = completedCategories.count
         let totalMappedApps = categoryToAppsMapping.values.reduce(0) { $0 + $1.count }
         let minimumAppsRequired = 5  // Require at least 5 total apps to be mapped (ensures real mapping occurred)
-        
-        isSetupCompleted = completedCategoriesCount == totalCategoriesCount && 
+
+        isSetupCompleted = completedCategoriesCount == totalCategoriesCount &&
                           totalMappedApps >= minimumAppsRequired
-        
+
         if !wasCompleted && isSetupCompleted {
-            print("🎉 SETUP COMPLETE: All \(completedCategoriesCount) categories and \(totalMappedApps) apps mapped!")
-            printCompleteMappingSummary()
-        } else if !isSetupCompleted {
-            print("📋 SETUP PROGRESS: \(completedCategoriesCount)/\(totalCategoriesCount) categories completed (\(totalMappedApps) apps)")
+            Self.logger.notice("Setup complete: \(completedCategoriesCount) categories, \(totalMappedApps) apps mapped")
         }
     }
     
@@ -255,12 +228,11 @@ final class CategoryMappingService: Sendable {
     func forceSetupCompleted() {
         let wasCompleted = isSetupCompleted
         isSetupCompleted = true
-        
+
         if !wasCompleted {
-            print("🎉 SETUP FORCED COMPLETE: User chose to finish with partial mapping!")
-            printCompleteMappingSummary()
+            Self.logger.notice("Setup forced complete with partial mapping")
         }
-        
+
         // Save the forced completion state
         saveToStorage()
     }
@@ -275,20 +247,17 @@ final class CategoryMappingService: Sendable {
         let currentMappedApps = categoryToAppsMapping.values.reduce(0) { $0 + $1.count }
 
         if currentMappedApps > 0 {
-            print("✅ RETRY SKIPPED: Category mappings already loaded - \(currentMappedApps) apps present")
-            return
+            return  // Mappings already loaded
         }
 
-        // Mappings are empty - this could be a transient iOS loading issue
-        print("🔄 RETRY: Mappings empty, reloading after initialization delay...")
+        // Mappings are empty - reload after delay
         loadCategoryMappings()
 
         let totalMappedApps = categoryToAppsMapping.values.reduce(0) { $0 + $1.count }
         if totalMappedApps == 0 {
-            print("🚨 RETRY FAILED: Still no app mappings after delay - forcing setup reset")
-            print("🔄 This indicates actual ApplicationToken expiration, not just loading delay")
+            Self.logger.error("Retry failed: ApplicationTokens expired, forcing setup reset")
 
-            // Now reset setup completion since retry failed
+            // Reset setup completion since retry failed
             isSetupCompleted = false
             setupProgress.removeAll()
 
@@ -298,40 +267,9 @@ final class CategoryMappingService: Sendable {
 
             // Clear any corrupted mapping data
             clearStoredMappings()
-
-            print("❌ FORCED RESET: User will need to complete category mapping again")
-        } else {
-            print("✅ RETRY SUCCESS: Category mappings loaded after delay - \(totalMappedApps) apps found")
         }
     }
     
-    /// Print a comprehensive summary of all mappings
-    private func printCompleteMappingSummary() {
-        print("\n" + String(repeating: "🎊", count: 30))
-        print("COMPLETE CATEGORY MAPPING SUMMARY")
-        print(String(repeating: "🎊", count: 30))
-        
-        let sortedCategories = AppCategory.allCases.sorted { $0.blockingPriority < $1.blockingPriority }
-        
-        var totalApps = 0
-        for category in sortedCategories {
-            let appCount = categoryToAppsMapping[category]?.count ?? 0
-            let hasToken = categoryToTokenMapping[category] != nil
-            totalApps += appCount
-            
-            print("📂 \(category.displayName):")
-            print("   - Apps: \(appCount)")
-            print("   - Has Category Token: \(hasToken ? "✅" : "❌")")
-            print("   - Blocking Priority: \(category.blockingPriority) (lower = blocked first)")
-        }
-        
-        print("\n📊 TOTALS:")
-        print("   - Categories Mapped: \(completedCategories.count)")
-        print("   - Total Apps Discovered: \(totalApps)")
-        print("   - Ready for Smart Blocking: ✅")
-        
-        print(String(repeating: "🎊", count: 30) + "\n")
-    }
     
     // MARK: - Query Methods
     
@@ -342,9 +280,7 @@ final class CategoryMappingService: Sendable {
     
     /// Get the category token for a specific category (if available)
     func getCategoryToken(for category: AppCategory) -> ActivityCategoryToken? {
-        let token = categoryToTokenMapping[category]
-        print("🔍 GET TOKEN: \(category.displayName) - Has token: \(token != nil)")
-        return token
+        return categoryToTokenMapping[category]
     }
     
     /// Get apps prioritized by blocking priority (most distracting first)
@@ -360,45 +296,33 @@ final class CategoryMappingService: Sendable {
     /// Get a prioritized list of apps to block, up to the specified limit
     func getPrioritizedAppsToBlock(from allAppsToBlock: Set<ApplicationToken>, limit: Int) -> Set<ApplicationToken> {
         guard allAppsToBlock.count > limit else { return allAppsToBlock }
-        
-        print("\n🧠 SMART PRIORITIZATION WITH CATEGORY MAPPING:")
-        print("   - Total apps to block: \(allAppsToBlock.count)")
-        print("   - API limit: \(limit)")
-        print("   - Using category-based prioritization")
-        
+
         var selectedApps: Set<ApplicationToken> = []
         let prioritizedCategories = getAppsPrioritizedForBlocking()
-        
-        for (category, categoryApps) in prioritizedCategories {
+
+        for (_, categoryApps) in prioritizedCategories {
             // Find apps in this category that need to be blocked
             let categoryAppsToBlock = categoryApps.intersection(allAppsToBlock)
-            
+
             if !categoryAppsToBlock.isEmpty {
                 let availableSlots = limit - selectedApps.count
                 if availableSlots <= 0 { break }
-                
+
                 let appsToAdd = Set(categoryAppsToBlock.prefix(availableSlots))
                 selectedApps.formUnion(appsToAdd)
-                
-                print("   - \(category.displayName): Added \(appsToAdd.count) apps (Priority \(category.blockingPriority))")
-                
+
                 if selectedApps.count >= limit { break }
             }
         }
-        
+
         // Fill remaining slots with unmapped apps if needed
         if selectedApps.count < limit {
             let unmappedApps = allAppsToBlock.subtracting(selectedApps)
             let remainingSlots = limit - selectedApps.count
             let additionalApps = Set(unmappedApps.prefix(remainingSlots))
             selectedApps.formUnion(additionalApps)
-            
-            if !additionalApps.isEmpty {
-                print("   - Unmapped apps: Added \(additionalApps.count) additional apps")
-            }
         }
-        
-        print("   - Final selection: \(selectedApps.count) apps prioritized by category")
+
         return selectedApps
     }
     
@@ -406,15 +330,12 @@ final class CategoryMappingService: Sendable {
     /// This is used when user selects categories they want to keep accessible during their session
     func getAppsForCategories(_ categories: Set<AppCategory>) -> Set<ApplicationToken> {
         var allApps: Set<ApplicationToken> = []
-        
-        print("\n📂 GETTING APPS FOR SELECTED CATEGORIES:")
+
         for category in categories {
             let categoryApps = getApps(for: category)
             allApps.formUnion(categoryApps)
-            print("   - \(category.displayName): \(categoryApps.count) apps")
         }
-        print("   - Total apps to allow: \(allApps.count)")
-        
+
         return allApps
     }
     
@@ -428,57 +349,67 @@ final class CategoryMappingService: Sendable {
     /// Analyze which categories contain the user's selected apps and determine blocking strategy
     /// Returns: (categoriesToBlockCompletely, appsToBlockIndividually)
     func analyzeBlockingStrategy(for selectedApps: Set<ApplicationToken>) -> (
-        categoriesToBlock: [AppCategory], 
+        categoriesToBlock: [AppCategory],
         appsToBlockInUsedCategories: Set<ApplicationToken>
     ) {
-        print("\n🧠 ANALYZING BLOCKING STRATEGY:")
-        print("   - User selected \(selectedApps.count) apps to allow")
-        
         var categoriesToBlockCompletely: [AppCategory] = []
         var appsToBlockIndividually: Set<ApplicationToken> = []
-        
+
         // Analyze each category
         for category in AppCategory.allCases {
             let categoryApps = getApps(for: category)
-            print("Category: (\(category.displayName)), number of apps: \(categoryApps.count)")
             let selectedAppsInCategory = categoryApps.intersection(selectedApps)
-            
+
             if selectedAppsInCategory.isEmpty {
                 // User didn't select any apps from this category - block the entire category
-                print("   - 🚫 \(category.displayName): Block entire category (\(categoryApps.count) apps)")
-
                 if !categoryApps.isEmpty {
                     categoriesToBlockCompletely.append(category)
-                    print("   - 🚫 \(category.displayName): Block entire category (\(categoryApps.count) apps)")
                 }
             } else {
                 // User selected some apps from this category - block individual unselected apps
                 let appsToBlockInThisCategory = categoryApps.subtracting(selectedApps)
                 appsToBlockIndividually.formUnion(appsToBlockInThisCategory)
-                
-                print("   - 📱 \(category.displayName): Allow \(selectedAppsInCategory.count) apps, block \(appsToBlockInThisCategory.count) apps individually")
             }
         }
-        
-        print("\n📊 BLOCKING STRATEGY SUMMARY:")
-        print("   - Categories to block completely: \(categoriesToBlockCompletely.count)")
-        print("   - Individual apps to block: \(appsToBlockIndividually.count)")
-        
+
         return (categoriesToBlockCompletely, appsToBlockIndividually)
     }
     
     /// Get ActivityCategoryTokens for categories that should be blocked completely
     func getCategoryTokensToBlock(for categories: [AppCategory]) -> Set<ActivityCategoryToken> {
         var tokens: Set<ActivityCategoryToken> = []
-        
+
         for category in categories {
             if let token = getCategoryToken(for: category) {
                 tokens.insert(token)
             }
         }
-        
-        // print("🏷️ CATEGORY TOKENS TO BLOCK: \(tokens.count) category tokens found for \(categories.count) categories")
+
         return tokens
+    }
+
+    /// Get the AppCategory for a given ActivityCategoryToken (reverse lookup)
+    func getCategory(for token: ActivityCategoryToken) -> AppCategory? {
+        for (category, categoryToken) in categoryToTokenMapping {
+            if categoryToken == token {
+                return category
+            }
+        }
+        return nil
+    }
+
+    /// Get all apps that belong to any of the selected category tokens
+    func getAppsForCategoryTokens(_ tokens: Set<ActivityCategoryToken>) -> Set<ApplicationToken> {
+        var allApps: Set<ApplicationToken> = []
+
+        for token in tokens {
+            if let category = getCategory(for: token) {
+                let categoryApps = getApps(for: category)
+                allApps.formUnion(categoryApps)
+            }
+        }
+
+        return allApps
     }
     
     // MARK: - Storage Management
@@ -486,43 +417,39 @@ final class CategoryMappingService: Sendable {
     private func saveToStorage() {
         // Save completion status
         UserDefaults.standard.set(isSetupCompleted, forKey: "category_mapping_setup_completed")
-        
+
         // Save setup progress
         let progressData = setupProgress.mapKeys { $0.rawValue }
         UserDefaults.standard.set(progressData, forKey: "category_mapping_setup_progress")
-        
+
         // SAVE ACTUAL APP MAPPINGS using the same method that worked for app discovery
         // Store each category's FamilyActivitySelection using JSON encoding
         saveCategoryMappings()
-        
-        print("💾 STORAGE: Category mapping progress and app mappings saved")
     }
     
     /// Save category mappings using JSON encoding (same method that worked for app discovery)
     private func saveCategoryMappings() {
         for (category, apps) in categoryToAppsMapping {
             guard !apps.isEmpty else { continue }
-            
+
             let key = "category_mapping_\(category.rawValue)"
             do {
                 // Store the app tokens directly as an array
                 let tokenData = try JSONEncoder().encode(Array(apps))
                 UserDefaults.standard.set(tokenData, forKey: key)
-                print("💾 Saved \(apps.count) app tokens for \(category.displayName)")
             } catch {
-                print("❌ Failed to save app tokens for \(category.displayName): \(error)")
+                Self.logger.error("Failed to save app tokens for \(category.displayName): \(error.localizedDescription)")
             }
         }
-        
+
         // Also save category tokens
         for (category, token) in categoryToTokenMapping {
             let key = "category_token_\(category.rawValue)"
             do {
                 let tokenData = try JSONEncoder().encode(token)
                 UserDefaults.standard.set(tokenData, forKey: key)
-                print("💾 Saved category token for \(category.displayName)")
             } catch {
-                print("❌ Failed to save category token for \(category.displayName): \(error)")
+                Self.logger.error("Failed to save category token for \(category.displayName): \(error.localizedDescription)")
             }
         }
     }
@@ -530,88 +457,60 @@ final class CategoryMappingService: Sendable {
     private func loadFromStorage() {
         // Load completion status
         isSetupCompleted = UserDefaults.standard.bool(forKey: "category_mapping_setup_completed")
-        
+
         // Load setup progress
         if let progressData = UserDefaults.standard.object(forKey: "category_mapping_setup_progress") as? [String: Bool] {
             setupProgress = progressData.compactMapKeys { AppCategory(rawValue: $0) }
         }
-        
-        // print("📱 STORAGE: Loaded category mapping state - Setup completed: \(isSetupCompleted)")
-        
+
         // LOAD ACTUAL APP MAPPINGS using the same method that worked for app discovery
         if isSetupCompleted {
             loadCategoryMappings()
-            
-            let totalMappedApps = categoryToAppsMapping.values.reduce(0) { $0 + $1.count }
-            if totalMappedApps == 0 {
-                print("⚠️ TRANSIENT ISSUE: Setup marked complete but no app mappings loaded yet")
-                print("🔄 This is likely due to iOS ApplicationToken loading delay on startup")
-                print("🔄 NOT resetting setup - will retry validation later")
-
-                // Don't immediately reset setup completion - this might be a transient issue
-                // The app should retry loading mappings before forcing user through setup again
-                print("📱 DEFERRED: Setup validation will be retried when app is fully initialized")
-            } else {
-                print("✅ App mappings loaded successfully - \(totalMappedApps) apps found across categories")
-            }
         }
     }
     
     /// Load category mappings using JSON decoding (same method that worked for app discovery)
     private func loadCategoryMappings() {
-        var totalLoadedApps = 0
-        var totalLoadedCategories = 0
-        
         // Load app mappings for each category
         for category in AppCategory.allCases {
             let key = "category_mapping_\(category.rawValue)"
             if let tokenData = UserDefaults.standard.data(forKey: key) {
                 do {
                     let apps = try JSONDecoder().decode([ApplicationToken].self, from: tokenData)
-                    
+
                     // ApplicationTokens are the actual tokens - no need to check .token property
                     let validApps = Set(apps)
-                    
+
                     if !validApps.isEmpty {
                         categoryToAppsMapping[category] = validApps
-                        totalLoadedApps += validApps.count
-                        // print("📱 Loaded \(validApps.count) valid app tokens for \(category.displayName)")
                     } else {
-                        print("⚠️ All app tokens expired for \(category.displayName)")
                         // Remove corrupted data
                         UserDefaults.standard.removeObject(forKey: key)
                     }
                 } catch {
-                    print("❌ Failed to load app tokens for \(category.displayName): \(error)")
+                    Self.logger.error("Failed to load app tokens for \(category.displayName): \(error.localizedDescription)")
                     // Remove corrupted data
                     UserDefaults.standard.removeObject(forKey: key)
                 }
             }
         }
-        
+
         // Load category tokens
         for category in AppCategory.allCases {
             let key = "category_token_\(category.rawValue)"
             if let tokenData = UserDefaults.standard.data(forKey: key) {
                 do {
                     let token = try JSONDecoder().decode(ActivityCategoryToken.self, from: tokenData)
-                    
+
                     // ActivityCategoryTokens are the actual tokens - store them directly
                     categoryToTokenMapping[category] = token
-                    totalLoadedCategories += 1
-                    print("📱 Loaded valid category token for \(category.displayName)")
                 } catch {
-                    print("❌ Failed to load category token for \(category.displayName): \(error)")
+                    Self.logger.error("Failed to load category token for \(category.displayName): \(error.localizedDescription)")
                     // Remove corrupted data
                     UserDefaults.standard.removeObject(forKey: key)
                 }
             }
         }
-        
-        print("📊 MAPPING LOAD SUMMARY:")
-        print("   - Total apps loaded: \(totalLoadedApps)")
-        print("   - Total category tokens loaded: \(totalLoadedCategories)")
-        print("   - Categories with apps: \(categoryToAppsMapping.count)")
     }
     
     /// Clear all stored mapping data (for cleanup when corrupted)
@@ -620,7 +519,6 @@ final class CategoryMappingService: Sendable {
             UserDefaults.standard.removeObject(forKey: "category_mapping_\(category.rawValue)")
             UserDefaults.standard.removeObject(forKey: "category_token_\(category.rawValue)")
         }
-        print("🗑️ Cleared all stored category mappings due to corruption")
     }
     
     /// Reset all category mappings and setup progress
@@ -629,13 +527,13 @@ final class CategoryMappingService: Sendable {
         categoryToTokenMapping.removeAll()
         setupProgress.removeAll()
         isSetupCompleted = false
-        
+
         // Clear storage including the new mapping data
         UserDefaults.standard.removeObject(forKey: "category_mapping_setup_completed")
         UserDefaults.standard.removeObject(forKey: "category_mapping_setup_progress")
         clearStoredMappings()
-        
-        print("🔄 RESET: All category mappings and storage cleared")
+
+        Self.logger.info("Reset all category mappings and storage")
     }
 }
 

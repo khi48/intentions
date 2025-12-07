@@ -12,6 +12,7 @@ import SwiftUI
 /// Sheet for creating and editing quick actions
 struct QuickActionEditorSheet: View {
     let dataService: DataPersisting
+    let categoryMappingService: CategoryMappingService
     let editingQuickAction: QuickAction?
     let onSave: (QuickAction) async -> Void
     let onCancel: () -> Void
@@ -148,9 +149,6 @@ struct QuickActionEditorSheet: View {
                 TextField("Enter name...", text: $name)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .submitLabel(.done)
-                    .onChange(of: name) { _, newValue in
-                        name = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                    }
 
                 // Validation area
                 HStack {
@@ -321,12 +319,10 @@ struct QuickActionEditorSheet: View {
                 let timeSinceLastTap = now.timeIntervalSince(lastPickerTapTime)
 
                 guard timeSinceLastTap > 1.0 else {
-                    print("🚫 PICKER DEBOUNCE: Ignoring rapid tap (\(timeSinceLastTap)s ago)")
                     return
                 }
 
                 lastPickerTapTime = now
-                print("📱 PICKER TAP: Opening family activity picker")
                 showingFamilyActivityPicker = true
             }) {
                 HStack {
@@ -367,18 +363,29 @@ struct QuickActionEditorSheet: View {
                 .foregroundColor(.primary)
 
             VStack(spacing: 12) {
-                if !selectedApps.isEmpty {
-                    selectedAppsView
-                }
-
+                // Show categories first
                 if !selectedCategories.isEmpty {
                     selectedCategoriesView
+                }
+
+                // Show only apps that DON'T belong to selected categories
+                if !appsNotInSelectedCategories.isEmpty {
+                    selectedAppsView
                 }
             }
             .padding()
             .background(AppConstants.Colors.surface)
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
+    }
+
+    /// Get apps that don't belong to any selected category
+    private var appsNotInSelectedCategories: Set<ApplicationToken> {
+        // Get all apps that belong to the selected categories
+        let appsInCategories = categoryMappingService.getAppsForCategoryTokens(selectedCategories)
+
+        // Return only apps that are NOT in any selected category
+        return selectedApps.subtracting(appsInCategories)
     }
 
     private var selectedAppsView: some View {
@@ -391,15 +398,15 @@ struct QuickActionEditorSheet: View {
                     .fontWeight(.medium)
                     .foregroundColor(AppConstants.Colors.textSecondary)
                 Spacer()
-                Text("\(selectedApps.count) selected")
+                Text("\(appsNotInSelectedCategories.count) selected")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
 
-            // App icons grid with remove functionality
-            if !selectedApps.isEmpty {
+            // App icons grid with remove functionality (only show apps not in categories)
+            if !appsNotInSelectedCategories.isEmpty {
                 FullAppIconsGrid(
-                    applicationTokens: Array(selectedApps),
+                    applicationTokens: Array(appsNotInSelectedCategories),
                     onRemove: { token in
                         removeApp(token)
                     }
@@ -427,6 +434,7 @@ struct QuickActionEditorSheet: View {
                 ForEach(Array(selectedCategories), id: \.self) { categoryToken in
                     CategoryItemView(
                         token: categoryToken,
+                        categoryMappingService: categoryMappingService,
                         onRemove: { token in
                             removeCategory(token)
                         }
@@ -471,7 +479,7 @@ struct QuickActionEditorSheet: View {
                     HStack {
                         Image(systemName: "trash.fill")
                             .font(.headline)
-                        Text("Delete \"\(name)\"")
+                        Text("Delete \"\(name.isEmpty ? "Quick Action" : name)\"")
                             .font(.headline)
                             .fontWeight(.medium)
                     }
@@ -565,43 +573,36 @@ struct QuickActionEditorSheet: View {
 
         isLoading = true
 
-        do {
-            let quickAction: QuickAction
+        let quickAction: QuickAction
 
-            if var existing = editingQuickAction {
-                // Update existing
-                existing.update(
-                    name: name,
-                    subtitle: nil,
-                    iconName: selectedIcon,
-                    color: .blue,
-                    duration: duration,
-                    appGroupIds: [], // Clear app groups, use individual selections
-                    individualApplications: selectedApps,
-                    individualCategories: selectedCategories,
-                    allowAllWebsites: allowAllWebsites
-                )
-                quickAction = existing
-            } else {
-                // Create new
-                quickAction = QuickAction(
-                    name: name,
-                    subtitle: nil,
-                    iconName: selectedIcon,
-                    color: .blue,
-                    duration: duration,
-                    appGroupIds: [],
-                    individualApplications: selectedApps,
-                    individualCategories: selectedCategories,
-                    allowAllWebsites: allowAllWebsites
-                )
-            }
-
-            await onSave(quickAction)
-
-        } catch {
-            errorMessage = "Failed to save quick action: \(error.localizedDescription)"
+        if var existing = editingQuickAction {
+            // Update existing
+            existing.update(
+                name: name,
+                subtitle: nil,
+                iconName: selectedIcon,
+                color: .blue,
+                duration: duration,
+                individualApplications: selectedApps,
+                individualCategories: selectedCategories,
+                allowAllWebsites: allowAllWebsites
+            )
+            quickAction = existing
+        } else {
+            // Create new
+            quickAction = QuickAction(
+                name: name,
+                subtitle: nil,
+                iconName: selectedIcon,
+                color: .blue,
+                duration: duration,
+                individualApplications: selectedApps,
+                individualCategories: selectedCategories,
+                allowAllWebsites: allowAllWebsites
+            )
         }
+
+        await onSave(quickAction)
 
         isLoading = false
     }
@@ -720,16 +721,47 @@ private struct StableAppIconCell: View {
 
 private struct CategoryItemView: View {
     let token: ActivityCategoryToken
+    let categoryMappingService: CategoryMappingService
     let onRemove: (ActivityCategoryToken) -> Void
+
+    private var category: CategoryMappingService.AppCategory? {
+        categoryMappingService.getCategory(for: token)
+    }
+
+    private var categoryName: String {
+        category?.displayName ?? "Category"
+    }
+
+    private var categoryIcon: String? {
+        category?.customImageName
+    }
+
+    private var categoryColor: Color {
+        category?.iconColor ?? .gray
+    }
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "folder.fill")
-                .font(.system(size: 16))
-                .foregroundColor(AppConstants.Colors.text)
-                .frame(width: 20, height: 20)
+            // Use Apple's category icon if available, otherwise fallback to folder icon
+            if let customImageName = categoryIcon, let uiImage = UIImage(named: customImageName) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 24, height: 24)
+                    .grayscale(1.0)
+            } else if let category = category {
+                Image(systemName: category.iconName)
+                    .font(.system(size: 16))
+                    .foregroundColor(categoryColor)
+                    .frame(width: 24, height: 24)
+            } else {
+                Image(systemName: "folder.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(AppConstants.Colors.text)
+                    .frame(width: 24, height: 24)
+            }
 
-            Text("Category")
+            Text(categoryName)
                 .font(.caption)
                 .foregroundColor(.primary)
                 .lineLimit(1)
@@ -745,10 +777,10 @@ private struct CategoryItemView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .background(AppConstants.Colors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
 
@@ -787,6 +819,7 @@ private struct StableFamilyControlsName: View {
 #Preview {
     QuickActionEditorSheet(
         dataService: MockDataPersistenceService(),
+        categoryMappingService: CategoryMappingService(),
         editingQuickAction: nil,
         onSave: { _ in },
         onCancel: {},

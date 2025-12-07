@@ -72,8 +72,8 @@ struct QuickActionsView: View {
             .sheet(item: $editorMode) { mode in
                 QuickActionEditorSheet(
                     dataService: dataService,
+                    categoryMappingService: contentViewModel.categoryMappingService,
                     editingQuickAction: mode.quickAction,
-                    availableAppGroups: viewModel.availableAppGroups,
                     onSave: { quickAction in
                         await viewModel.saveQuickAction(quickAction)
                         editorMode = nil
@@ -254,10 +254,10 @@ struct QuickActionsView: View {
         do {
             // Record usage
             await viewModel.recordQuickActionUsage(quickAction)
-            
+
             // Create session from quick action
-            let session = try quickAction.createSession(with: viewModel.availableAppGroups)
-            
+            let session = try quickAction.createSession()
+
             // Start the session through ContentViewModel
             await contentViewModel.startSession(session)
             
@@ -343,16 +343,16 @@ private struct QuickActionRowView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
                 HStack(spacing: 6) {
-                    Image(systemName: "square.stack.3d.up")
+                    Image(systemName: "app.badge")
                         .font(.caption)
                         .foregroundColor(AppConstants.Colors.textSecondary)
-                    Text("\(quickAction.appGroupIds.count) groups")
+                    Text("\(quickAction.individualApplications.count + quickAction.individualCategories.count) items")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
                 if quickAction.usageCount > 0 {
                     HStack(spacing: 6) {
                         Image(systemName: "chart.bar")

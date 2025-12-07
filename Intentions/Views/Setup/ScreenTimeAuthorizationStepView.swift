@@ -233,23 +233,18 @@ struct ScreenTimeAuthorizationStepView: View {
         
         do {
             try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
-            print("✅ SETUP: Authorization request completed, checking status...")
             
             // Wait a moment for the system to update the authorization status
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             
             await checkAuthorizationStatus()
-            print("🔐 SETUP: Authorization status after request: \(authorizationStatus)")
             
             // If authorization was granted, automatically complete the step
             if authorizationStatus == .approved {
-                print("✅ SETUP: Authorization approved, completing step...")
                 await completeStep()
             } else {
-                print("⚠️ SETUP: Authorization not approved (\(authorizationStatus)), staying on current step")
             }
         } catch {
-            print("❌ SETUP: Screen Time authorization failed: \(error)")
             await MainActor.run {
                 showingManualInstructions = true
             }
@@ -290,6 +285,5 @@ struct ScreenTimeAuthorizationStepView: View {
             categoryMappingService: CategoryMappingService()
         )
     ) {
-        print("Screen Time step completed")
     }
 }

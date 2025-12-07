@@ -33,9 +33,6 @@ struct QuickAction: Identifiable, Codable, Sendable {
     
     /// Session duration in seconds
     var duration: TimeInterval
-    
-    /// Associated app group IDs for this quick action (legacy, kept for backward compatibility)
-    var appGroupIds: Set<UUID>
 
     /// Individual applications selected for this quick action
     var individualApplications: Set<ApplicationToken>
@@ -95,7 +92,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
     
     /// Whether this quick action has any content (apps or categories)
     var hasContent: Bool {
-        !appGroupIds.isEmpty || !individualApplications.isEmpty || !individualCategories.isEmpty
+        !individualApplications.isEmpty || !individualCategories.isEmpty
     }
     
     // MARK: - Initialization
@@ -107,14 +104,15 @@ struct QuickAction: Identifiable, Codable, Sendable {
     ///   - iconName: SF Symbol icon name
     ///   - color: Color theme for the action
     ///   - duration: Session duration in seconds
-    ///   - appGroupIds: Associated app group IDs
+    ///   - individualApplications: Individual apps selected for this quick action
+    ///   - individualCategories: Individual categories selected for this quick action
+    ///   - allowAllWebsites: Whether to allow all websites during the session
     init(
         name: String,
         subtitle: String? = nil,
         iconName: String = "star.fill",
         color: Color = .blue,
         duration: TimeInterval = AppConstants.Session.defaultDuration,
-        appGroupIds: Set<UUID> = [],
         individualApplications: Set<ApplicationToken> = [],
         individualCategories: Set<ActivityCategoryToken> = [],
         allowAllWebsites: Bool = false
@@ -125,7 +123,6 @@ struct QuickAction: Identifiable, Codable, Sendable {
         self.iconName = iconName
         self._colorHex = color.toHex() ?? "#007AFF"
         self.duration = duration
-        self.appGroupIds = appGroupIds
         self.individualApplications = individualApplications
         self.individualCategories = individualCategories
         self.allowAllWebsites = allowAllWebsites
@@ -141,10 +138,11 @@ struct QuickAction: Identifiable, Codable, Sendable {
     
     private enum CodingKeys: String, CodingKey {
         case id, name, subtitle, iconName, _colorHex, duration
-        case appGroupIds
         case individualApplications, individualCategories
         case allowAllWebsites
         case isEnabled, createdAt, lastModified, usageCount, lastUsed, sortOrder
+        // Legacy key for backward compatibility (not used)
+        case appGroupIds
     }
     
     init(from decoder: Decoder) throws {
@@ -156,7 +154,6 @@ struct QuickAction: Identifiable, Codable, Sendable {
         iconName = try container.decode(String.self, forKey: .iconName)
         _colorHex = try container.decode(String.self, forKey: ._colorHex)
         duration = try container.decode(TimeInterval.self, forKey: .duration)
-        appGroupIds = try container.decode(Set<UUID>.self, forKey: .appGroupIds)
 
         // Handle backward compatibility for individual tokens
         individualApplications = try container.decodeIfPresent(Set<ApplicationToken>.self, forKey: .individualApplications) ?? []
@@ -171,6 +168,9 @@ struct QuickAction: Identifiable, Codable, Sendable {
         usageCount = try container.decode(Int.self, forKey: .usageCount)
         lastUsed = try container.decodeIfPresent(Date.self, forKey: .lastUsed)
         sortOrder = try container.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
+
+        // Ignore legacy appGroupIds if present (backward compatibility)
+        _ = try? container.decodeIfPresent(Set<UUID>.self, forKey: .appGroupIds)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -182,7 +182,6 @@ struct QuickAction: Identifiable, Codable, Sendable {
         try container.encode(iconName, forKey: .iconName)
         try container.encode(_colorHex, forKey: ._colorHex)
         try container.encode(duration, forKey: .duration)
-        try container.encode(appGroupIds, forKey: .appGroupIds)
         try container.encode(individualApplications, forKey: .individualApplications)
         try container.encode(individualCategories, forKey: .individualCategories)
         try container.encode(allowAllWebsites, forKey: .allowAllWebsites)
@@ -193,6 +192,8 @@ struct QuickAction: Identifiable, Codable, Sendable {
         try container.encode(usageCount, forKey: .usageCount)
         try container.encodeIfPresent(lastUsed, forKey: .lastUsed)
         try container.encode(sortOrder, forKey: .sortOrder)
+
+        // Do NOT encode legacy appGroupIds - it's been removed
     }
     
     // MARK: - Action Methods
@@ -204,7 +205,6 @@ struct QuickAction: Identifiable, Codable, Sendable {
         iconName: String? = nil,
         color: Color? = nil,
         duration: TimeInterval? = nil,
-        appGroupIds: Set<UUID>? = nil,
         individualApplications: Set<ApplicationToken>? = nil,
         individualCategories: Set<ActivityCategoryToken>? = nil,
         allowAllWebsites: Bool? = nil
@@ -214,7 +214,6 @@ struct QuickAction: Identifiable, Codable, Sendable {
         if let iconName = iconName { self.iconName = iconName }
         if let color = color { self.setColor(color) }
         if let duration = duration { self.duration = duration }
-        if let appGroupIds = appGroupIds { self.appGroupIds = appGroupIds }
         if let individualApplications = individualApplications { self.individualApplications = individualApplications }
         if let individualCategories = individualCategories { self.individualCategories = individualCategories }
         if let allowAllWebsites = allowAllWebsites { self.allowAllWebsites = allowAllWebsites }
@@ -236,27 +235,17 @@ struct QuickAction: Identifiable, Codable, Sendable {
     }
     
     /// Create an IntentionSession from this quick action
-    /// - Parameter appGroups: Available app groups to resolve IDs
     /// - Returns: Configured IntentionSession
-    func createSession(with appGroups: [AppGroup]) throws -> IntentionSession {
-        // Collect all applications and categories from referenced app groups
-        var resolvedGroupIds: [UUID] = []
-
-        for groupId in appGroupIds {
-            if appGroups.contains(where: { $0.id == groupId }) {
-                resolvedGroupIds.append(groupId)
-            }
-        }
-
-        // Validate that we have at least one valid source (app group, individual app, or category)
+    func createSession() throws -> IntentionSession {
+        // Validate that we have at least one valid source (individual app or category)
         // Empty quick actions should not create sessions that unlock everything
-        guard !resolvedGroupIds.isEmpty || !individualApplications.isEmpty || !individualCategories.isEmpty else {
-            throw AppError.validationFailed("content", reason: "Quick action must have at least one app, category, or app group to create a session")
+        guard !individualApplications.isEmpty || !individualCategories.isEmpty else {
+            throw AppError.validationFailed("content", reason: "Quick action must have at least one app or category to create a session")
         }
 
-        // Create session with comprehensive blocking - collect tokens from app groups and individual selections
+        // Create session with direct app and category selections
         return try IntentionSession(
-            appGroups: resolvedGroupIds,
+            appGroups: [], // No app groups - removed feature
             applications: individualApplications,
             categories: individualCategories,
             allowAllWebsites: allowAllWebsites,

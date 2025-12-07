@@ -10,6 +10,7 @@ import Foundation
 import DeviceActivity
 import ManagedSettings
 import FamilyControls
+import WidgetKit
 import OSLog
 
 /// Monitor extension that handles session expiration events
@@ -243,16 +244,67 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             sharedDefaults.set(true, forKey: "intentions.session.expired")
             sharedDefaults.set(timestamp, forKey: "intentions.session.expirationTime")
             sharedDefaults.set("DeviceActivityMonitor", forKey: "intentions.session.expiredBy")
+
+            // CRITICAL: Update widget to show correct state based on schedule
+            // Clear session data
+            sharedDefaults.removeObject(forKey: "intentions.widget.sessionTitle")
+            sharedDefaults.removeObject(forKey: "intentions.widget.sessionEndTime")
+
+            // Determine if we should be blocking based on schedule settings
+            let shouldBeBlocking = isCurrentlyInProtectedHours(sharedDefaults: sharedDefaults)
+            logger.info("📱 WIDGET UPDATE: Schedule check - shouldBeBlocking = \(shouldBeBlocking)")
+
+            // Set widget blocking status based on schedule
+            sharedDefaults.set(shouldBeBlocking, forKey: "intentions.widget.blockingStatus")
+            sharedDefaults.set(timestamp, forKey: "intentions.widget.lastUpdate")
+
             sharedDefaults.synchronize()
             logger.info("✅ RESTORE BLOCKING: Notified main app via UserDefaults")
+            logger.info("✅ RESTORE BLOCKING: Updated widget to show blocked state")
+
+            // Reload widget timelines to immediately reflect session expiration
+            WidgetCenter.shared.reloadAllTimelines()
+            logger.info("📱 WIDGET UPDATE: Reloaded widget timelines after session expiration")
 
             // Log current state for debugging
-            let webBlocking = sharedDefaults.bool(forKey: "intentions.session.expired")
-            logger.info("✅ RESTORE BLOCKING: Verified UserDefaults - expired flag: \(webBlocking)")
+            let expiredFlag = sharedDefaults.bool(forKey: "intentions.session.expired")
+            let blockingStatus = sharedDefaults.bool(forKey: "intentions.widget.blockingStatus")
+            logger.info("✅ RESTORE BLOCKING: Verified UserDefaults - expired flag: \(expiredFlag), blocking: \(blockingStatus)")
         } else {
             logger.error("❌ RESTORE BLOCKING: Failed to access shared UserDefaults!")
         }
 
         logger.notice("🎉 RESTORE BLOCKING: Complete!")
+    }
+
+    /// Check if current time is within protected hours based on schedule settings
+    private func isCurrentlyInProtectedHours(sharedDefaults: UserDefaults) -> Bool {
+        // Read schedule settings from UserDefaults
+        let isEnabled = sharedDefaults.bool(forKey: "intentions.schedule.isEnabled")
+        guard isEnabled else {
+            logger.info("📅 SCHEDULE CHECK: Schedule is disabled - not blocking")
+            return false
+        }
+
+        let startHour = sharedDefaults.integer(forKey: "intentions.schedule.startHour")
+        let endHour = sharedDefaults.integer(forKey: "intentions.schedule.endHour")
+        let activeDaysIntegers = sharedDefaults.array(forKey: "intentions.schedule.activeDays") as? [Int] ?? []
+
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Check day of week
+        let weekdayComponent = calendar.component(.weekday, from: now)
+        let dayMatches = activeDaysIntegers.contains(weekdayComponent)
+
+        // Check hour
+        let hour = calendar.component(.hour, from: now)
+        let hourMatches = (startHour...endHour).contains(hour)
+
+        let isActive = dayMatches && hourMatches
+
+        logger.info("📅 SCHEDULE CHECK: enabled=\(isEnabled), day=\(weekdayComponent), dayMatches=\(dayMatches), hour=\(hour), hourMatches=\(hourMatches), isActive=\(isActive)")
+
+        return isActive
     }
 }

@@ -79,17 +79,14 @@ struct CategoryMappingSetupView: View {
         .navigationBarTitleDisplayMode(.large)
         .familyActivityPicker(isPresented: $showingFamilyActivityPicker, selection: $currentSelection)
         .onChange(of: showingFamilyActivityPicker) { oldValue, newValue in
-            print("🎯 FamilyActivityPicker showing state changed: \(oldValue) → \(newValue)")
 
             // Track when picker actually appears
             if !oldValue && newValue {
-                print("✅ FamilyActivityPicker appeared - ready to accept selections")
                 pickerDidAppear = true
             }
 
             // If picker was dismissed, handle cleanup
             if oldValue && !newValue {
-                print("🔄 FamilyActivityPicker dismissed")
 
                 // Clear the error detection timer when picker is dismissed
                 errorDetectionTimer?.invalidate()
@@ -102,7 +99,6 @@ struct CategoryMappingSetupView: View {
                     // Give a short delay to let selection processing complete
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         if !isProcessingSelection {
-                            print("❌ No selection processed, resetting state")
                             currentCategory = nil
                         }
                     }
@@ -110,24 +106,20 @@ struct CategoryMappingSetupView: View {
             }
         }
         .onChange(of: currentSelection) { oldSelection, newSelection in
-            print("🎯 FamilyActivityPicker selection changed: \(newSelection.applications.count) apps, \(newSelection.categories.count) categories")
 
             // Only process selections when:
             // 1. We have an active category selection in progress
             // 2. The picker has actually appeared (not just spurious selection events)
             // 3. The selection has actually changed from the previous one
             guard currentCategory != nil else {
-                print("⚠️ Ignoring selection change - no active category selection")
                 return
             }
 
             guard pickerDidAppear else {
-                print("⚠️ Ignoring selection change - picker hasn't properly appeared yet")
                 return
             }
 
             guard oldSelection != newSelection else {
-                print("⚠️ Ignoring selection change - no actual change detected")
                 return
             }
 
@@ -282,14 +274,11 @@ struct CategoryMappingSetupView: View {
     // MARK: - Actions
     
     private func startCategorySelection(_ category: CategoryMappingService.AppCategory) {
-        print("🎯 Starting category selection for: \(category.displayName)")
 
         // Check authorization status before opening picker
         let authStatus = AuthorizationCenter.shared.authorizationStatus
-        print("📋 Current authorization status: \(authStatus)")
 
         if authStatus != .approved {
-            print("❌ Authorization not approved, cannot open picker")
             return
         }
 
@@ -311,7 +300,6 @@ struct CategoryMappingSetupView: View {
                 // If picker dismissed quickly without user interaction, likely a system error
                 if !showingFamilyActivityPicker && !isProcessingSelection {
                     hasLaunchServicesError = true
-                    print("🚨 SYSTEM ERROR: Detected likely LaunchServices failure - picker dismissed immediately")
                 }
             }
         }
@@ -325,12 +313,10 @@ struct CategoryMappingSetupView: View {
     private func handleCategorySelection(_ selection: FamilyActivitySelection) {
         // Prevent multiple processing of the same selection
         guard !isProcessingSelection else {
-            print("⚠️ Already processing selection, ignoring")
             return
         }
 
         guard let category = currentCategory else {
-            print("ERROR: No current category set for selection")
             return
         }
 
@@ -341,7 +327,6 @@ struct CategoryMappingSetupView: View {
         if hasApps || hasCategories {
             isProcessingSelection = true
 
-            print("✅ Processing selection for \(category.displayName): \(selection.applications.count) apps, \(selection.categories.count) categories")
 
             // Record the mapping
             mappingService.recordCategoryMapping(category, selection: selection)
@@ -352,17 +337,14 @@ struct CategoryMappingSetupView: View {
                 isProcessingSelection = false
                 pickerDidAppear = false
                 errorDetectionTimer?.invalidate()
-                print("🔄 Reset state after successful mapping")
             }
         } else if !isProcessingSelection && !showingFamilyActivityPicker {
             // Empty selection - check if it's due to system error or user cancellation
             if hasLaunchServicesError {
-                print("🚨 Empty selection for \(category.displayName) due to LaunchServices system error - not retrying")
                 currentCategory = nil
                 // Clear error state
                 hasLaunchServicesError = false
             } else {
-                print("❌ Empty selection for \(category.displayName) - user cancelled")
                 currentCategory = nil
             }
             errorDetectionTimer?.invalidate()

@@ -57,11 +57,9 @@ class IsolatedPickerViewController: UIViewController {
     
     func presentFamilyActivityPicker() {
         guard pickerWindow == nil else { 
-            print("⚠️ ISOLATED PICKER: Already presenting, ignoring duplicate request")
             return 
         }
         
-        print("🎯 ISOLATED PICKER: Presenting FamilyActivityPicker")
         
         // Create isolated window
         if let windowScene = view.window?.windowScene {
@@ -70,7 +68,6 @@ class IsolatedPickerViewController: UIViewController {
             // Create picker view controller
             let pickerView = IsolatedFamilyPickerView(
                 onFinish: { [weak self] selection in
-                    print("✅ ISOLATED PICKER: User finished with selection")
                     Task { @MainActor in
                         // Small delay to let the system clean up properly
                         try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
@@ -79,7 +76,6 @@ class IsolatedPickerViewController: UIViewController {
                     }
                 },
                 onCancel: { [weak self] in
-                    print("❌ ISOLATED PICKER: User cancelled")
                     Task { @MainActor in
                         // Small delay to let the system clean up properly
                         try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
@@ -99,12 +95,10 @@ class IsolatedPickerViewController: UIViewController {
     }
     
     func dismissFamilyActivityPicker() {
-        print("🔄 ISOLATED PICKER: Dismissing FamilyActivityPicker")
         cleanupWindow()
     }
     
     private func cleanupWindow() {
-        print("🧹 ISOLATED PICKER: Cleaning up window")
         guard let window = pickerWindow else { return }
         
         // More thorough cleanup to prevent plugin connection issues
@@ -124,7 +118,6 @@ class IsolatedPickerViewController: UIViewController {
             
             // Finally clear our reference
             self.pickerWindow = nil
-            print("✅ ISOLATED PICKER: Window cleanup completed")
         }
     }
 }
@@ -154,7 +147,6 @@ struct IsolatedFamilyPickerView: View {
                         if !hasInitialized {
                             hasInitialized = true
                             showingPicker = true
-                            print("📱 ISOLATED PICKER: Showing picker after initialization delay")
                         }
                     }
                 }
@@ -168,7 +160,6 @@ struct IsolatedFamilyPickerView: View {
                 let hasNewCategories = !newSelection.categories.isEmpty && newSelection.categories != oldSelection.categories
                 
                 if hasNewApps || hasNewCategories {
-                    print("📱 ISOLATED PICKER: Selection changed, will finish")
                     isFinishing = true
                     
                     // Add a small delay to ensure the picker UI has fully updated
@@ -183,7 +174,6 @@ struct IsolatedFamilyPickerView: View {
             .onChange(of: showingPicker) { _, isShowing in
                 // Handle cancellation when picker is dismissed
                 if !isShowing && !isFinishing && hasInitialized {
-                    print("📱 ISOLATED PICKER: Picker dismissed, will cancel")
                     Task {
                         try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
                         await MainActor.run {

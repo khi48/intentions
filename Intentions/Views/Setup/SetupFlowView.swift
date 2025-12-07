@@ -63,10 +63,8 @@ struct SetupFlowView: View {
             }
         }
         .onAppear {
-            print("📱 SETUP VIEW: onAppear - forceSetup=\(forceSetup), currentPage=\(currentPage)")
         }
         .onDisappear {
-            print("📱 SETUP VIEW: onDisappear")
         }
     }
 
@@ -184,7 +182,6 @@ struct SetupFlowView: View {
     
     private var landingPageContent: some View {
         SetupLandingView {
-            print("📱 STATE: Moving from landing to screenTimePermission")
             currentPage = .screenTimePermission
         }
     }
@@ -193,7 +190,6 @@ struct SetupFlowView: View {
         ScreenTimeAuthorizationStepView(
             setupCoordinator: setupCoordinator,
             onComplete: {
-                print("📱 STATE: Screen Time completed, moving to categoryMapping")
                 await setupCoordinator.completeSetupStep(.screenTimeAuthorization)
                 currentPage = .categoryMapping
             }
@@ -204,7 +200,6 @@ struct SetupFlowView: View {
         CategoryMappingStepView(
             setupCoordinator: setupCoordinator,
             onComplete: {
-                print("📱 STATE: Category mapping completed, moving to widget setup")
                 await setupCoordinator.completeSetupStep(.categoryMapping)
                 currentPage = .widgetSetup
             }
@@ -271,7 +266,6 @@ struct SetupFlowView: View {
             .cornerRadius(12)
             
             Button("Start Using Intent") {
-                print("📱 STATE: Widget setup completed, finishing setup")
                 onComplete()
             }
             .buttonStyle(.bordered)
@@ -290,25 +284,18 @@ struct SetupFlowView: View {
     // MARK: - Actions
     
     private func initializeSetup() async {
-        print("📱 STATE: Initializing setup flow")
-        print("📱 STATE: forceSetup = \(forceSetup)")
         await setupCoordinator.validateSetupRequirements()
 
         // Check if we should skip to a later page based on current state
         if let state = setupCoordinator.setupState {
-            print("📱 STATE: Setup state - sufficient: \(state.isSetupSufficient), screenTime: \(state.screenTimeAuthorized)")
             if state.isSetupSufficient && !forceSetup {
-                print("📱 STATE: Setup already complete, exiting setup")
                 onComplete()
             } else if state.screenTimeAuthorized && !forceSetup {
-                print("📱 STATE: Screen Time already authorized, starting at category mapping")
                 currentPage = .categoryMapping
             } else {
-                print("📱 STATE: Starting fresh setup (forced: \(forceSetup))")
                 currentPage = .landing
             }
         } else {
-            print("📱 STATE: No setup state available")
             currentPage = .landing
         }
     }
@@ -324,6 +311,5 @@ struct SetupFlowView: View {
             categoryMappingService: CategoryMappingService()
         )
     ) {
-        print("Setup completed")
     }
 }

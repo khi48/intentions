@@ -87,6 +87,8 @@
 		20EB27392E6D070A00FC4BE4 /* SetupStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB27382E6D070A00FC4BE4 /* SetupStateManager.swift */; };
 		20EB273B2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB273A2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift */; };
 		20EB273F2E6EE46500FC4BE4 /* SetupLandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB273E2E6EE46500FC4BE4 /* SetupLandingView.swift */; };
+		20FAEEEA2EE3DD3400E75AE0 /* IntentionsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20FAEEE92EE3DD3400E75AE0 /* IntentionsApp.swift */; };
+		20FAEEEC2EE3DDAD00E75AE0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20FAEEEB2EE3DDAD00E75AE0 /* ContentView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -235,6 +237,8 @@
 		20EB273A2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryMappingStepView.swift; sourceTree = "<group>"; };
 		20EB273E2E6EE46500FC4BE4 /* SetupLandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupLandingView.swift; sourceTree = "<group>"; };
 		20EB27422E77427B00FC4BE4 /* IntentionsWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IntentionsWidgetExtension.entitlements; sourceTree = "<group>"; };
+		20FAEEE92EE3DD3400E75AE0 /* IntentionsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsApp.swift; sourceTree = "<group>"; };
+		20FAEEEB2EE3DDAD00E75AE0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -463,6 +467,8 @@
 		2085A8D42DF54F480011EB9A /* App */ = {
 			isa = PBXGroup;
 			children = (
+				20FAEEEB2EE3DDAD00E75AE0 /* ContentView.swift */,
+				20FAEEE92EE3DD3400E75AE0 /* IntentionsApp.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -924,6 +930,7 @@
 			files = (
 				20EB26532E13229900FC4BE4 /* DataPersistingService.swift in Sources */,
 				20EB273B2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift in Sources */,
+				20FAEEEC2EE3DDAD00E75AE0 /* ContentView.swift in Sources */,
 				20EB270D2E695DC400FC4BE4 /* NavigationStateManager.swift in Sources */,
 				20EB270E2E695DC400FC4BE4 /* QuickActionsViewModel.swift in Sources */,
 				20EB27392E6D070A00FC4BE4 /* SetupStateManager.swift in Sources */,
@@ -937,6 +944,7 @@
 				20EB272E2E6D066100FC4BE4 /* SetupState.swift in Sources */,
 				2085A8E72DF55A470011EB9A /* DiscoveredApp.swift in Sources */,
 				20EB27352E6D06DC00FC4BE4 /* ScreenTimeAuthorizationStepView.swift in Sources */,
+				20FAEEEA2EE3DD3400E75AE0 /* IntentionsApp.swift in Sources */,
 				20EB27372E6D06DC00FC4BE4 /* SetupFlowView.swift in Sources */,
 				2085A9142DFF4B180011EB9A /* ApplicationExtension.swift in Sources */,
 				2085A8FC2DF6D2BB0011EB9A /* ScreenTimeUIAdaptor.swift in Sources */,

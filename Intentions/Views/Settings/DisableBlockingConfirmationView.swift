@@ -80,7 +80,7 @@ struct DisableBlockingConfirmationView: View {
                 .font(.title3)
                 .fontWeight(.semibold)
 
-            Text("Please help us understand why you want to disable blocking.")
+            Text("Take a moment to reflect on why you need full access.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
@@ -90,10 +90,10 @@ struct DisableBlockingConfirmationView: View {
 
     private var intentionInputSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-                    Text("Why do you need to disable blocking?")
+                    Text("What's your reason?")
                         .font(.headline)
 
-                    TextField("Share your intention here...", text: $intentionText)
+                    TextField("Write your reason for disabling...", text: $intentionText)
                         .textFieldStyle(.roundedBorder)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.sentences)
@@ -126,7 +126,7 @@ struct DisableBlockingConfirmationView: View {
 
     private var countdownSection: some View {
         VStack(spacing: 20) {
-            Text("Please take a moment to reflect...")
+            Text("Is this really what you want?")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 

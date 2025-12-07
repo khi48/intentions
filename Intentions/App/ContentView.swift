@@ -63,7 +63,6 @@ private struct MainTabView: View {
         TabView(selection: Binding(
             get: { viewModel.selectedTab },
             set: { newTab in
-                print("🔄 TAB CHANGE: \(viewModel.selectedTab.rawValue) → \(newTab.rawValue)")
                 
                 let oldTab = viewModel.selectedTab
                 
@@ -72,24 +71,19 @@ private struct MainTabView: View {
                 
                 // Then reset Settings navigation in the background after a brief delay
                 if oldTab == .settings && newTab != .settings {
-                    print("🏠 SETTINGS RESET: Will reset Settings navigation in background")
                     // Use a small delay to let the tab transition complete smoothly
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         navigationManager.resetSettingsNavigationWithoutAnimation()
                         settingsViewModel?.resetSheetState()
-                        print("   ✅ Background reset completed")
                     }
                 }
                 // Also reset when navigating TO Settings tab (ensures clean state) 
                 else if oldTab != .settings && newTab == .settings {
-                    print("🏠 SETTINGS ENTRY: Will ensure clean Settings state in background")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         navigationManager.resetSettingsNavigationWithoutAnimation()
                         settingsViewModel?.resetSheetState()
-                        print("   ✅ Clean entry state ensured")
                     }
                 } else {
-                    print("   ℹ️ No Settings reset needed")
                 }
             }
         )) {
@@ -121,23 +115,7 @@ private struct MainTabView: View {
             
         }
         .tint(AppConstants.Colors.tabBarIcon)
-        .sheet(isPresented: Binding(
-            get: { viewModel.showingIntentionPrompt },
-            set: { viewModel.showingIntentionPrompt = $0 }
-        )) {
-            IntentionPromptView(
-                dataService: viewModel.dataServiceProvider,
-                screenTimeService: viewModel.screenTimeService,
-                categoryMappingService: viewModel.categoryMappingService,
-                contentViewModel: viewModel,
-                onSessionStart: { session in
-                    await viewModel.startSession(session)
-                },
-                onCancel: {
-                    viewModel.showingIntentionPrompt = false
-                }
-            )
-        }
+        // REMOVED: IntentionPromptView was legacy - intention functionality now via Quick Actions
     }
 }
 

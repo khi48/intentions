@@ -186,6 +186,5 @@ struct WidgetSetupStepView: View {
 
 #Preview {
     WidgetSetupStepView {
-        print("Widget setup completed")
     }
 }

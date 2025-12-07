@@ -90,9 +90,6 @@ final class SessionStatusViewModel: Sendable {
         }
     }
     
-    /// App groups associated with current session
-    private(set) var sessionAppGroups: [AppGroup] = []
-    
     /// Individual apps associated with current session
     private(set) var sessionApps: [DiscoveredApp] = []
 
@@ -122,7 +119,7 @@ final class SessionStatusViewModel: Sendable {
     private let notificationService: NotificationService
     
     // MARK: - Timer
-    
+
     nonisolated(unsafe) private var timer: Timer?
     
     // MARK: - Callbacks (Legacy - will be removed)
@@ -146,7 +143,7 @@ final class SessionStatusViewModel: Sendable {
         self.screenTimeService = screenTimeService ?? contentViewModel.screenTimeService
         self.notificationService = notificationService ?? NotificationService.shared
 
-        if let session = session {
+        if session != nil {
             updateRemainingTime()
             startTimer()
 
@@ -191,8 +188,8 @@ final class SessionStatusViewModel: Sendable {
         } else {
             stopTimer()
             remainingTime = 0
-            sessionAppGroups = []
             sessionApps = []
+            sessionTokens = []
 
             // Cancel notifications when session ends
             Task {
@@ -237,13 +234,13 @@ final class SessionStatusViewModel: Sendable {
     /// End the current session early
     func endSession() async {
         guard let currentSession = session, currentSession.isActive else { return }
-        
+
         await withLoading {
             do {
                 // End current session
                 currentSession.complete()
                 let endedSession = currentSession
-                
+
                 try await dataService.saveIntentionSession(endedSession)
                 session = endedSession
                 stopTimer()
@@ -256,8 +253,11 @@ final class SessionStatusViewModel: Sendable {
 
                 // Keep legacy callback for backward compatibility during transition
                 await onSessionEnded?()
-                
+
             } catch {
+                // CRITICAL: Even if saving fails, we MUST restore blocking
+                // Otherwise apps remain unblocked when session ends with an error
+                await contentViewModel.endCurrentSession()
                 await handleError(error)
             }
         }
@@ -288,33 +288,22 @@ final class SessionStatusViewModel: Sendable {
             return
         }
 
-        do {
-            // Load app groups for this session
-            let allGroups = try await dataService.loadAppGroups()
-            sessionAppGroups = allGroups.filter { group in
-                session.requestedAppGroups.contains(group.id)
-            }
+        // Store the ApplicationTokens directly - no need to convert
+        sessionTokens = Array(session.requestedApplications)
 
-            // Store the ApplicationTokens directly - no need to convert
-            sessionTokens = Array(session.requestedApplications)
-
-            // For now, create simple placeholder DiscoveredApps for backward compatibility
-            var allSessionApps: [DiscoveredApp] = []
-            for (index, token) in session.requestedApplications.enumerated() {
-                let discoveredApp = DiscoveredApp(
-                    displayName: "App \(index + 1)", // Placeholder name - in real app this would come from the app metadata
-                    bundleIdentifier: "com.app\(index + 1).bundle", // Placeholder - would be real bundle ID
-                    token: token,
-                    category: "Allowed"
-                )
-                allSessionApps.append(discoveredApp)
-            }
-
-            sessionApps = allSessionApps
-
-        } catch {
-            print("❌ Failed to load session data: \(error)")
+        // For now, create simple placeholder DiscoveredApps for backward compatibility
+        var allSessionApps: [DiscoveredApp] = []
+        for (index, token) in session.requestedApplications.enumerated() {
+            let discoveredApp = DiscoveredApp(
+                displayName: "App \(index + 1)", // Placeholder name - in real app this would come from the app metadata
+                bundleIdentifier: "com.app\(index + 1).bundle", // Placeholder - would be real bundle ID
+                token: token,
+                category: "Allowed"
+            )
+            allSessionApps.append(discoveredApp)
         }
+
+        sessionApps = allSessionApps
     }
     
 
@@ -351,7 +340,6 @@ final class SessionStatusViewModel: Sendable {
             Task {
                 // End the session via manual UI timer expiration
                 // This will complete the session, clear state, and re-block apps
-                print("⏰ UI TIMER: Session expired - ending session via UI timer")
                 await contentViewModel.endCurrentSession()
 
                 // Keep legacy callback for backward compatibility during transition

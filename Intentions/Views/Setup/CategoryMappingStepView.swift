@@ -40,11 +40,6 @@ struct CategoryMappingStepView: View {
         }
         .padding()
         .onAppear {
-            print("🔍 CATEGORY MAPPING STEP DEBUG:")
-            print("   - isSetupCompleted: \(categoryMappingService.isSetupCompleted)")
-            print("   - isTrulySetupCompleted: \(categoryMappingService.isTrulySetupCompleted)")
-            print("   - completedCategories count: \(categoryMappingService.completedCategories.count)")
-            print("   - Will show Continue button: \(categoryMappingService.isTrulySetupCompleted)")
         }
         .fullScreenCover(isPresented: $showingCategoryMapping) {
             CategoryMappingSetupView(mappingService: categoryMappingService) {
@@ -166,7 +161,6 @@ struct CategoryMappingStepView: View {
             if categoryMappingService.isTrulySetupCompleted {
                 VStack(spacing: 12) {
                     Button("Continue") {
-                        print("🔘 BUTTON: Continue button pressed in CategoryMappingStepView")
                         Task {
                             await completeStep()
                         }
@@ -183,7 +177,6 @@ struct CategoryMappingStepView: View {
             } else {
                 VStack(spacing: 16) {
                     Button(categoryMappingService.completedCategories.isEmpty ? "Start Category Mapping" : "Continue Mapping") {
-                        print("🔘 BUTTON: Start/Continue Category Mapping button pressed")
                         showingCategoryMapping = true
                     }
                     .buttonStyle(.bordered)
@@ -220,12 +213,8 @@ struct CategoryMappingStepView: View {
     // MARK: - Actions
     
     private func completeStep() async {
-        print("🔍 COMPLETING CATEGORY MAPPING STEP:")
-        print("   - isSetupCompleted: \(categoryMappingService.isSetupCompleted)")
-        print("   - isTrulySetupCompleted: \(categoryMappingService.isTrulySetupCompleted)")
         
         await setupCoordinator.completeSetupStep(.categoryMapping)
-        print("🚪 CATEGORY MAPPING: Calling onComplete() to exit setup flow")
         await onComplete()
     }
     
@@ -240,6 +229,5 @@ struct CategoryMappingStepView: View {
             categoryMappingService: CategoryMappingService()
         )
     ) {
-        print("Category mapping step completed")
     }
 }

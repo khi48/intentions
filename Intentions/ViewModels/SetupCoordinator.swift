@@ -140,7 +140,6 @@ final class SetupCoordinator: Sendable {
             return try await operation()
         } catch {
             errorMessage = error.localizedDescription
-            print("SETUP VALIDATION ERROR: \(error)")
             throw error
         }
     }

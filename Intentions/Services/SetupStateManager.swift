@@ -94,7 +94,6 @@ final class SetupStateManager: Sendable {
             let state = try JSONDecoder().decode(SetupState.self, from: data)
             return state
         } catch {
-            print("❌ SETUP STATE: Failed to decode from UserDefaults: \(error)")
             return nil
         }
     }
@@ -103,9 +102,7 @@ final class SetupStateManager: Sendable {
         do {
             let data = try JSONEncoder().encode(state)
             userDefaults.set(data, forKey: Self.setupStateKey)
-            print("✅ SETUP STATE: Saved to UserDefaults")
         } catch {
-            print("❌ SETUP STATE: Failed to encode to UserDefaults: \(error)")
         }
     }
     
@@ -123,7 +120,6 @@ final class SetupStateManager: Sendable {
             let state = try JSONDecoder().decode(SetupState.self, from: data)
             return state
         } catch {
-            print("❌ SETUP STATE: Failed to load from file system: \(error)")
             return nil
         }
     }
@@ -134,9 +130,7 @@ final class SetupStateManager: Sendable {
         do {
             let data = try JSONEncoder().encode(state)
             try data.write(to: fileURL)
-            print("✅ SETUP STATE: Saved to file system")
         } catch {
-            print("❌ SETUP STATE: Failed to save to file system: \(error)")
         }
     }
     
@@ -146,9 +140,7 @@ final class SetupStateManager: Sendable {
         if fileManager.fileExists(atPath: fileURL.path) {
             do {
                 try fileManager.removeItem(at: fileURL)
-                print("✅ SETUP STATE: Deleted from file system")
             } catch {
-                print("❌ SETUP STATE: Failed to delete from file system: \(error)")
             }
         }
     }

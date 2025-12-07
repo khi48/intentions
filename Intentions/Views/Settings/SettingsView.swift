@@ -79,41 +79,6 @@ struct ScheduleDetailsRow: View {
     }
 }
 
-struct AppGroupRow: View {
-    let group: AppGroup
-    let onEdit: () -> Void
-    let onDelete: () -> Void
-    
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(group.name)
-                    .font(.headline)
-                    .foregroundColor(AppConstants.Colors.text)
-                
-                Text("\(group.applications.count) apps")
-                    .font(.caption)
-                    .foregroundColor(AppConstants.Colors.textSecondary)
-            }
-            
-            Spacer()
-            
-            Menu {
-                Button("Edit", systemImage: "pencil") {
-                    onEdit()
-                }
-                
-                Button("Delete", systemImage: "trash", role: .destructive) {
-                    onDelete()
-                }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-                    .foregroundColor(AppConstants.Colors.textSecondary)
-            }
-        }
-    }
-}
-
 struct StatisticRow: View {
     let title: String
     let value: String
@@ -176,6 +141,21 @@ struct SettingsView: View {
     private let authorizationStatus: AuthorizationStatus
     @EnvironmentObject private var navigationManager: NavigationStateManager
 
+    /// Whether schedule editing should be disabled (either during active session or active protected hours)
+    private var isScheduleEditingDisabled: Bool {
+        hasActiveSession || viewModel.scheduleSettings.isCurrentlyActive
+    }
+
+    /// Reason message explaining why schedule editing is disabled
+    private var scheduleEditingDisabledReason: String {
+        if hasActiveSession {
+            return "Cannot modify schedule while session is active"
+        } else if viewModel.scheduleSettings.isCurrentlyActive {
+            return "Cannot modify schedule during active protected hours"
+        }
+        return ""
+    }
+
     init(
         dataService: DataPersisting? = nil,
         setupCoordinator: SetupCoordinator? = nil,
@@ -230,7 +210,6 @@ struct SettingsView: View {
                                 forceSetup: true
                             ) {
                                 // Handle completion in navigation context
-                                print("Navigation: Setup flow completed")
                                 navigationManager.resetSettingsNavigation()
                             }
                         } else {
@@ -248,35 +227,7 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(.visible, for: .tabBar)
-        .alert("Error", isPresented: Binding(
-            get: { 
-                // COMPLETELY DISABLE SettingsView error alerts to prevent presentation conflicts
-                false  // Only delete confirmation alert remains active
-            },
-            set: { _ in viewModel.clearError() }
-        )) {
-            Button("OK") {
-                viewModel.clearError()
-            }
-        } message: {
-            Text(viewModel.errorMessage ?? "")
-        }
-        .alert("Delete App Group", isPresented: $viewModel.showingDeleteConfirmation) {
-            Button("Cancel", role: .cancel) {
-                viewModel.cancelDelete()
-            }
-            Button("Delete", role: .destructive) {
-                Task {
-                    await viewModel.executeDelete()
-                }
-            }
-        } message: {
-            if let group = viewModel.groupToDelete {
-                Text("Are you sure you want to delete '\(group.name)'? This action cannot be undone.")
-            }
-        }
-        // TEMPORARILY DISABLED: Schedule editor sheet to test presentation conflict
-        .sheet(isPresented: .constant(false)) {
+        .sheet(isPresented: $viewModel.showingScheduleEditor) {
             ScheduleSettingsView(
                 settings: viewModel.scheduleSettings,
                 onSave: { settings in
@@ -289,20 +240,6 @@ struct SettingsView: View {
                 },
                 onCancel: {
                     viewModel.hideScheduleEditor()
-                }
-            )
-        }
-        // TEMPORARILY DISABLED: App group editor sheet to test presentation conflict
-        .sheet(isPresented: .constant(false)) {
-            AppGroupEditorView(
-                onSave: { name, apps in
-                    Task {
-                        await viewModel.createAppGroup(name: name, applications: apps)
-                    }
-                    viewModel.hideAppGroupEditor()
-                },
-                onCancel: {
-                    viewModel.hideAppGroupEditor()
                 }
             )
         }
@@ -325,10 +262,7 @@ struct SettingsView: View {
             await viewModel.loadData()
         }
         .onAppear {
-            print("🏠 SETTINGS VIEW: onAppear called")
-            print("   - Navigation path count: \(navigationManager.settingsPath.count)")
             onViewModelReady?(viewModel)
-            print("   ✅ ViewModel ready callback sent")
         }
     }
     
@@ -378,23 +312,23 @@ struct SettingsView: View {
                 title: "Blocking Hours",
                 value: viewModel.formattedActiveHours,
                 action: { viewModel.showScheduleEditor() },
-                isDisabled: hasActiveSession
+                isDisabled: isScheduleEditingDisabled
             )
 
             ScheduleDetailsRow(
                 title: "Blocking Days",
                 value: viewModel.activeDaysText,
                 action: { viewModel.showScheduleEditor() },
-                isDisabled: hasActiveSession
+                isDisabled: isScheduleEditingDisabled
             )
 
 
-            // Show information when disabled due to active session
-            if hasActiveSession {
+            // Show information when disabled
+            if isScheduleEditingDisabled {
                 HStack {
                     Image(systemName: "info.circle")
                         .foregroundColor(AppConstants.Colors.textSecondary)
-                    Text("Cannot modify schedule while session is active")
+                    Text(scheduleEditingDisabledReason)
                         .font(.caption)
                         .foregroundColor(AppConstants.Colors.textSecondary)
                 }
@@ -417,17 +351,11 @@ struct SettingsView: View {
     private var statisticsSection: some View {
         Section("Usage Statistics") {
             StatisticRow(
-                title: "Managed Apps",
-                value: "\(viewModel.totalManagedApps)",
-                icon: "apps.iphone"
-            )
-            
-            StatisticRow(
                 title: "Today's Sessions",
                 value: "\(viewModel.todaySessionCount)",
                 icon: "calendar"
             )
-            
+
             StatisticRow(
                 title: "This Week",
                 value: "\(viewModel.weeklySessionCount)",
@@ -630,10 +558,7 @@ struct SettingsView: View {
         if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
             UIApplication.shared.open(settingsURL) { success in
                 if success {
-                    print("✅ Opened Settings (app page)")
-                    print("ℹ️  User needs to navigate: < Settings → Accessibility → Display & Text Size → Color Filters")
                 } else {
-                    print("❌ Failed to open Settings app")
                 }
             }
         }
@@ -815,34 +740,6 @@ struct ScheduleSettingsView: View {
     
     private func dateFromHour(_ hour: Int) -> Date {
         Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: Date()) ?? Date()
-    }
-}
-
-struct AppGroupEditorView: View {
-    let onSave: (String, Set<ApplicationToken>) -> Void
-    let onCancel: () -> Void
-    
-    var body: some View {
-        NavigationView {
-            VStack {
-                Text("App Group Editor")
-                    .font(.title2)
-                Text("Coming Soon")
-                    .foregroundStyle(.secondary)
-            }
-            .navigationTitle("New Group")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { onCancel() }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") { 
-                        onSave("New Group", Set<ApplicationToken>()) 
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -1220,7 +1117,7 @@ struct AboutView: View {
     }
 }
 
-
+#if DEBUG
 // MARK: - All Apps Discovery Test View
 
 /// Simple test view to discover all apps and capture tokens with debug output
@@ -1262,8 +1159,6 @@ struct AllAppsDiscoveryTestView: View {
                         .padding(.horizontal)
                     
                     Button("Start Discovery") {
-                        print("🔍 DISCOVERY TEST: Opening FamilyActivityPicker")
-                        print("🔍 INSTRUCTION: Please select ALL apps and ALL categories")
                         showingPicker = true
                     }
                     .buttonStyle(.bordered)
@@ -1359,103 +1254,65 @@ struct AllAppsDiscoveryTestView: View {
     }
     
     private func handleSelectionChange(oldSelection: FamilyActivitySelection, newSelection: FamilyActivitySelection) {
-        print("\n" + String(repeating: "=", count: 60))
-        print("🔍 DISCOVERY TEST: Selection Changed")
-        print(String(repeating: "=", count: 60))
         
         // Basic counts
-        print("📊 BASIC COUNTS:")
-        print("   Applications: \(newSelection.applications.count)")
-        print("   Categories: \(newSelection.categories.count)")
-        print("   Web Domains: \(newSelection.webDomains.count)")
-        print("   includeEntireCategory: \(newSelection.includeEntireCategory)")
         
         // Token analysis
         let appTokens = newSelection.applications.compactMap { $0.token }
         let categoryTokens = newSelection.categories.compactMap { $0.token }
         
-        print("\n🔑 TOKEN ANALYSIS:")
-        print("   Valid App Tokens: \(appTokens.count)/\(newSelection.applications.count)")
-        print("   Valid Category Tokens: \(categoryTokens.count)/\(newSelection.categories.count)")
-        print("   🎯 With includeEntireCategory=true, selecting categories should populate individual apps too!")
         
         // Detailed app analysis
-        print("\n📱 DETAILED APP ANALYSIS:")
         for (index, app) in newSelection.applications.enumerated().prefix(10) {
             let hasToken = app.token != nil
-            print("   App \(index + 1): \(hasToken ? "✅ HAS TOKEN" : "❌ NO TOKEN")")
             
-            print("     - App: \(app)")
             if let token = app.token {
-                print("     - Token: \(token)")
             }
         }
         
         if newSelection.applications.count > 10 {
-            print("   ... and \(newSelection.applications.count - 10) more apps")
         }
         
         // Detailed category analysis
-        print("\n🏷️ DETAILED CATEGORY ANALYSIS:")
         for (index, category) in newSelection.categories.enumerated() {
             let hasToken = category.token != nil
-            print("   Category \(index + 1): \(hasToken ? "✅ HAS TOKEN" : "❌ NO TOKEN")")
-            print("     - Category: \(category)")
             if let token = category.token {
-                print("     - Token: \(token)")
             }
         }
         
         // Web domains analysis
         if !newSelection.webDomains.isEmpty {
-            print("\n🌐 WEB DOMAINS ANALYSIS:")
             for (index, domain) in newSelection.webDomains.enumerated().prefix(5) {
-                print("   Domain \(index + 1): \(domain)")
             }
             if newSelection.webDomains.count > 5 {
-                print("   ... and \(newSelection.webDomains.count - 5) more domains")
             }
         }
         
         // Summary
-        print("\n📝 DISCOVERY SUMMARY:")
         if appTokens.count > 0 || categoryTokens.count > 0 {
-            print("   ✅ Discovery SUCCESSFUL!")
-            print("   📊 Total usable tokens: \(appTokens.count + categoryTokens.count)")
             discoveryComplete = true
         } else {
-            print("   ⚠️ No valid tokens found - user may not have selected anything")
         }
         
         // Storage simulation
-        print("\n💾 STORAGE SIMULATION:")
         do {
             let encoded = try JSONEncoder().encode(newSelection)
-            print("   ✅ JSON encoding successful: \(encoded.count) bytes")
             
             let decoded = try JSONDecoder().decode(FamilyActivitySelection.self, from: encoded)
             let decodedAppTokens = decoded.applications.compactMap { $0.token }.count
             let decodedCategoryTokens = decoded.categories.compactMap { $0.token }.count
             
-            print("   📊 After JSON round-trip:")
-            print("     - App tokens: \(decodedAppTokens) (original: \(appTokens.count))")
-            print("     - Category tokens: \(decodedCategoryTokens) (original: \(categoryTokens.count))")
             
             if decodedAppTokens == appTokens.count && decodedCategoryTokens == categoryTokens.count {
-                print("   ✅ Token persistence looks good!")
             } else {
-                print("   ⚠️ Token persistence may have issues")
             }
             
         } catch {
-            print("   ❌ JSON encoding failed: \(error)")
         }
         
-        print(String(repeating: "=", count: 60) + "\n")
     }
     
     private func resetDiscovery() {
-        print("🔄 DISCOVERY TEST: Resetting for new discovery")
         allAppsSelection = FamilyActivitySelection(includeEntireCategory: true)
         discoveryComplete = false
     }
@@ -1524,7 +1381,6 @@ struct IncludeEntireCategoryTestView: View {
             
             // Open Picker Button
             Button("Open Family Activity Picker") {
-                print("\n🧪 TESTING: \(testMode.rawValue)")
                 showingPicker = true
             }
             .buttonStyle(.bordered)
@@ -1650,49 +1506,28 @@ struct IncludeEntireCategoryTestView: View {
     }
     
     private func handleSelectionChange(_ selection: FamilyActivitySelection, mode: TestMode) {
-        print("\n" + String(repeating: "=", count: 50))
-        print("🧪 MVP TEST RESULTS: \(mode.rawValue)")
-        print(String(repeating: "=", count: 50))
         
-        print("📊 BASIC COUNTS:")
-        print("   Applications: \(selection.applications.count)")
-        print("   Categories: \(selection.categories.count)")
-        print("   Web Domains: \(selection.webDomains.count)")
-        print("   includeEntireCategory: \(selection.includeEntireCategory)")
         
         let appTokens = selection.applications.compactMap { $0.token }
         let categoryTokens = selection.categories.compactMap { $0.token }
         
-        print("\n🔑 TOKEN VALIDATION:")
-        print("   Valid App Tokens: \(appTokens.count)/\(selection.applications.count)")
-        print("   Valid Category Tokens: \(categoryTokens.count)/\(selection.categories.count)")
         
-        print("\n🎯 TEST ANALYSIS:")
         if mode == .withCategories {
             if selection.categories.count > 0 && selection.applications.count > 0 {
-                print("   ✅ SUCCESS: includeEntireCategory=true gave us BOTH categories AND individual apps!")
-                print("   📱 This means selecting categories populated individual app tokens")
             } else if selection.categories.count > 0 && selection.applications.count == 0 {
-                print("   ❌ UNEXPECTED: includeEntireCategory=true gave us categories but NO individual apps")
-                print("   🤔 This suggests the feature might not work as expected")
             } else if selection.applications.count > 0 && selection.categories.count == 0 {
-                print("   ✅ User selected individual apps (not categories) - this is fine")
             } else {
-                print("   ⚠️ No selection made yet")
             }
         } else {
             if selection.categories.count > 0 && selection.applications.count == 0 {
-                print("   ✅ EXPECTED: includeEntireCategory=false gave us only categories")
             } else if selection.categories.count > 0 && selection.applications.count > 0 {
-                print("   🤔 UNEXPECTED: includeEntireCategory=false gave us categories AND individual apps")
             } else if selection.applications.count > 0 {
-                print("   ✅ User selected individual apps - this is normal")
             }
         }
         
-        print(String(repeating: "=", count: 50) + "\n")
     }
 }
+#endif
 
 //#Preview {
 //    SettingsView()

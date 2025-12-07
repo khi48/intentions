@@ -191,8 +191,8 @@ private struct QuickActionsSection: View {
         .sheet(item: $editorMode) { mode in
             QuickActionEditorSheet(
                 dataService: viewModel.dataServiceProvider,
+                categoryMappingService: viewModel.categoryMappingService,
                 editingQuickAction: mode.quickAction,
-                availableAppGroups: quickActionsViewModel.availableAppGroups,
                 onSave: { quickAction in
                     await quickActionsViewModel.saveQuickAction(quickAction)
                     editorMode = nil
@@ -264,7 +264,7 @@ private struct QuickActionsSection: View {
             await quickActionsViewModel.recordQuickActionUsage(quickAction)
 
             // Create session from quick action
-            let session = try quickAction.createSession(with: quickActionsViewModel.availableAppGroups)
+            let session = try quickAction.createSession()
 
             // Start the session through ContentViewModel
             await viewModel.startSession(session)

@@ -150,6 +150,5 @@ struct SetupLandingView: View {
 
 #Preview {
     SetupLandingView {
-        print("Get started tapped")
     }
 }
