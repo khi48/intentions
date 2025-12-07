@@ -89,6 +89,7 @@
 		20EB273F2E6EE46500FC4BE4 /* SetupLandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB273E2E6EE46500FC4BE4 /* SetupLandingView.swift */; };
 		20FAEEEA2EE3DD3400E75AE0 /* IntentionsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20FAEEE92EE3DD3400E75AE0 /* IntentionsApp.swift */; };
 		20FAEEEC2EE3DDAD00E75AE0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20FAEEEB2EE3DDAD00E75AE0 /* ContentView.swift */; };
+		20FAEEEE2EE502B900E75AE0 /* AlwaysAllowedInfoStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20FAEEED2EE502B900E75AE0 /* AlwaysAllowedInfoStepView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -239,6 +240,7 @@
 		20EB27422E77427B00FC4BE4 /* IntentionsWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IntentionsWidgetExtension.entitlements; sourceTree = "<group>"; };
 		20FAEEE92EE3DD3400E75AE0 /* IntentionsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsApp.swift; sourceTree = "<group>"; };
 		20FAEEEB2EE3DDAD00E75AE0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		20FAEEED2EE502B900E75AE0 /* AlwaysAllowedInfoStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlwaysAllowedInfoStepView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -680,6 +682,7 @@
 		20EB27342E6D06DC00FC4BE4 /* Setup */ = {
 			isa = PBXGroup;
 			children = (
+				20FAEEED2EE502B900E75AE0 /* AlwaysAllowedInfoStepView.swift */,
 				207E14812E9B6A6200730900 /* WidgetSetupStepView.swift */,
 				20EB273E2E6EE46500FC4BE4 /* SetupLandingView.swift */,
 				20EB273A2E6D3ACB00FC4BE4 /* CategoryMappingStepView.swift */,
@@ -944,6 +947,7 @@
 				20EB272E2E6D066100FC4BE4 /* SetupState.swift in Sources */,
 				2085A8E72DF55A470011EB9A /* DiscoveredApp.swift in Sources */,
 				20EB27352E6D06DC00FC4BE4 /* ScreenTimeAuthorizationStepView.swift in Sources */,
+				20FAEEEE2EE502B900E75AE0 /* AlwaysAllowedInfoStepView.swift in Sources */,
 				20FAEEEA2EE3DD3400E75AE0 /* IntentionsApp.swift in Sources */,
 				20EB27372E6D06DC00FC4BE4 /* SetupFlowView.swift in Sources */,
 				2085A9142DFF4B180011EB9A /* ApplicationExtension.swift in Sources */,

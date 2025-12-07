@@ -11,8 +11,9 @@ import SwiftUI
 
 enum SetupPage {
     case landing
-    case screenTimePermission  
+    case screenTimePermission
     case categoryMapping
+    case alwaysAllowedInfo
     case widgetSetup
 }
 
@@ -109,6 +110,9 @@ struct SetupFlowView: View {
                         .padding()
                     }
 
+                case .alwaysAllowedInfo:
+                    alwaysAllowedInfoContent
+
                 case .widgetSetup:
                     ScrollView {
                         VStack(spacing: 24) {
@@ -132,47 +136,61 @@ struct SetupFlowView: View {
     
     private func progressSection(step: Int) -> some View {
         VStack(spacing: 12) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 // Step 1: Screen Time
                 Circle()
                     .fill(step >= 1 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
-                    .frame(width: 12, height: 12)
+                    .frame(width: 10, height: 10)
                     .overlay(
                         Circle()
                             .stroke(AppConstants.Colors.text, lineWidth: step == 1 ? 2 : 0)
                     )
-                
+
                 Rectangle()
                     .fill(step >= 2 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
                     .frame(height: 2)
-                    .frame(maxWidth: 30)
-                
+                    .frame(maxWidth: 20)
+
                 // Step 2: Category Mapping
                 Circle()
                     .fill(step >= 2 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
-                    .frame(width: 12, height: 12)
+                    .frame(width: 10, height: 10)
                     .overlay(
                         Circle()
                             .stroke(AppConstants.Colors.text, lineWidth: step == 2 ? 2 : 0)
                     )
-                
+
                 Rectangle()
                     .fill(step >= 3 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
                     .frame(height: 2)
-                    .frame(maxWidth: 30)
-                
-                // Step 3: Widget Setup
+                    .frame(maxWidth: 20)
+
+                // Step 3: Always Allowed (no progress indicator, just info)
                 Circle()
                     .fill(step >= 3 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
-                    .frame(width: 12, height: 12)
+                    .frame(width: 10, height: 10)
                     .overlay(
                         Circle()
                             .stroke(AppConstants.Colors.text, lineWidth: step == 3 ? 2 : 0)
                     )
+
+                Rectangle()
+                    .fill(step >= 4 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
+                    .frame(height: 2)
+                    .frame(maxWidth: 20)
+
+                // Step 4: Widget Setup (optional)
+                Circle()
+                    .fill(step >= 4 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
+                    .frame(width: 10, height: 10)
+                    .overlay(
+                        Circle()
+                            .stroke(AppConstants.Colors.text, lineWidth: step == 4 ? 2 : 0)
+                    )
             }
             .padding(.horizontal)
-            
-            Text("Step \(step) of 3")
+
+            Text("Step \(step) of 4")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -201,6 +219,14 @@ struct SetupFlowView: View {
             setupCoordinator: setupCoordinator,
             onComplete: {
                 await setupCoordinator.completeSetupStep(.categoryMapping)
+                currentPage = .alwaysAllowedInfo
+            }
+        )
+    }
+
+    private var alwaysAllowedInfoContent: some View {
+        AlwaysAllowedInfoStepView(
+            onContinue: {
                 currentPage = .widgetSetup
             }
         )
