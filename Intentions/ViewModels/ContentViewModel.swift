@@ -337,17 +337,20 @@ final class ContentViewModel: Sendable {
 
     /// Extend the current session by additional time
     func extendCurrentSession(by extensionTime: TimeInterval) async {
-        guard let session = activeSession else { return }
-        
+        guard let session = activeSession, session.isActive else { return }
+
         await withLoading {
             do {
                 // Extend the session duration
                 session.duration += extensionTime
                 try await dataService.saveIntentionSession(session)
-                
-                // Update local state
-                activeSession = session
-                
+
+                // Re-apply blocking with the new remaining time so the
+                // ScreenTimeService timer and DeviceActivity schedule update
+                currentlyAppliedSessionId = nil // Force re-application
+                await applySessionBlocking(for: session)
+
+                updateWidgetSessionData(session)
             } catch {
                 await handleError(error)
             }

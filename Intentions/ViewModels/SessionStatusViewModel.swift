@@ -182,52 +182,26 @@ final class SessionStatusViewModel: Sendable {
         }
 
         let extensionTime = TimeInterval(minutes * 60)
-        
-        await withLoading {
-            do {
-                // Create extended session by modifying current session
-                let extendedSession = currentSession
-                extendedSession.duration += extensionTime
 
-                try await dataService.saveIntentionSession(extendedSession)
-                session = extendedSession
-                updateRemainingTime()
+        // Delegate to ContentViewModel which handles persistence,
+        // ScreenTimeService timer update, and widget data
+        await contentViewModel.extendCurrentSession(by: extensionTime)
 
-                // Close dialog
-                showingExtendDialog = false
-                
-            } catch {
-                await handleError(error)
-            }
-        }
+        // Update local UI state
+        updateRemainingTime()
+        showingExtendDialog = false
     }
     
     /// End the current session early
     func endSession() async {
-        guard let currentSession = session, currentSession.isActive else { return }
+        guard session != nil, session?.isActive == true else { return }
 
-        await withLoading {
-            do {
-                // End current session
-                currentSession.complete()
-                let endedSession = currentSession
+        stopTimer()
+        session = nil
 
-                try await dataService.saveIntentionSession(endedSession)
-                session = endedSession
-                stopTimer()
-
-                // Cancel any pending notifications
-                await notificationService.cancelSessionNotifications()
-
-                await contentViewModel.endCurrentSession()
-
-            } catch {
-                // CRITICAL: Even if saving fails, we MUST restore blocking
-                // Otherwise apps remain unblocked when session ends with an error
-                await contentViewModel.endCurrentSession()
-                await handleError(error)
-            }
-        }
+        // Delegate session completion, persistence, and blocking restore
+        // to ContentViewModel — the single owner of session lifecycle
+        await contentViewModel.endCurrentSession()
     }
     
     // MARK: - UI Actions
