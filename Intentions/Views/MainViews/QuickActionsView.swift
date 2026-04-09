@@ -398,46 +398,6 @@ private struct QuickActionRowView: View {
     }
 }
 
-// MARK: - Statistic Card (Reused from AppGroupListView)
-
-private struct StatisticCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(AppConstants.Colors.text)
-                .frame(width: 32, height: 32)
-                .frame(minWidth: 32, minHeight: 32)
-                .background(AppConstants.Colors.surface)
-                .clipShape(Circle())
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                
-                Text(title)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
-            
-            Spacer(minLength: 0)
-        }
-        .padding()
-        .frame(minHeight: 60)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-}
-
 #Preview {
     QuickActionsView(
         dataService: MockDataPersistenceService(),

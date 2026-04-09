@@ -109,7 +109,7 @@ struct SessionStatusView: View {
     private var progressBar: some View {
         VStack(spacing: 8) {
             ProgressView(value: viewModel.progress)
-                .progressViewStyle(LinearProgressViewStyle(tint: progressColor))
+                .progressViewStyle(LinearProgressViewStyle(tint: AppConstants.Colors.textSecondary))
                 .scaleEffect(y: 3)
             
             HStack {
@@ -126,80 +126,6 @@ struct SessionStatusView: View {
                 }
             }
         }
-    }
-    
-    private var progressColor: Color {
-        switch viewModel.progress {
-        case 0.0..<0.5:
-            return AppConstants.Colors.textSecondary
-        case 0.5..<0.8:
-            return AppConstants.Colors.textSecondary
-        default:
-            return AppConstants.Colors.textSecondary
-        }
-    }
-    
-    // MARK: - Session Apps Section
-    
-    private var sessionAppsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Allowed Apps")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                Text("\(viewModel.sessionTokens.count) apps")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 12) {
-                    ForEach(Array(viewModel.sessionTokens.prefix(10).enumerated()), id: \.offset) { index, token in
-                        VStack(spacing: 4) {
-                            Label(token)
-                                .labelStyle(.iconOnly)
-                                .scaleEffect(40.0 / 25.0)
-                                .frame(width: 40, height: 40)
-                                .grayscale(1.0)
-
-                            Label(token)
-                                .labelStyle(.titleOnly)
-                                .font(.caption2)
-                                .lineLimit(1)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(width: 50)
-                    }
-
-                    if viewModel.sessionTokens.count > 10 {
-                        VStack(spacing: 4) {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(.gray.opacity(0.1))
-                                .frame(width: 40, height: 40)
-                                .overlay(
-                                    Text("+\(viewModel.sessionTokens.count - 10)")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(.gray)
-                                )
-
-                            Text("more")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(width: 50)
-                    }
-                }
-                .padding(.horizontal, 4)
-            }
-        }
-        .padding()
-        .background(AppConstants.Colors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
     
     // MARK: - Action Buttons
