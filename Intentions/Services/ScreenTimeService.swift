@@ -55,15 +55,9 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Call initialize() after creating the service
     }
     
-    deinit {
-        logger.info("🧹 DEINIT: ScreenTimeService being deallocated - clearing all settings")
-        // Cancel any running session expiration tasks
-        sessionExpirationTask?.cancel()
-        // Clear callback to break any retain cycles
-        restoreDefaultStateCallback = nil
-        // Clean up managed settings store
-        managedSettingsStore.clearAllSettings()
-    }
+    // Note: No deinit needed. sessionExpirationTask uses [weak self] and will
+    // clean up naturally. ManagedSettingsStore settings should persist across
+    // service lifecycle since the app keeps blocking active by default.
     
     /// Initialize the service without applying any blocking
     /// Must be called after creating the service before any other operations
