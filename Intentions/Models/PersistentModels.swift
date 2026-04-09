@@ -23,11 +23,9 @@ final class PersistentIntentionSession {
     var endTime: Date
     var isActive: Bool
     var wasCompleted: Bool
-    var isPaused: Bool = false // Track paused state separately
-    var pausedElapsedTime: TimeInterval = 0 // Elapsed time when paused
     var createdAt: Date
     var sourceData: Data? // Stores encoded SessionSource (optional for backward compatibility)
-    
+
     init(
         id: UUID,
         requestedAppGroupsData: Data,
@@ -38,8 +36,6 @@ final class PersistentIntentionSession {
         endTime: Date,
         isActive: Bool,
         wasCompleted: Bool,
-        isPaused: Bool = false,
-        pausedElapsedTime: TimeInterval = 0,
         createdAt: Date,
         sourceData: Data? = nil
     ) {
@@ -52,8 +48,6 @@ final class PersistentIntentionSession {
         self.endTime = endTime
         self.isActive = isActive
         self.wasCompleted = wasCompleted
-        self.isPaused = isPaused
-        self.pausedElapsedTime = pausedElapsedTime
         self.createdAt = createdAt
         self.sourceData = sourceData
     }
@@ -74,16 +68,6 @@ final class PersistentIntentionSession {
             return Data()
         }()
 
-        let isPaused: Bool
-        let pausedElapsedTime: TimeInterval
-        if case .paused(let elapsed, _) = session.state {
-            isPaused = true
-            pausedElapsedTime = elapsed
-        } else {
-            isPaused = false
-            pausedElapsedTime = 0
-        }
-
         self.init(
             id: session.id,
             requestedAppGroupsData: appGroupsData,
@@ -94,13 +78,11 @@ final class PersistentIntentionSession {
             endTime: session.endTime,
             isActive: session.isActive,
             wasCompleted: session.wasCompleted,
-            isPaused: isPaused,
-            pausedElapsedTime: pausedElapsedTime,
             createdAt: session.createdAt,
             sourceData: sourceData
         )
     }
-    
+
     @MainActor
     func update(from session: IntentionSession) {
         let encoder = JSONEncoder()
@@ -113,13 +95,6 @@ final class PersistentIntentionSession {
         self.endTime = session.endTime
         self.isActive = session.isActive
         self.wasCompleted = session.wasCompleted
-        if case .paused(let elapsed, _) = session.state {
-            self.isPaused = true
-            self.pausedElapsedTime = elapsed
-        } else {
-            self.isPaused = false
-            self.pausedElapsedTime = 0
-        }
         // Note: createdAt should not be updated - it represents the original creation time
     }
     
@@ -142,8 +117,6 @@ final class PersistentIntentionSession {
 
         if wasCompleted {
             state = .completed(totalElapsed: totalElapsed, completedAt: endTime)
-        } else if isPaused {
-            state = .paused(totalElapsed: pausedElapsedTime, pausedAt: endTime)
         } else if isActive {
             state = .active(startedAt: startTime)
         } else {

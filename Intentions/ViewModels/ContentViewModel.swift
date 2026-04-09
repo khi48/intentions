@@ -397,10 +397,9 @@ final class ContentViewModel: Sendable {
         currentlyAppliedSessionId = session.id
 
         do {
-            if !session.requestedApplications.isEmpty || !session.selectedCategories.isEmpty {
+            if !session.requestedApplications.isEmpty {
                 try await screenTimeService.allowApps(
                     session.requestedApplications,
-                    categories: session.selectedCategories,
                     allowWebsites: session.allowAllWebsites,
                     duration: session.duration,
                     sessionId: session.id

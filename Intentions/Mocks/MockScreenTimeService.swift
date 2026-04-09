@@ -98,7 +98,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
         print("Mock: All apps blocked")
     }
     
-    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken> = [], allowWebsites: Bool = false, duration: TimeInterval, sessionId: UUID) async throws {
+    func allowApps(_ tokens: sending Set<ApplicationToken>, allowWebsites: Bool = false, duration: TimeInterval, sessionId: UUID) async throws {
         let status = await authorizationStatus()
         guard status == .approved else {
             throw AppError.screenTimeAuthorizationFailed
@@ -110,7 +110,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
 
         mockCurrentlyAllowedApps = tokens
 
-        print("Mock: Allowed \(tokens.count) apps, \(categories.count) categories. Websites: \(allowWebsites ? "Allowed" : "Blocked")")
+        print("Mock: Allowed \(tokens.count) apps. Websites: \(allowWebsites ? "Allowed" : "Blocked")")
         print("Mock: Session ID = \(sessionId.uuidString)")
 
         // Mock session expiration
@@ -128,7 +128,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
             }
         }
 
-        print("Mock: Allowed \(tokens.count) apps and \(categories.count) categories for \(duration) seconds")
+        print("Mock: Allowed \(tokens.count) apps for \(duration) seconds")
     }
     
     func getCurrentlyAllowedApps() async -> Set<ApplicationToken> {

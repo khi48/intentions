@@ -24,9 +24,8 @@ struct QuickActionEditorSheet: View {
     @State private var duration: TimeInterval = 300 // 5 minutes default
     @State private var selectedIcon: String = "bolt.fill"
     @State private var selectedApps: Set<ApplicationToken> = []
-    @State private var selectedCategories: Set<ActivityCategoryToken> = []
     @State private var allowAllWebsites: Bool = false
-    @State private var familyActivitySelection = FamilyActivitySelection(includeEntireCategory: true)
+    @State private var familyActivitySelection = FamilyActivitySelection(includeEntireCategory: false)
     @State private var showingFamilyActivityPicker = false
 
     // UI state
@@ -63,7 +62,7 @@ struct QuickActionEditorSheet: View {
                         websiteAccessSection
 
                         // Selected items preview
-                        if !selectedApps.isEmpty || !selectedCategories.isEmpty {
+                        if !selectedApps.isEmpty {
                             selectedItemsPreview
                         }
 
@@ -129,7 +128,7 @@ struct QuickActionEditorSheet: View {
                 .font(.title2)
                 .fontWeight(.semibold)
 
-            Text("Create instant shortcuts to start sessions with your favorite apps and categories")
+            Text("Create instant shortcuts to start sessions with your favorite apps")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -304,11 +303,11 @@ struct QuickActionEditorSheet: View {
 
     private var appSelectionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Select Apps & Categories")
+            Text("Select Apps")
                 .font(.headline)
                 .foregroundColor(.primary)
 
-            Text(isEditing ? "Add more apps and categories to this quick action" : "Choose the apps and categories that will be included in this quick action")
+            Text(isEditing ? "Add more apps to this quick action" : "Choose the apps that will be included in this quick action")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
@@ -330,7 +329,7 @@ struct QuickActionEditorSheet: View {
                         .foregroundColor(AppConstants.Colors.text)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(isEditing ? "Add More Apps & Categories" : "Add Apps & Categories")
+                        Text(isEditing ? "Add More Apps" : "Add Apps")
                             .font(.headline)
                             .foregroundColor(AppConstants.Colors.text)
 
@@ -362,13 +361,7 @@ struct QuickActionEditorSheet: View {
                 .foregroundColor(.primary)
 
             VStack(spacing: 12) {
-                // Show categories first
-                if !selectedCategories.isEmpty {
-                    selectedCategoriesView
-                }
-
-                // Show only apps that DON'T belong to selected categories
-                if !individualApps.isEmpty {
+                if !selectedApps.isEmpty {
                     selectedAppsView
                 }
             }
@@ -376,11 +369,6 @@ struct QuickActionEditorSheet: View {
             .background(AppConstants.Colors.surface)
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
-    }
-
-    /// Individual apps selected (not part of a category selection)
-    private var individualApps: Set<ApplicationToken> {
-        selectedApps
     }
 
     private var selectedAppsView: some View {
@@ -393,52 +381,19 @@ struct QuickActionEditorSheet: View {
                     .fontWeight(.medium)
                     .foregroundColor(AppConstants.Colors.textSecondary)
                 Spacer()
-                Text("\(individualApps.count) selected")
+                Text("\(selectedApps.count) selected")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
 
-            // App icons grid with remove functionality (only show apps not in categories)
-            if !individualApps.isEmpty {
+            if !selectedApps.isEmpty {
                 FullAppIconsGrid(
-                    applicationTokens: Array(individualApps),
+                    applicationTokens: Array(selectedApps),
                     onRemove: { token in
                         removeApp(token)
                     }
                 )
             }
-        }
-    }
-
-    private var selectedCategoriesView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "folder.fill")
-                    .foregroundColor(AppConstants.Colors.text)
-                Text("App Categories")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Spacer()
-                Text("\(selectedCategories.count) selected")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            // Show individual category items with remove buttons
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 8) {
-                ForEach(Array(selectedCategories), id: \.self) { categoryToken in
-                    CategoryItemView(
-                        token: categoryToken,
-                        onRemove: { token in
-                            removeCategory(token)
-                        }
-                    )
-                }
-            }
-
-            Text("All apps in the selected categories will be included in this quick action")
-                .font(.caption)
-                .foregroundColor(.secondary)
         }
     }
 
@@ -516,7 +471,7 @@ struct QuickActionEditorSheet: View {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         return !trimmedName.isEmpty &&
                trimmedName.count <= 50 &&
-               (!selectedApps.isEmpty || !selectedCategories.isEmpty)
+               !selectedApps.isEmpty
     }
 
     // MARK: - Actions
@@ -524,23 +479,16 @@ struct QuickActionEditorSheet: View {
     private func updateSelectedItems(from selection: FamilyActivitySelection) {
         // Convert new selections to tokens
         let newApps = Set(selection.applications.compactMap { $0.token })
-        let newCategories = Set(selection.categories.compactMap { $0.token })
 
         // Only add items that aren't already selected (additive behavior)
         let appsToAdd = newApps.subtracting(selectedApps)
-        let categoriesToAdd = newCategories.subtracting(selectedCategories)
 
         // Add new items to existing selections
         selectedApps.formUnion(appsToAdd)
-        selectedCategories.formUnion(categoriesToAdd)
     }
 
     private func removeApp(_ token: ApplicationToken) {
         selectedApps.remove(token)
-    }
-
-    private func removeCategory(_ token: ActivityCategoryToken) {
-        selectedCategories.remove(token)
     }
 
     @MainActor
@@ -560,8 +508,8 @@ struct QuickActionEditorSheet: View {
             return
         }
 
-        guard !selectedApps.isEmpty || !selectedCategories.isEmpty else {
-            errorMessage = "At least one app or category must be selected"
+        guard !selectedApps.isEmpty else {
+            errorMessage = "At least one app must be selected"
             return
         }
 
@@ -578,7 +526,6 @@ struct QuickActionEditorSheet: View {
                 color: .blue,
                 duration: duration,
                 individualApplications: selectedApps,
-                individualCategories: selectedCategories,
                 allowAllWebsites: allowAllWebsites
             )
             quickAction = existing
@@ -591,7 +538,6 @@ struct QuickActionEditorSheet: View {
                 color: .blue,
                 duration: duration,
                 individualApplications: selectedApps,
-                individualCategories: selectedCategories,
                 allowAllWebsites: allowAllWebsites
             )
         }
@@ -617,7 +563,6 @@ struct QuickActionEditorSheet: View {
         }
 
         selectedApps = quickAction.individualApplications
-        selectedCategories = quickAction.individualCategories
     }
 
     private func formatDuration(_ duration: TimeInterval) -> String {
@@ -710,41 +655,6 @@ private struct StableAppIconCell: View {
                 .lineLimit(1)
                 .multilineTextAlignment(.center)
         }
-    }
-}
-
-private struct CategoryItemView: View {
-    let token: ActivityCategoryToken
-    let onRemove: (ActivityCategoryToken) -> Void
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Label(token)
-                .labelStyle(.iconOnly)
-                .frame(width: 24, height: 24)
-                .grayscale(1.0)
-
-            Label(token)
-                .labelStyle(.titleOnly)
-                .font(.caption)
-                .foregroundColor(.primary)
-                .lineLimit(1)
-
-            Spacer()
-
-            Button(action: {
-                onRemove(token)
-            }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 14))
-                    .foregroundColor(AppConstants.Colors.textSecondary)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(AppConstants.Colors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
 

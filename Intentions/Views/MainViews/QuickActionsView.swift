@@ -346,7 +346,7 @@ private struct QuickActionRowView: View {
                     Image(systemName: "app.badge")
                         .font(.caption)
                         .foregroundColor(AppConstants.Colors.textSecondary)
-                    Text("\(quickAction.individualApplications.count + quickAction.individualCategories.count) items")
+                    Text("\(quickAction.individualApplications.count) items")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

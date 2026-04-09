@@ -15,26 +15,23 @@ import ManagedSettings
 // MARK: - Session State
 enum SessionState: Codable, Sendable {
     case active(startedAt: Date)
-    case paused(totalElapsed: TimeInterval, pausedAt: Date)
     case completed(totalElapsed: TimeInterval, completedAt: Date)
     case cancelled(totalElapsed: TimeInterval, cancelledAt: Date)
-    
+
     var isActive: Bool {
         if case .active = self { return true }
         return false
     }
-    
+
     var wasCompleted: Bool {
         if case .completed = self { return true }
         return false
     }
-    
+
     var totalElapsedTime: TimeInterval {
         switch self {
         case .active(let startedAt):
             return Date().timeIntervalSince(startedAt)
-        case .paused(let totalElapsed, _):
-            return totalElapsed
         case .completed(let totalElapsed, _):
             return totalElapsed
         case .cancelled(let totalElapsed, _):
@@ -55,7 +52,6 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
     let id: UUID
     var requestedAppGroups: [UUID] // References to AppGroup IDs
     var requestedApplications: Set<ApplicationToken>
-    var selectedCategories: Set<ActivityCategoryToken> = [] // Categories from FamilyActivityPicker
     var allowAllWebsites: Bool = false // Whether to allow access to all websites during this session
     var duration: TimeInterval
     var createdAt: Date
@@ -67,8 +63,6 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
         switch state {
         case .active(let startedAt):
             return startedAt
-        case .paused(_, let pausedAt):
-            return pausedAt.addingTimeInterval(-state.totalElapsedTime)
         case .completed(_, let completedAt):
             return completedAt.addingTimeInterval(-state.totalElapsedTime)
         case .cancelled(_, let cancelledAt):
@@ -105,7 +99,7 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
         return min(1.0, elapsed / duration)
     }
     
-    init(appGroups: [UUID] = [], applications: Set<ApplicationToken> = [], categories: Set<ActivityCategoryToken> = [], allowAllWebsites: Bool = false, duration: TimeInterval, source: SessionSource = .manual) throws {
+    init(appGroups: [UUID] = [], applications: Set<ApplicationToken> = [], allowAllWebsites: Bool = false, duration: TimeInterval, source: SessionSource = .manual) throws {
         // Validate duration
         guard duration >= AppConstants.Session.minimumDuration else {
             throw AppError.validationFailed("duration", reason: "Session duration must be at least \(AppConstants.Session.minimumDuration.formattedDuration)")
@@ -117,7 +111,6 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
         self.id = UUID()
         self.requestedAppGroups = appGroups
         self.requestedApplications = applications
-        self.selectedCategories = categories
         self.allowAllWebsites = allowAllWebsites
         self.duration = duration
         self.createdAt = Date()
@@ -170,20 +163,7 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
     }
     
     // MARK: - Session Control Methods
-    
-    func pause() {
-        guard case .active(let startedAt) = state else { return }
-        let totalElapsed = Date().timeIntervalSince(startedAt)
-        state = .paused(totalElapsed: totalElapsed, pausedAt: Date())
-    }
-    
-    func resume() {
-        guard case .paused(let totalElapsed, _) = state else { return }
-        // Adjust startedAt backwards by the already-elapsed time so that
-        // Date().timeIntervalSince(startedAt) correctly returns totalElapsed + new time
-        state = .active(startedAt: Date().addingTimeInterval(-totalElapsed))
-    }
-    
+
     func complete() {
         let totalElapsed = state.totalElapsedTime
         state = .completed(totalElapsed: totalElapsed, completedAt: Date())

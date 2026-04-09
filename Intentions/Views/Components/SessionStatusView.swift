@@ -243,7 +243,6 @@ private struct ExtensionOptionButton: View {
     let mockSession = try! IntentionSession(
         appGroups: [],
         applications: Set(),
-        categories: Set(),
         duration: 1800 // 30 minutes
     )
     

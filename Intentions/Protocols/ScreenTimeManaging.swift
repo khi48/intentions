@@ -19,15 +19,14 @@ protocol ScreenTimeManaging: Sendable {
     /// - Throws: AppError if blocking fails
     func blockAllApps() async throws
     
-    /// Allow specific apps and categories for a limited duration
+    /// Allow specific apps for a limited duration
     /// - Parameters:
     ///   - tokens: Set of ApplicationTokens to allow
-    ///   - categories: Set of ActivityCategoryTokens to allow (default empty)
     ///   - allowWebsites: Whether to allow access to all websites (default false)
     ///   - duration: How long to allow access (in seconds)
     ///   - sessionId: UUID of the session for tracking and validation
     /// - Throws: AppError if allowing apps fails
-    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken>, allowWebsites: Bool, duration: TimeInterval, sessionId: UUID) async throws
+    func allowApps(_ tokens: sending Set<ApplicationToken>, allowWebsites: Bool, duration: TimeInterval, sessionId: UUID) async throws
     
     /// Get currently allowed apps
     /// - Returns: Set of ApplicationTokens that are currently allowed

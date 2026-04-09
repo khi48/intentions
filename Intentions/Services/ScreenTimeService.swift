@@ -39,34 +39,66 @@ actor ScreenTimeService: ScreenTimeManaging {
     private var essentialSystemApps: Set<ApplicationToken> = []
     
     /// Track initialization state. nonisolated(unsafe) is safe here because this
-    /// only transitions false→true once in initialize() and is never reset.
+    /// only transitions false→true once in performInitialize() (guarded by the
+    /// single-flight initializationTask) and is never reset.
     nonisolated(unsafe) private var isInitialized = false
+
+    /// Single-flight task for initialize(). Prevents reentrancy races when multiple
+    /// concurrent callers enter initialize() and both suspend on await authorizationStatus().
+    /// Once set, subsequent callers await the same task instead of starting a new one.
+    private var initializationTask: Task<Void, Error>?
 
     /// Track the state before a session started (was Intentions blocking or allowing?)
     private var preSessionBlockingState: Bool?
 
     /// Callback to restore proper default state when session ends
     private var restoreDefaultStateCallback: (@Sendable () async -> Void)?
-    
+
     // MARK: - Initialization
-    
+
     init() {
         // Clean initialization - no async work
         // Call initialize() after creating the service
     }
-    
+
     // Note: No deinit needed. sessionExpirationTask uses [weak self] and will
     // clean up naturally. ManagedSettingsStore settings should persist across
     // service lifecycle since the app keeps blocking active by default.
-    
+
     /// Initialize the service without applying any blocking
     /// Must be called after creating the service before any other operations
     /// Blocking should be applied separately based on schedule settings
+    ///
+    /// Uses a single-flight Task pattern to prevent reentrancy: if called
+    /// concurrently, all callers await the same underlying initialization task.
     func initialize() async throws {
-        guard !isInitialized else {
-            return // Don't throw error, just return - this is idempotent
+        if isInitialized { return }
+
+        // If initialization is already in progress, await the existing task
+        if let existingTask = initializationTask {
+            try await existingTask.value
+            return
         }
 
+        // Start a new initialization task and store it before awaiting so that
+        // subsequent concurrent callers reuse it instead of starting their own.
+        let task = Task { [self] in
+            try await self.performInitialize()
+        }
+        initializationTask = task
+
+        do {
+            try await task.value
+        } catch {
+            // Clear the failed task so initialization can be retried
+            initializationTask = nil
+            throw error
+        }
+    }
+
+    /// Performs the actual initialization work. Callers must go through initialize()
+    /// to ensure single-flight semantics.
+    private func performInitialize() async throws {
         // Check current authorization status first
         let currentStatus = await authorizationStatus()
 
@@ -196,19 +228,7 @@ actor ScreenTimeService: ScreenTimeManaging {
         return Set<ApplicationToken>()
     }
     
-    /// Get all discoverable categories for comprehensive blocking  
-    /// Uses all major app categories to implement default-block-all approach
-    private func getAllDiscoverableCategories() -> Set<ActivityCategoryToken> {
-        // For default-block-all, we need to block major app categories
-        // This provides comprehensive blocking without needing specific app tokens
-        
-        // Note: ActivityCategoryToken values are not directly constructible
-        // In practice, these would come from FamilyActivityPicker user selections
-        // For now, we'll use an alternative approach via ManagedSettingsStore
-        return Set<ActivityCategoryToken>()
-    }
-    
-    func allowApps(_ tokens: sending Set<ApplicationToken>, categories: Set<ActivityCategoryToken> = [], allowWebsites: Bool = false, duration: TimeInterval, sessionId: UUID) async throws {
+    func allowApps(_ tokens: sending Set<ApplicationToken>, allowWebsites: Bool = false, duration: TimeInterval, sessionId: UUID) async throws {
         try ensureInitialized()
 
         let status = await authorizationStatus()
@@ -224,8 +244,8 @@ actor ScreenTimeService: ScreenTimeManaging {
             throw AppError.validationFailed("duration", reason: "Cannot exceed \(AppConstants.Session.maximumDuration.formattedDuration)")
         }
 
-        guard !tokens.isEmpty || !categories.isEmpty else {
-            throw AppError.validationFailed("applications", reason: "At least one application or category must be specified")
+        guard !tokens.isEmpty else {
+            throw AppError.validationFailed("applications", reason: "At least one application must be specified")
         }
 
         // Capture current blocking state before starting session

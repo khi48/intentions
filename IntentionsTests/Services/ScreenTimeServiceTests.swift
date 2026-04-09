@@ -145,7 +145,7 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         // Given - Service with some allowed apps
         try await mockService.initialize()
         let tokens = try createTestTokens()
-        try await mockService.allowApps(tokens, categories: [], duration: 3600, sessionId: UUID())
+        try await mockService.allowApps(tokens, duration: 3600, sessionId: UUID())
         
         let allowedBefore = await mockService.getCurrentlyAllowedApps()
         XCTAssertFalse(allowedBefore.isEmpty)
@@ -162,7 +162,7 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         // Given - Service with active session
         try await mockService.initialize()
         let tokens = try createTestTokens()
-        try await mockService.allowApps(tokens, categories: [], duration: 3600, sessionId: UUID())
+        try await mockService.allowApps(tokens, duration: 3600, sessionId: UUID())
         
         let statusBefore = await mockService.getStatusInfo()
         XCTAssertTrue(statusBefore.hasActiveSession)
@@ -184,7 +184,7 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         // When/Then - Allow should fail
         do {
             let tokens = try createTestTokens()
-            try await mockService.allowApps(tokens, categories: [], duration: 1800, sessionId: UUID())
+            try await mockService.allowApps(tokens, duration: 1800, sessionId: UUID())
             XCTFail("Allow should fail without authorization")
         } catch AppError.screenTimeAuthorizationFailed {
             // Expected
@@ -199,7 +199,7 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         let tokens = try createTestTokens(count: 3)
         
         // When - Allow apps
-        try await mockService.allowApps(tokens, categories: [], duration: 1800, sessionId: UUID())
+        try await mockService.allowApps(tokens, duration: 1800, sessionId: UUID())
         
         // Then - Apps should be allowed
         let allowedApps = await mockService.getCurrentlyAllowedApps()
@@ -218,7 +218,7 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         
         // When/Then - Should reject negative duration
         do {
-            try await mockService.allowApps(tokens, categories: [], duration: -1, sessionId: UUID())
+            try await mockService.allowApps(tokens, duration: -1, sessionId: UUID())
             XCTFail("Should reject negative duration")
         } catch AppError.invalidConfiguration(let message) {
             XCTAssertTrue(message.contains("greater than 0"))
@@ -228,7 +228,7 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         
         // When/Then - Should reject zero duration
         do {
-            try await mockService.allowApps(tokens, categories: [], duration: 0, sessionId: UUID())
+            try await mockService.allowApps(tokens, duration: 0, sessionId: UUID())
             XCTFail("Should reject zero duration")
         } catch AppError.invalidConfiguration {
             // Expected
@@ -241,14 +241,14 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         // Given - Service with existing session
         try await mockService.initialize()
         let firstTokens = try createTestTokens(count: 1)
-        try await mockService.allowApps(firstTokens, categories: [], duration: 3600, sessionId: UUID())
+        try await mockService.allowApps(firstTokens, duration: 3600, sessionId: UUID())
         
         let allowedFirst = await mockService.getCurrentlyAllowedApps()
         XCTAssertEqual(allowedFirst.count, 1)
         
         // When - Allow different apps
         let secondTokens = try createTestTokens(count: 2)
-        try await mockService.allowApps(secondTokens, categories: [], duration: 1800, sessionId: UUID())
+        try await mockService.allowApps(secondTokens, duration: 1800, sessionId: UUID())
         
         // Then - Should replace previous session
         let allowedSecond = await mockService.getCurrentlyAllowedApps()
@@ -265,7 +265,7 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         let tokens = try createTestTokens()
         
         // When - Allow apps for very short duration
-        try await mockService.allowApps(tokens, categories: [], duration: 0.1, sessionId: UUID()) // 100ms
+        try await mockService.allowApps(tokens, duration: 0.1, sessionId: UUID()) // 100ms
         
         // Verify apps are initially allowed
         let allowedBefore = await mockService.getCurrentlyAllowedApps()
@@ -283,7 +283,7 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         // Given - Service with long session
         try await mockService.initialize()
         let tokens = try createTestTokens()
-        try await mockService.allowApps(tokens, categories: [], duration: 10, sessionId: UUID()) // 10 seconds
+        try await mockService.allowApps(tokens, duration: 10, sessionId: UUID()) // 10 seconds
         
         let statusBefore = await mockService.getStatusInfo()
         XCTAssertTrue(statusBefore.hasActiveSession)
@@ -305,7 +305,7 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         // Given - Service with allowed apps
         try await mockService.initialize()
         let tokens = try createTestTokens()
-        try await mockService.allowApps(tokens, categories: [], duration: 3600, sessionId: UUID())
+        try await mockService.allowApps(tokens, duration: 3600, sessionId: UUID())
         
         // When - Check if app is allowed
         let testToken = tokens.first!
@@ -389,7 +389,7 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         // Given - Service with active session
         try await mockService.initialize()
         let tokens = try createTestTokens()
-        try await mockService.allowApps(tokens, categories: [], duration: 3600, sessionId: UUID())
+        try await mockService.allowApps(tokens, duration: 3600, sessionId: UUID())
         
         let allowedBefore = await mockService.getCurrentlyAllowedApps()
         XCTAssertFalse(allowedBefore.isEmpty)
@@ -420,7 +420,7 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         }
         
         let userTokens = try createTestTokens(count: 3)
-        try await mockService.allowApps(userTokens, categories: [], duration: 3600, sessionId: UUID())
+        try await mockService.allowApps(userTokens, duration: 3600, sessionId: UUID())
         
         // When - Get status
         let status = await mockService.getStatusInfo()
@@ -469,8 +469,8 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         let tokens2 = try createTestTokens(count: 2)
         
         // When - Make concurrent allow requests
-        async let result1: Void = mockService.allowApps(tokens1, categories: [], duration: 1800, sessionId: UUID())
-        async let result2: Void = mockService.allowApps(tokens2, categories: [], duration: 3600, sessionId: UUID())
+        async let result1: Void = mockService.allowApps(tokens1, duration: 1800, sessionId: UUID())
+        async let result2: Void = mockService.allowApps(tokens2, duration: 3600, sessionId: UUID())
         
         // Then - Both should complete without errors
         try await result1
@@ -488,7 +488,7 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         
         // When - Make concurrent block and allow requests
         async let blockResult: Void = mockService.blockAllApps()
-        async let allowResult: Void = mockService.allowApps(tokens, categories: [], duration: 1800, sessionId: UUID())
+        async let allowResult: Void = mockService.allowApps(tokens, duration: 1800, sessionId: UUID())
         
         // Then - Both should complete without errors
         try await blockResult
