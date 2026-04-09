@@ -39,7 +39,6 @@ struct AlwaysAllowedInfoStepView: View {
                     // What is Always Allowed
                     infoSection(
                         icon: "info.circle.fill",
-                        iconColor: .blue,
                         title: "What is Always Allowed?",
                         description: "iOS Screen Time has a built-in feature that lets you mark certain apps as \"Always Allowed.\" These apps will remain accessible even when Intent blocks other apps."
                     )
@@ -49,7 +48,6 @@ struct AlwaysAllowedInfoStepView: View {
                     // When to use it
                     infoSection(
                         icon: "exclamationmark.triangle.fill",
-                        iconColor: .orange,
                         title: "Use This Carefully",
                         description: "Only mark apps as Always Allowed if you truly need them for critical tasks (like work communication, health apps, or navigation). Adding too many apps defeats the purpose of mindful phone usage."
                     )
@@ -83,14 +81,12 @@ struct AlwaysAllowedInfoStepView: View {
                     // Examples
                     infoSection(
                         icon: "lightbulb.fill",
-                        iconColor: .yellow,
                         title: "Good Examples",
                         description: "Phone, Messages, Calendar, Maps, Banking apps, Health apps, Work communication tools"
                     )
 
                     infoSection(
                         icon: "xmark.circle.fill",
-                        iconColor: .red,
                         title: "Avoid Adding",
                         description: "Social media, games, entertainment apps, shopping apps, or any app you're trying to use more mindfully"
                     )
@@ -141,12 +137,12 @@ struct AlwaysAllowedInfoStepView: View {
 
     // MARK: - Helper Views
 
-    private func infoSection(icon: String, iconColor: Color, title: String, description: String) -> some View {
+    private func infoSection(icon: String, title: String, description: String) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.title2)
-                    .foregroundColor(iconColor)
+                    .foregroundColor(AppConstants.Colors.text)
                     .frame(width: 32)
 
                 Text(title)

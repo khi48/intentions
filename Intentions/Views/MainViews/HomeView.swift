@@ -80,6 +80,7 @@ private struct QuickActionsSection: View {
     @ObservedObject private var quickActionsViewModel: QuickActionsViewModel
     @State private var draggingQuickAction: QuickAction?
     @State private var editorMode: QuickActionEditorMode?
+    @State private var isPulsing = false
 
     init(viewModel: ContentViewModel) {
         self.viewModel = viewModel
@@ -88,22 +89,25 @@ private struct QuickActionsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Quick Actions")
-                    .font(.headline)
-                    .foregroundColor(AppConstants.Colors.text)
+            // Section header is hidden when empty — the altar card has its own internal kicker.
+            if !quickActionsViewModel.quickActions.isEmpty {
+                HStack {
+                    Text("Quick Actions")
+                        .font(.headline)
+                        .foregroundColor(AppConstants.Colors.text)
 
-                Spacer()
+                    Spacer()
 
-                Button(action: {
-                    editorMode = .create
-                }) {
-                    Image(systemName: "plus")
-                        .font(.title3)
-                        .foregroundColor(AppConstants.Colors.accent)
+                    Button(action: {
+                        editorMode = .create
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.title3)
+                            .foregroundColor(AppConstants.Colors.accent)
+                    }
                 }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
 
             if quickActionsViewModel.quickActions.isEmpty {
                 // Show getting started card
@@ -199,33 +203,106 @@ private struct QuickActionsSection: View {
     }
     
     private var gettingStartedCard: some View {
-        VStack(spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("No Quick Actions Yet")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+        VStack(spacing: 0) {
+            // Kicker: thin rules flanking a monospaced section label
+            HStack(spacing: 10) {
+                Rectangle()
+                    .fill(AppConstants.Colors.textSecondary.opacity(0.4))
+                    .frame(width: 24, height: 1)
+                Text("QUICK ACTIONS")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .tracking(2)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+                Rectangle()
+                    .fill(AppConstants.Colors.textSecondary.opacity(0.4))
+                    .frame(width: 24, height: 1)
+            }
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+
+            // Serif headline
+            (
+                Text("Set your first ")
+                    .font(.system(size: 28, weight: .light, design: .serif))
+                    .foregroundColor(AppConstants.Colors.text)
+                +
+                Text("intention.")
+                    .font(.system(size: 28, weight: .light, design: .serif))
+                    .italic()
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+            )
+            .multilineTextAlignment(.center)
+            .padding(.bottom, 28)
+
+            // The altar card — a single prominent ghost card in the shape of
+            // an eventual QuickActionCard, but larger. Tapping opens the editor.
+            Button(action: {
+                editorMode = .create
+            }) {
+                VStack(spacing: 14) {
+                    // Emblem: pulsing ring around a large serif plus
+                    ZStack {
+                        // Pulsing outer ring (animates outward and fades)
+                        Circle()
+                            .stroke(AppConstants.Colors.textSecondary, lineWidth: 1)
+                            .frame(width: 88, height: 88)
+                            .scaleEffect(isPulsing ? 1.15 : 1.0)
+                            .opacity(isPulsing ? 0 : 0.5)
+
+                        // Static ring
+                        Circle()
+                            .stroke(AppConstants.Colors.textSecondary.opacity(0.5), lineWidth: 1)
+                            .frame(width: 88, height: 88)
+
+                        // Large serif plus
+                        Text("+")
+                            .font(.system(size: 44, weight: .light, design: .serif))
+                            .foregroundColor(AppConstants.Colors.text)
+                            .offset(y: -2)
+                    }
+                    .frame(width: 88, height: 88)
+                    .padding(.bottom, 4)
+
+                    Text("Create a quick action")
+                        .font(.system(size: 17, weight: .regular, design: .serif))
+                        .italic()
                         .foregroundColor(AppConstants.Colors.text)
 
-                    Text("Create quick actions for instant access to your favorite app groups and session types")
-                        .font(.caption)
+                    Text("APPS  ·  DURATION")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .tracking(1.6)
                         .foregroundColor(AppConstants.Colors.textSecondary)
                 }
-
-                Spacer()
-
-                Button("Create") {
-                    editorMode = .create
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .foregroundColor(AppConstants.Colors.text)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 340)
+                .padding(.vertical, 40)
+                .background(
+                    RadialGradient(
+                        colors: [
+                            AppConstants.Colors.text.opacity(0.04),
+                            Color.clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 180
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .strokeBorder(
+                            AppConstants.Colors.textSecondary.opacity(0.6),
+                            style: StrokeStyle(lineWidth: 1, dash: [4, 4])
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal)
+        .onAppear {
+            withAnimation(.easeOut(duration: 4).repeatForever(autoreverses: false)) {
+                isPulsing = true
             }
         }
-        .padding()
-        .background(AppConstants.Colors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal)
     }
     
     private func loadQuickActions() async {

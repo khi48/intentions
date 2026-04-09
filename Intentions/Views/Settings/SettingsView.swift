@@ -243,6 +243,7 @@ struct SettingsView: View {
                             }
                         }
                     ))
+                    .labelsHidden()
 
                     Text(viewModel.intentionsStateText)
                         .font(.caption)
@@ -276,12 +277,6 @@ struct SettingsView: View {
             }
         } header: {
             Text("Protected Hours")
-        } footer: {
-            if viewModel.scheduleSettings.isEnabled {
-                Text("Apps are blocked by default during the specified times and days. Outside these hours, all apps remain accessible unless you start a focused session.")
-            } else {
-                Text("Scheduled blocking is disabled. Apps remain accessible by default unless you start a focused session.")
-            }
         }
     }
 
