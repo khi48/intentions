@@ -10,8 +10,9 @@
 
 import Foundation
 
+@MainActor
 @Observable
-final class ScheduleSettings: Codable, @unchecked Sendable {
+final class ScheduleSettings: @preconcurrency Codable {
     var isEnabled: Bool
     var activeHours: ClosedRange<Int> // 24-hour format: 9...17 means 9 AM to 5 PM
     var activeDays: Set<Weekday>

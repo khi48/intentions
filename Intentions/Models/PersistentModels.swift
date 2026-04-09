@@ -58,6 +58,7 @@ final class PersistentIntentionSession {
         self.sourceData = sourceData
     }
     
+    @MainActor
     convenience init(from session: IntentionSession) {
         let encoder = JSONEncoder()
         let appGroupsData = (try? encoder.encode(session.requestedAppGroups)) ?? {
@@ -100,6 +101,7 @@ final class PersistentIntentionSession {
         )
     }
     
+    @MainActor
     func update(from session: IntentionSession) {
         let encoder = JSONEncoder()
         self.requestedAppGroupsData = (try? encoder.encode(session.requestedAppGroups)) ?? Data()
@@ -121,6 +123,7 @@ final class PersistentIntentionSession {
         // Note: createdAt should not be updated - it represents the original creation time
     }
     
+    @MainActor
     func toIntentionSession() -> IntentionSession? {
         let requestedAppGroups = (try? JSONDecoder().decode([UUID].self, from: requestedAppGroupsData)) ?? []
         let requestedApplications = (try? JSONDecoder().decode(Set<ApplicationToken>.self, from: requestedApplicationsData)) ?? Set()
@@ -190,6 +193,7 @@ final class PersistentScheduleSettings {
         self.timeZoneIdentifier = timeZoneIdentifier
     }
     
+    @MainActor
     convenience init(from settings: ScheduleSettings) {
         let activeDaysData = (try? JSONEncoder().encode(settings.activeDays)) ?? Data()
         
@@ -202,6 +206,7 @@ final class PersistentScheduleSettings {
         )
     }
     
+    @MainActor
     func toScheduleSettings() -> ScheduleSettings? {
         guard let timeZone = TimeZone(identifier: timeZoneIdentifier) else {
             return nil

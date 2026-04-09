@@ -236,6 +236,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
     
     /// Create an IntentionSession from this quick action
     /// - Returns: Configured IntentionSession
+    @MainActor
     func createSession() throws -> IntentionSession {
         // Validate that we have at least one valid source (individual app or category)
         // Empty quick actions should not create sessions that unlock everything

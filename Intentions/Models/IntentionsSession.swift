@@ -49,8 +49,9 @@ enum SessionSource: Codable, Sendable {
     case manual
 }
 
+@MainActor
 @Observable
-final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
+final class IntentionSession: Identifiable, @preconcurrency Codable {
     let id: UUID
     var requestedAppGroups: [UUID] // References to AppGroup IDs
     var requestedApplications: Set<ApplicationToken>

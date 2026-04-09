@@ -7,8 +7,9 @@
 
 import Foundation
 
+@MainActor
 @Observable
-final class NotificationSettings: Codable, @unchecked Sendable {
+final class NotificationSettings: @preconcurrency Codable {
     /// Whether notifications are enabled at all
     var isEnabled: Bool
 
