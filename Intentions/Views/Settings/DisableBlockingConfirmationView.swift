@@ -45,7 +45,7 @@ struct DisableBlockingConfirmationView: View {
                     actionButtonsSection
                 }
                 .padding()
-                .frame(maxWidth: .infinity, minHeight: UIScreen.main.bounds.height * 0.8)
+                .frame(maxWidth: .infinity)
             }
             .navigationTitle("Confirm Action")
             .navigationBarTitleDisplayMode(.inline)

@@ -11,7 +11,6 @@ import SwiftUI
 // MARK: - Widget Data Management
 
 private struct WidgetDataManager {
-    // Widget Constants
     private enum Constants {
         static let appGroupId = "group.oh.Intent"
         static let blockingStatusKey = "intentions.widget.blockingStatus"
@@ -19,102 +18,31 @@ private struct WidgetDataManager {
         static let sessionTitleKey = "intentions.widget.sessionTitle"
         static let sessionEndTimeKey = "intentions.widget.sessionEndTime"
     }
-    
-    // Shared UserDefaults for communication between app and widget
+
     private static var sharedUserDefaults: UserDefaults {
-        // Debug: Check current user context
-        let currentUser = getuid()
-        let effectiveUser = geteuid()
-        print("🔍 Widget User Context - UID: \(currentUser), EUID: \(effectiveUser)")
-
-        // Debug: Check if we're in a sandbox
-        let isSandboxed = getenv("APP_SANDBOX_CONTAINER_ID") != nil
-        print("🔍 Widget Sandbox Status: \(isSandboxed ? "Sandboxed" : "Not Sandboxed")")
-
-        // Force CFPreferences synchronization before creating UserDefaults
         CFPreferencesSynchronize(Constants.appGroupId as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
-
-        guard let sharedDefaults = UserDefaults(suiteName: Constants.appGroupId) else {
-            print("⚠️ Widget: Failed to access App Group \(Constants.appGroupId), falling back to standard")
-            return UserDefaults.standard
-        }
-
-        // Debug: Check UserDefaults access (avoid dictionaryRepresentation which triggers kCFPreferencesAnyUser)
-        print("🔍 Widget UserDefaults Suite: Access successful")
-
-        // Test read/write to see what actually happens
-        let testKey = "widget.debug.test"
-        sharedDefaults.set("widget-test-\(Date().timeIntervalSince1970)", forKey: testKey)
-        let readValue = sharedDefaults.string(forKey: testKey)
-        print("🔍 Widget R/W Test - Wrote and read: \(readValue ?? "nil")")
-
-        // Advanced: Check CFPreferences directly to see actual domain access
-        checkCFPreferencesAccess()
-
-        return sharedDefaults
+        return UserDefaults(suiteName: Constants.appGroupId) ?? UserDefaults.standard
     }
 
-    // Check CFPreferences access patterns
-    private static func checkCFPreferencesAccess() {
-        let appGroupId = Constants.appGroupId as CFString
-
-        // Try different user scopes
-        let currentUserValue = CFPreferencesCopyValue("intent.widget.blockingStatus" as CFString, appGroupId, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
-        print("🔍 CFPrefs kCFPreferencesCurrentUser: \(currentUserValue != nil ? "✅ Success" : "❌ Failed")")
-
-        let anyUserValue = CFPreferencesCopyValue("intent.widget.blockingStatus" as CFString, appGroupId, kCFPreferencesAnyUser, kCFPreferencesAnyHost)
-        print("🔍 CFPrefs kCFPreferencesAnyUser: \(anyUserValue != nil ? "✅ Success" : "❌ Failed")")
-
-        // Check what domains are actually available
-        let domains = CFPreferencesCopyKeyList(appGroupId, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
-        print("🔍 CFPrefs Available Keys Count: \(domains != nil ? CFArrayGetCount(domains!) : 0)")
-    }
-    
-    // Get the current blocking status for widgets
     static func getBlockingStatus() -> Bool {
-        // Try shared UserDefaults first
-        let sharedStatus = sharedUserDefaults.bool(forKey: Constants.blockingStatusKey)
-
-        // Try standard UserDefaults as fallback
-        let standardStatus = UserDefaults.standard.bool(forKey: Constants.blockingStatusKey)
-
-        // Use shared if available, fallback to standard
-        let finalStatus = sharedUserDefaults == UserDefaults.standard ? standardStatus : sharedStatus
-
-        return finalStatus
+        sharedUserDefaults.bool(forKey: Constants.blockingStatusKey)
     }
-    
-    // Get the last update time
+
     static func getLastUpdateTime() -> Date? {
-        // Try shared UserDefaults first
-        let sharedTimestamp = sharedUserDefaults.object(forKey: Constants.lastUpdateKey) as? Date
-
-        // Try standard UserDefaults as fallback
-        let standardTimestamp = UserDefaults.standard.object(forKey: Constants.lastUpdateKey) as? Date
-
-        // Use shared if available, fallback to standard
-        let finalTimestamp = sharedUserDefaults == UserDefaults.standard ? standardTimestamp : sharedTimestamp
-
-        return finalTimestamp
+        sharedUserDefaults.object(forKey: Constants.lastUpdateKey) as? Date
     }
-    
-    // Check if blocking status data is stale (older than 1 hour)
+
     static func isDataStale() -> Bool {
-        guard let lastUpdate = getLastUpdateTime() else {
-            return true
-        }
-        let isStale = Date().timeIntervalSince(lastUpdate) > 3600 // 1 hour
-        return isStale
+        guard let lastUpdate = getLastUpdateTime() else { return true }
+        return Date().timeIntervalSince(lastUpdate) > 3600
     }
 
-    // Get the current session title
     static func getSessionTitle() -> String? {
-        return sharedUserDefaults.string(forKey: Constants.sessionTitleKey)
+        sharedUserDefaults.string(forKey: Constants.sessionTitleKey)
     }
 
-    // Get the session end time
     static func getSessionEndTime() -> Date? {
-        return sharedUserDefaults.object(forKey: Constants.sessionEndTimeKey) as? Date
+        sharedUserDefaults.object(forKey: Constants.sessionEndTimeKey) as? Date
     }
 
     // Calculate remaining time for active session
@@ -456,17 +384,12 @@ struct IntentionsWidget: Widget {
     IntentionsEntry(date: .now, isBlocking: false, isDataStale: false, sessionTitle: nil, remainingTime: nil)
 }
 
-// MARK: - iOS 17+ Compatibility Extension
+// MARK: - Widget Background Extension
 
 extension View {
-    /// Backwards compatible widget background modifier for iOS 17+ containerBackground API
     func widgetBackground() -> some View {
-        if #available(iOSApplicationExtension 17.0, *) {
-            return containerBackground(for: .widget) {
-                AccessoryWidgetBackground()
-            }
-        } else {
-            return background(AccessoryWidgetBackground())
+        containerBackground(for: .widget) {
+            AccessoryWidgetBackground()
         }
     }
 }

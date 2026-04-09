@@ -38,7 +38,8 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// Essential system apps that should never be blocked
     private var essentialSystemApps: Set<ApplicationToken> = []
     
-    /// Track initialization state
+    /// Track initialization state. nonisolated(unsafe) is safe here because this
+    /// only transitions false→true once in initialize() and is never reset.
     nonisolated(unsafe) private var isInitialized = false
 
     /// Track the state before a session started (was Intentions blocking or allowing?)
@@ -58,6 +59,8 @@ actor ScreenTimeService: ScreenTimeManaging {
         logger.info("🧹 DEINIT: ScreenTimeService being deallocated - clearing all settings")
         // Cancel any running session expiration tasks
         sessionExpirationTask?.cancel()
+        // Clear callback to break any retain cycles
+        restoreDefaultStateCallback = nil
         // Clean up managed settings store
         managedSettingsStore.clearAllSettings()
     }
@@ -121,12 +124,6 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Access authorization status safely
         return AuthorizationCenter.shared.authorizationStatus
     }
-    
-    // MARK: - App Discovery Storage
-    
-    
-    /// Category mapping service for intelligent app prioritization
-    private var categoryMappingService: CategoryMappingService? = nil
     
     // MARK: - App Management
     
@@ -249,17 +246,11 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Brief delay to ensure clearing takes effect
         try? await Task.sleep(nanoseconds: 50_000_000)
 
-        if let mappingService = categoryMappingService {
-            await applySmartCategoryBlocking(allowedCategoryTokens: categories, allowedAppTokens: tokens, mappingService: mappingService)
+        // Block everything except the apps the user selected for this session
+        if !tokens.isEmpty {
+            managedSettingsStore.shield.applicationCategories = .all(except: tokens)
         } else {
-            // Fallback: Use .all(except:) to block everything EXCEPT the session apps
-            if !tokens.isEmpty {
-                managedSettingsStore.shield.applicationCategories = .all(except: tokens)
-                managedSettingsStore.shield.applications = nil
-            } else {
-                managedSettingsStore.shield.applicationCategories = .all()
-                managedSettingsStore.shield.applications = nil
-            }
+            managedSettingsStore.shield.applicationCategories = .all()
         }
 
         // Conditionally allow web content
@@ -340,15 +331,8 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Clear tracking
         currentlyAllowedApps.removeAll()
 
-        // Actually remove all restrictions (clear managed settings)
-        do {
-            managedSettingsStore.clearAllSettings()
-
-            // Update widget with blocking status
-            updateWidgetBlockingStatus(isBlocking: false)
-        } catch {
-            throw AppError.appBlockingFailed("Failed to clear restrictions: \(error.localizedDescription)")
-        }
+        managedSettingsStore.clearAllSettings()
+        updateWidgetBlockingStatus(isBlocking: false)
     }
     
     /// Clean up all resources and reset service state
@@ -402,11 +386,6 @@ actor ScreenTimeService: ScreenTimeManaging {
     }
     
     
-    /// Set the category mapping service for intelligent app blocking
-    func setCategoryMappingService(_ service: CategoryMappingService) async {
-        categoryMappingService = service
-    }
-
     /// Set callback to restore default state when sessions end
     func setRestoreDefaultStateCallback(_ callback: @escaping @Sendable () async -> Void) async {
         restoreDefaultStateCallback = callback
@@ -428,8 +407,8 @@ actor ScreenTimeService: ScreenTimeManaging {
         cancelDeviceActivitySchedule()
 
         // CRITICAL: Clear the current session ID from UserDefaults
-        if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") {
-            sharedDefaults.removeObject(forKey: "intentions.currentSessionId")
+        if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
+            sharedDefaults.removeObject(forKey: AppConstants.Keys.currentSessionId)
             sharedDefaults.synchronize()
         }
     }
@@ -451,97 +430,6 @@ actor ScreenTimeService: ScreenTimeManaging {
         )
     }
     
-    
-    /// Prioritize which apps to block when we exceed the 50-app API limit
-    /// Uses category mapping service for intelligent prioritization when available
-    private func prioritizeAppsForBlocking(_ appsToBlock: Set<ApplicationToken>, limit: Int) -> Set<ApplicationToken> {
-        guard appsToBlock.count > limit else { return appsToBlock }
-        
-        // Use deterministic selection for app prioritization
-        let sortedApps = Array(appsToBlock).sorted { token1, token2 in
-            return token1.hashValue < token2.hashValue
-        }
-        
-        let prioritizedApps = Set(sortedApps.prefix(limit))
-        return prioritizedApps
-    }
-    
-    
-    
-    /// Apply smart category-based blocking using the CategoryMappingService
-    /// Logic: Allow categories that contain selected apps, but block unselected apps within those categories
-    /// Block entire categories that contain no selected apps
-    private func applySmartCategoryBlocking(
-        allowedCategoryTokens: Set<ActivityCategoryToken>,
-        allowedAppTokens: Set<ApplicationToken>,
-        mappingService: CategoryMappingService
-    ) async {
-
-        logger.info("🔍 SMART BLOCKING: Starting analysis...")
-        logger.info("🔍 SMART BLOCKING: Allowed apps count: \(allowedAppTokens.count)")
-        logger.info("🔍 SMART BLOCKING: Allowed category tokens count: \(allowedCategoryTokens.count)")
-
-        // DIAGNOSTIC: Log which apps we're trying to allow
-        for (index, token) in allowedAppTokens.enumerated().prefix(5) {
-            logger.info("🔍 SMART BLOCKING: Allowed app #\(index + 1): hashValue=\(token.hashValue)")
-        }
-
-        // Get the blocking strategy from category mapping service (MainActor context required)
-        let (categoriesToBlockCompletely, appsToBlockWithinUsedCategories) = await MainActor.run {
-            let blockingStrategy = mappingService.analyzeBlockingStrategy(for: allowedAppTokens)
-            return (blockingStrategy.categoriesToBlock, blockingStrategy.appsToBlockInUsedCategories)
-        }
-
-        logger.info("🔍 SMART BLOCKING: Categories to block completely: \(categoriesToBlockCompletely.map { $0.rawValue }.joined(separator: ", "))")
-        logger.info("🔍 SMART BLOCKING: Apps to block within used categories: \(appsToBlockWithinUsedCategories.count)")
-
-        // Step 1: Block entire categories that have NO selected apps
-        // This allows categories with selected apps to remain accessible
-        if !categoriesToBlockCompletely.isEmpty {
-            let categoryTokensToBlock = await MainActor.run {
-                mappingService.getCategoryTokensToBlock(for: categoriesToBlockCompletely)
-            }
-
-            // Remove any explicitly allowed categories from the block list
-            let finalCategoriesToBlock = categoryTokensToBlock.subtracting(allowedCategoryTokens)
-
-            logger.info("🔍 SMART BLOCKING: Final category tokens to block: \(finalCategoriesToBlock.count)")
-
-            if !finalCategoriesToBlock.isEmpty {
-                managedSettingsStore.shield.applicationCategories = .specific(finalCategoriesToBlock)
-            } else {
-                managedSettingsStore.shield.applicationCategories = nil
-            }
-        } else {
-            logger.info("🔍 SMART BLOCKING: No categories to block completely")
-            managedSettingsStore.shield.applicationCategories = nil
-        }
-
-        // Step 2: Within categories that have selected apps, block the unselected individual apps
-        // This allows the selected apps to work while blocking distracting apps in the same category
-        if !appsToBlockWithinUsedCategories.isEmpty {
-            let appsToBlock = appsToBlockWithinUsedCategories.subtracting(allowedAppTokens)
-
-            logger.info("🔍 SMART BLOCKING: Individual apps to block: \(appsToBlock.count)")
-
-            if !appsToBlock.isEmpty {
-                if appsToBlock.count <= 50 {
-                    managedSettingsStore.shield.applications = appsToBlock
-                    logger.info("✅ SMART BLOCKING: Blocking \(appsToBlock.count) individual apps (within limit)")
-                } else {
-                    let prioritizedApps = prioritizeAppsForBlocking(appsToBlock, limit: 50)
-                    managedSettingsStore.shield.applications = prioritizedApps
-                    logger.warning("⚠️ SMART BLOCKING: Hit 50-app limit - blocking \(prioritizedApps.count) prioritized apps, \(appsToBlock.count - prioritizedApps.count) apps may remain unblocked")
-                }
-            } else {
-                logger.info("🔍 SMART BLOCKING: No individual apps to block")
-                managedSettingsStore.shield.applications = nil
-            }
-        } else {
-            logger.info("🔍 SMART BLOCKING: No apps in used categories to block")
-            managedSettingsStore.shield.applications = nil
-        }
-    }
     
     // MARK: - DeviceActivity Scheduling
 
@@ -603,12 +491,12 @@ actor ScreenTimeService: ScreenTimeManaging {
             try deviceActivityCenter.startMonitoring(activityName, during: schedule, events: events)
 
             // Write to shared UserDefaults for extension
-            if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") {
-                sharedDefaults.set(activityName.rawValue, forKey: "intentions.lastScheduledActivity")
-                sharedDefaults.set(endDate, forKey: "intentions.lastScheduledEndTime")
-                sharedDefaults.set(Date(), forKey: "intentions.lastScheduleTime")
-                sharedDefaults.set(duration, forKey: "intentions.lastScheduledDuration")
-                sharedDefaults.set(sessionId.uuidString, forKey: "intentions.currentSessionId")
+            if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
+                sharedDefaults.set(activityName.rawValue, forKey: AppConstants.Keys.lastScheduledActivity)
+                sharedDefaults.set(endDate, forKey: AppConstants.Keys.lastScheduledEndTime)
+                sharedDefaults.set(Date(), forKey: AppConstants.Keys.lastScheduleTime)
+                sharedDefaults.set(duration, forKey: AppConstants.Keys.lastScheduledDuration)
+                sharedDefaults.set(sessionId.uuidString, forKey: AppConstants.Keys.currentSessionId)
                 sharedDefaults.synchronize()
             }
         } catch {
@@ -629,27 +517,26 @@ actor ScreenTimeService: ScreenTimeManaging {
 
     /// Update widget with current blocking status
     private func updateWidgetBlockingStatus(isBlocking: Bool) {
-        let appGroupId = "group.oh.Intent"
+        let appGroupId = AppConstants.appGroupId
 
-        // Force CFPreferences synchronization
         CFPreferencesSynchronize(appGroupId as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
 
         guard let sharedDefaults = UserDefaults(suiteName: appGroupId) else {
             // Fallback to standard UserDefaults only
-            UserDefaults.standard.set(isBlocking, forKey: "intentions.widget.blockingStatus")
-            UserDefaults.standard.set(Date(), forKey: "intentions.widget.lastUpdate")
+            UserDefaults.standard.set(isBlocking, forKey: AppConstants.Keys.widgetBlockingStatus)
+            UserDefaults.standard.set(Date(), forKey: AppConstants.Keys.widgetLastUpdate)
             WidgetCenter.shared.reloadAllTimelines()
             return
         }
 
         // Set the data
-        sharedDefaults.set(isBlocking, forKey: "intentions.widget.blockingStatus")
-        sharedDefaults.set(Date(), forKey: "intentions.widget.lastUpdate")
+        sharedDefaults.set(isBlocking, forKey: AppConstants.Keys.widgetBlockingStatus)
+        sharedDefaults.set(Date(), forKey: AppConstants.Keys.widgetLastUpdate)
         sharedDefaults.synchronize()
 
         // Also set in standard UserDefaults as fallback
-        UserDefaults.standard.set(isBlocking, forKey: "intentions.widget.blockingStatus")
-        UserDefaults.standard.set(Date(), forKey: "intentions.widget.lastUpdate")
+        UserDefaults.standard.set(isBlocking, forKey: AppConstants.Keys.widgetBlockingStatus)
+        UserDefaults.standard.set(Date(), forKey: AppConstants.Keys.widgetLastUpdate)
 
         // Force widget timeline refresh
         WidgetCenter.shared.reloadAllTimelines()

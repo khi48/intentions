@@ -42,6 +42,7 @@ final class SettingsViewModel: Sendable {
     
     func loadData() async {
         isLoading = true
+        defer { isLoading = false }
         errorMessage = nil
 
         do {
@@ -54,14 +55,12 @@ final class SettingsViewModel: Sendable {
                 try await dataService.saveScheduleSettings(scheduleSettings)
             }
 
-            // Update statistics
-            updateStatistics()
+            // Update statistics from persisted sessions
+            await updateStatistics()
 
         } catch {
             errorMessage = "Failed to load settings: \(error.localizedDescription)"
         }
-
-        isLoading = false
     }
     
     // MARK: - Schedule Settings
@@ -82,11 +81,21 @@ final class SettingsViewModel: Sendable {
     
     // MARK: - Statistics
     
-    private func updateStatistics() {
-        // TODO: Load actual session statistics from data service
-        // These are placeholder values for now
-        todaySessionCount = 0
-        weeklySessionCount = 0
+    private func updateStatistics() async {
+        do {
+            let sessions = try await dataService.loadIntentionSessions()
+            let calendar = Calendar.current
+            let now = Date()
+
+            let startOfToday = calendar.startOfDay(for: now)
+            todaySessionCount = sessions.filter { $0.createdAt >= startOfToday }.count
+
+            let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now)) ?? now
+            weeklySessionCount = sessions.filter { $0.createdAt >= startOfWeek }.count
+        } catch {
+            todaySessionCount = 0
+            weeklySessionCount = 0
+        }
     }
     
     // MARK: - Error Handling
@@ -110,19 +119,7 @@ final class SettingsViewModel: Sendable {
     }
 
     func resetSheetState() {
-
-        // Force dismiss any active sheets with explicit state changes
-        if showingScheduleEditor {
-            showingScheduleEditor = false
-        }
-
-        // Reset all states regardless
         showingScheduleEditor = false
-
-
-        // Add a small delay to ensure UI updates
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-        }
     }
     
     // MARK: - Computed Properties

@@ -86,30 +86,6 @@ private struct QuickActionsSection: View {
         self.quickActionsViewModel = viewModel.sharedQuickActionsViewModel
     }
 
-    /// Sheet presentation mode for QuickActionEditor
-    enum QuickActionEditorMode: Identifiable {
-        case create
-        case edit(QuickAction)
-
-        var id: String {
-            switch self {
-            case .create:
-                return "create"
-            case .edit(let action):
-                return "edit-\(action.id.uuidString)"
-            }
-        }
-
-        var quickAction: QuickAction? {
-            switch self {
-            case .create:
-                return nil
-            case .edit(let action):
-                return action
-            }
-        }
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -191,7 +167,6 @@ private struct QuickActionsSection: View {
         .sheet(item: $editorMode) { mode in
             QuickActionEditorSheet(
                 dataService: viewModel.dataServiceProvider,
-                categoryMappingService: viewModel.categoryMappingService,
                 editingQuickAction: mode.quickAction,
                 onSave: { quickAction in
                     await quickActionsViewModel.saveQuickAction(quickAction)
@@ -254,7 +229,6 @@ private struct QuickActionsSection: View {
     }
     
     private func loadQuickActions() async {
-        quickActionsViewModel.setDataService(viewModel.dataServiceProvider)
         await quickActionsViewModel.loadData()
     }
     

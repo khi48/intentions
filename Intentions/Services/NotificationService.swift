@@ -8,10 +8,13 @@
 import Foundation
 @preconcurrency import UserNotifications
 import UIKit
+import OSLog
 
 /// Service for managing app notifications including session warnings and completion alerts
 @MainActor
-final class NotificationService: NSObject, @unchecked Sendable {
+final class NotificationService: NSObject, Sendable {
+
+    private static let log = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Intentions", category: "NotificationService")
 
     // MARK: - Singleton
 
@@ -29,13 +32,19 @@ final class NotificationService: NSObject, @unchecked Sendable {
 
     // MARK: - Initialization
 
+    private var settingsLoaded = false
+
     private override init() {
-        self.settings = NotificationSettings()
+        // Try to create DataPersistenceService; fall back to mock if it fails
+        let service: DataPersisting
         do {
-            self.dataService = try DataPersistenceService()
+            service = try DataPersistenceService()
         } catch {
-            fatalError("Failed to initialize DataPersistenceService: \(error)")
+            Self.log.error("Failed to initialize DataPersistenceService, using in-memory fallback: \(error.localizedDescription)")
+            service = MockDataPersistenceService()
         }
+        self.dataService = service
+        self.settings = NotificationSettings()
         super.init()
 
         // Set up notification center delegate
@@ -55,8 +64,10 @@ final class NotificationService: NSObject, @unchecked Sendable {
             if let loadedSettings = try await dataService.load(NotificationSettings.self, forKey: "notificationSettings") {
                 settings = loadedSettings
             }
+            settingsLoaded = true
         } catch {
-            // Use default settings
+            Self.log.warning("Failed to load notification settings, using defaults: \(error.localizedDescription)")
+            settingsLoaded = true
         }
     }
 
@@ -64,6 +75,7 @@ final class NotificationService: NSObject, @unchecked Sendable {
         do {
             try await dataService.save(settings, forKey: "notificationSettings")
         } catch {
+            Self.log.error("Failed to save notification settings: \(error.localizedDescription)")
         }
     }
 
@@ -171,6 +183,7 @@ final class NotificationService: NSObject, @unchecked Sendable {
             do {
                 try await notificationCenter.add(request)
             } catch {
+                Self.log.error("Failed to schedule warning notification: \(error.localizedDescription)")
             }
         }
     }
@@ -196,6 +209,7 @@ final class NotificationService: NSObject, @unchecked Sendable {
         do {
             try await notificationCenter.add(request)
         } catch {
+            Self.log.error("Failed to schedule completion notification: \(error.localizedDescription)")
         }
     }
 
@@ -239,6 +253,7 @@ final class NotificationService: NSObject, @unchecked Sendable {
         do {
             try await notificationCenter.add(request)
         } catch {
+            Self.log.error("Failed to schedule expiration notification: \(error.localizedDescription)")
         }
     }
 

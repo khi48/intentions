@@ -71,15 +71,9 @@ The app succeeds if users:
 - Icon, name, and color customization
 - Quick Actions directly include selected apps and categories (no app groups)
 
-#### FR-3: Category-Based App Mapping
+#### FR-3: App Blocking
 **Priority**: HIGH
-**Description**: Apps are categorized to enable intelligent blocking/allowing decisions.
-**Acceptance Criteria**:
-- One-time setup process to map apps to categories
-- Categories match Apple's FamilyControls taxonomy
-- User can review and update category mappings
-- Unmapped apps default to "Other" category
-- Setup progress tracked and displayed
+**Description**: All apps blocked by default using `.all(except:)` category policy. Sessions allow specific apps temporarily.
 
 #### FR-4: Session Management
 **Priority**: CRITICAL
@@ -327,7 +321,7 @@ Widget displays current state
 - Recommended by Apple for new development
 
 #### Decision 3: Centralized vs Distributed Services
-**Choice**: Centralized service layer (ScreenTimeService, CategoryMappingService)
+**Choice**: Centralized service layer (ScreenTimeService)
 **Rationale**:
 - Single source of truth for Screen Time state
 - Easier testing with mock services
@@ -512,44 +506,6 @@ class ScreenTimeService: @unchecked Sendable {
 - Uses `DeviceActivityCenter()` for scheduling
 - Validates all state transitions
 
-#### CategoryMappingService
-**Purpose**: Manage app-to-category mappings for intelligent blocking
-
-**Responsibilities**:
-- Store user's category selections
-- Track setup completion progress
-- Provide category-based app queries
-- Persist mappings to UserDefaults
-
-**Key Methods**:
-```swift
-@Observable
-final class CategoryMappingService {
-    enum AppCategory: String, CaseIterable {
-        case social, games, entertainment, creativity
-        case productivityFinance, education, informationReading
-        case healthFitness, utilities, shoppingFood, travel, other
-    }
-
-    // Setup Management
-    func recordCategoryMapping(_ category: AppCategory, selection: FamilyActivitySelection)
-    func clearCategoryMapping(_ category: AppCategory)
-    var isSetupCompleted: Bool { get }
-    var setupCompletionPercentage: Double { get }
-
-    // Queries
-    func getApps(for category: AppCategory) -> [AllowedApp]
-    func getCategory(for bundleId: String) -> AppCategory?
-    var completedCategories: [AppCategory] { get }
-}
-```
-
-**Implementation Notes**:
-- Uses `@Observable` for SwiftUI reactivity
-- Persists to `UserDefaults` with JSON encoding
-- Stores `FamilyActivitySelection` tokens for each category
-- Setup progress computed from completed categories
-
 #### NotificationService
 **Purpose**: Schedule and deliver local notifications for session events
 
@@ -673,22 +629,7 @@ This allows the DeviceActivityMonitor extension to:
 - Simplified UX with no ad-hoc session creation
 - Reorderable Quick Actions
 
-#### Phase 4: Category Mapping (COMPLETE)
-**Goal**: Intelligent app categorization
-**Tasks**:
-1. ✅ Category mapping setup flow
-2. ✅ CategoryMappingService implementation
-3. ✅ Category-by-category selection UI
-4. ✅ Setup progress tracking
-5. ✅ Category mapping persistence
-6. ✅ Custom category icons
-
-**Deliverables**:
-- One-time setup maps all apps to categories
-- Categories used for intelligent grouping
-- Setup completion enforced before main app use
-
-#### Phase 5: Protected Hours (COMPLETE)
+#### Phase 4: Protected Hours (COMPLETE)
 **Goal**: Time-based automatic blocking
 **Tasks**:
 1. ✅ ScheduleSettings model
@@ -810,7 +751,6 @@ Intentions/
 │
 ├── Services/
 │   ├── ScreenTimeService.swift          # Screen Time API wrapper
-│   ├── CategoryMappingService.swift     # Category management
 │   └── NotificationService.swift        # Local notifications
 │
 ├── ViewModels/
@@ -825,8 +765,7 @@ Intentions/
 │   │
 │   ├── Setup/
 │   │   ├── SetupLandingView.swift       # Onboarding entry
-│   │   ├── CategoryMappingSetupView.swift # Category setup
-│   │   └── CategoryMappingStepView.swift  # Individual category
+│   │   └── ScreenTimeAuthorizationStepView.swift # Screen Time permission
 │   │
 │   ├── Settings/
 │   │   └── SettingsView.swift           # App settings
@@ -863,7 +802,7 @@ IntentionsDeviceActivityMonitor/
 // Types: UpperCamelCase
 class ScreenTimeService { }
 struct IntentionsSession { }
-enum AppCategory { }
+enum SetupStep { }
 
 // Variables/Functions: lowerCamelCase
 var currentSession: IntentionsSession?

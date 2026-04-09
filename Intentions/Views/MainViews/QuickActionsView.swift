@@ -72,7 +72,6 @@ struct QuickActionsView: View {
             .sheet(item: $editorMode) { mode in
                 QuickActionEditorSheet(
                     dataService: dataService,
-                    categoryMappingService: contentViewModel.categoryMappingService,
                     editingQuickAction: mode.quickAction,
                     onSave: { quickAction in
                         await viewModel.saveQuickAction(quickAction)
@@ -270,9 +269,8 @@ struct QuickActionsView: View {
     }
     
     private func loadData() async {
-        viewModel.setDataService(dataService)
         await viewModel.loadData()
-        
+
         // Also trigger app groups refresh
         contentViewModel.notifyAppGroupsChanged()
     }

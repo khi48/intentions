@@ -28,3 +28,6 @@ When working on this project, remember:
 - Always try build after code changes to confirm code is still viable
 
 [Rest of the file remains unchanged...]
+# Project Notes
+
+For project context, notes, and decisions, see .project-notes/

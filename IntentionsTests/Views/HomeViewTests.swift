@@ -32,17 +32,17 @@ final class HomeViewTests: XCTestCase {
     }
     
     @MainActor
-    private func createViewModel() {
-        viewModel = ContentViewModel(
+    private func createViewModel() throws {
+        viewModel = try ContentViewModel(
             screenTimeService: mockScreenTimeService,
             dataService: mockDataService
         )
     }
     
     @MainActor
-    func testHomeViewCreation() {
+    func testHomeViewCreation() throws {
         // Given
-        createViewModel()
+        try createViewModel()
         
         // When
         let homeView = HomeView(viewModel: viewModel)
@@ -52,9 +52,9 @@ final class HomeViewTests: XCTestCase {
     }
     
     @MainActor
-    func testHomeViewWithActiveSession() async {
+    func testHomeViewWithActiveSession() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.approved)
         await viewModel.initializeApp()
         
@@ -70,9 +70,9 @@ final class HomeViewTests: XCTestCase {
     }
     
     @MainActor
-    func testHomeViewWithoutActiveSession() async {
+    func testHomeViewWithoutActiveSession() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.approved)
         await viewModel.initializeApp()
         

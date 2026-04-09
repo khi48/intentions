@@ -177,8 +177,10 @@ final class IntentionSession: Identifiable, Codable, @unchecked Sendable {
     }
     
     func resume() {
-        guard case .paused = state else { return }
-        state = .active(startedAt: Date())
+        guard case .paused(let totalElapsed, _) = state else { return }
+        // Adjust startedAt backwards by the already-elapsed time so that
+        // Date().timeIntervalSince(startedAt) correctly returns totalElapsed + new time
+        state = .active(startedAt: Date().addingTimeInterval(-totalElapsed))
     }
     
     func complete() {

@@ -23,6 +23,8 @@ final class PersistentIntentionSession {
     var endTime: Date
     var isActive: Bool
     var wasCompleted: Bool
+    var isPaused: Bool = false // Track paused state separately
+    var pausedElapsedTime: TimeInterval = 0 // Elapsed time when paused
     var createdAt: Date
     var sourceData: Data? // Stores encoded SessionSource (optional for backward compatibility)
     
@@ -36,6 +38,8 @@ final class PersistentIntentionSession {
         endTime: Date,
         isActive: Bool,
         wasCompleted: Bool,
+        isPaused: Bool = false,
+        pausedElapsedTime: TimeInterval = 0,
         createdAt: Date,
         sourceData: Data? = nil
     ) {
@@ -48,14 +52,36 @@ final class PersistentIntentionSession {
         self.endTime = endTime
         self.isActive = isActive
         self.wasCompleted = wasCompleted
+        self.isPaused = isPaused
+        self.pausedElapsedTime = pausedElapsedTime
         self.createdAt = createdAt
         self.sourceData = sourceData
     }
     
     convenience init(from session: IntentionSession) {
-        let appGroupsData = (try? JSONEncoder().encode(session.requestedAppGroups)) ?? Data()
-        let applicationsData = (try? JSONEncoder().encode(session.requestedApplications)) ?? Data()
-        let sourceData = (try? JSONEncoder().encode(session.source)) ?? Data()
+        let encoder = JSONEncoder()
+        let appGroupsData = (try? encoder.encode(session.requestedAppGroups)) ?? {
+            assertionFailure("Failed to encode requestedAppGroups for session \(session.id)")
+            return Data()
+        }()
+        let applicationsData = (try? encoder.encode(session.requestedApplications)) ?? {
+            assertionFailure("Failed to encode requestedApplications for session \(session.id)")
+            return Data()
+        }()
+        let sourceData = (try? encoder.encode(session.source)) ?? {
+            assertionFailure("Failed to encode source for session \(session.id)")
+            return Data()
+        }()
+
+        let isPaused: Bool
+        let pausedElapsedTime: TimeInterval
+        if case .paused(let elapsed, _) = session.state {
+            isPaused = true
+            pausedElapsedTime = elapsed
+        } else {
+            isPaused = false
+            pausedElapsedTime = 0
+        }
 
         self.init(
             id: session.id,
@@ -67,21 +93,31 @@ final class PersistentIntentionSession {
             endTime: session.endTime,
             isActive: session.isActive,
             wasCompleted: session.wasCompleted,
+            isPaused: isPaused,
+            pausedElapsedTime: pausedElapsedTime,
             createdAt: session.createdAt,
             sourceData: sourceData
         )
     }
     
     func update(from session: IntentionSession) {
-        self.requestedAppGroupsData = (try? JSONEncoder().encode(session.requestedAppGroups)) ?? Data()
-        self.requestedApplicationsData = (try? JSONEncoder().encode(session.requestedApplications)) ?? Data()
-        self.sourceData = (try? JSONEncoder().encode(session.source)) ?? Data()
+        let encoder = JSONEncoder()
+        self.requestedAppGroupsData = (try? encoder.encode(session.requestedAppGroups)) ?? Data()
+        self.requestedApplicationsData = (try? encoder.encode(session.requestedApplications)) ?? Data()
+        self.sourceData = (try? encoder.encode(session.source)) ?? Data()
         self.allowAllWebsites = session.allowAllWebsites
         self.duration = session.duration
         self.startTime = session.startTime
         self.endTime = session.endTime
         self.isActive = session.isActive
         self.wasCompleted = session.wasCompleted
+        if case .paused(let elapsed, _) = session.state {
+            self.isPaused = true
+            self.pausedElapsedTime = elapsed
+        } else {
+            self.isPaused = false
+            self.pausedElapsedTime = 0
+        }
         // Note: createdAt should not be updated - it represents the original creation time
     }
     
@@ -103,10 +139,11 @@ final class PersistentIntentionSession {
 
         if wasCompleted {
             state = .completed(totalElapsed: totalElapsed, completedAt: endTime)
+        } else if isPaused {
+            state = .paused(totalElapsed: pausedElapsedTime, pausedAt: endTime)
         } else if isActive {
             state = .active(startedAt: startTime)
         } else {
-            // Session was cancelled or paused
             state = .cancelled(totalElapsed: totalElapsed, cancelledAt: endTime)
         }
 

@@ -12,7 +12,6 @@ import SwiftUI
 /// Sheet for creating and editing quick actions
 struct QuickActionEditorSheet: View {
     let dataService: DataPersisting
-    let categoryMappingService: CategoryMappingService
     let editingQuickAction: QuickAction?
     let onSave: (QuickAction) async -> Void
     let onCancel: () -> Void
@@ -369,7 +368,7 @@ struct QuickActionEditorSheet: View {
                 }
 
                 // Show only apps that DON'T belong to selected categories
-                if !appsNotInSelectedCategories.isEmpty {
+                if !individualApps.isEmpty {
                     selectedAppsView
                 }
             }
@@ -379,13 +378,9 @@ struct QuickActionEditorSheet: View {
         }
     }
 
-    /// Get apps that don't belong to any selected category
-    private var appsNotInSelectedCategories: Set<ApplicationToken> {
-        // Get all apps that belong to the selected categories
-        let appsInCategories = categoryMappingService.getAppsForCategoryTokens(selectedCategories)
-
-        // Return only apps that are NOT in any selected category
-        return selectedApps.subtracting(appsInCategories)
+    /// Individual apps selected (not part of a category selection)
+    private var individualApps: Set<ApplicationToken> {
+        selectedApps
     }
 
     private var selectedAppsView: some View {
@@ -398,15 +393,15 @@ struct QuickActionEditorSheet: View {
                     .fontWeight(.medium)
                     .foregroundColor(AppConstants.Colors.textSecondary)
                 Spacer()
-                Text("\(appsNotInSelectedCategories.count) selected")
+                Text("\(individualApps.count) selected")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
 
             // App icons grid with remove functionality (only show apps not in categories)
-            if !appsNotInSelectedCategories.isEmpty {
+            if !individualApps.isEmpty {
                 FullAppIconsGrid(
-                    applicationTokens: Array(appsNotInSelectedCategories),
+                    applicationTokens: Array(individualApps),
                     onRemove: { token in
                         removeApp(token)
                     }
@@ -434,7 +429,6 @@ struct QuickActionEditorSheet: View {
                 ForEach(Array(selectedCategories), id: \.self) { categoryToken in
                     CategoryItemView(
                         token: categoryToken,
-                        categoryMappingService: categoryMappingService,
                         onRemove: { token in
                             removeCategory(token)
                         }
@@ -721,47 +715,17 @@ private struct StableAppIconCell: View {
 
 private struct CategoryItemView: View {
     let token: ActivityCategoryToken
-    let categoryMappingService: CategoryMappingService
     let onRemove: (ActivityCategoryToken) -> Void
-
-    private var category: CategoryMappingService.AppCategory? {
-        categoryMappingService.getCategory(for: token)
-    }
-
-    private var categoryName: String {
-        category?.displayName ?? "Category"
-    }
-
-    private var categoryIcon: String? {
-        category?.customImageName
-    }
-
-    private var categoryColor: Color {
-        category?.iconColor ?? .gray
-    }
 
     var body: some View {
         HStack(spacing: 8) {
-            // Use Apple's category icon if available, otherwise fallback to folder icon
-            if let customImageName = categoryIcon, let uiImage = UIImage(named: customImageName) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 24, height: 24)
-                    .grayscale(1.0)
-            } else if let category = category {
-                Image(systemName: category.iconName)
-                    .font(.system(size: 16))
-                    .foregroundColor(categoryColor)
-                    .frame(width: 24, height: 24)
-            } else {
-                Image(systemName: "folder.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(AppConstants.Colors.text)
-                    .frame(width: 24, height: 24)
-            }
+            Label(token)
+                .labelStyle(.iconOnly)
+                .frame(width: 24, height: 24)
+                .grayscale(1.0)
 
-            Text(categoryName)
+            Label(token)
+                .labelStyle(.titleOnly)
                 .font(.caption)
                 .foregroundColor(.primary)
                 .lineLimit(1)
@@ -819,7 +783,6 @@ private struct StableFamilyControlsName: View {
 #Preview {
     QuickActionEditorSheet(
         dataService: MockDataPersistenceService(),
-        categoryMappingService: CategoryMappingService(),
         editingQuickAction: nil,
         onSave: { _ in },
         onCancel: {},

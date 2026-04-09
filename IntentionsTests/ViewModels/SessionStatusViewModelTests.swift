@@ -16,11 +16,17 @@ final class SessionStatusViewModelTests: XCTestCase {
     var viewModel: SessionStatusViewModel!
     var mockDataService: MockDataPersistenceService!
     var mockScreenTimeService: MockScreenTimeService!
-    
+    var contentViewModel: ContentViewModel!
+
     override func setUp() async throws {
         mockDataService = MockDataPersistenceService()
         mockScreenTimeService = MockScreenTimeService()
+        contentViewModel = try ContentViewModel(
+            screenTimeService: mockScreenTimeService,
+            dataService: mockDataService
+        )
         viewModel = SessionStatusViewModel(
+            contentViewModel: contentViewModel,
             dataService: mockDataService,
             screenTimeService: mockScreenTimeService
         )
@@ -28,6 +34,7 @@ final class SessionStatusViewModelTests: XCTestCase {
     
     override func tearDown() async throws {
         viewModel = nil
+        contentViewModel = nil
         mockDataService = nil
         mockScreenTimeService = nil
     }
@@ -50,6 +57,7 @@ final class SessionStatusViewModelTests: XCTestCase {
         // When
         let viewModelWithSession = SessionStatusViewModel(
             session: testSession,
+            contentViewModel: contentViewModel,
             dataService: mockDataService,
             screenTimeService: mockScreenTimeService
         )
@@ -256,101 +264,20 @@ final class SessionStatusViewModelTests: XCTestCase {
         let testSession = try! IntentionSession(appGroups: [], applications: [], duration: 1800)
         viewModel.updateSession(testSession)
         let originalDuration = testSession.duration
-        var sessionExtended = false
-        var extensionTime: TimeInterval = 0
-        
-        viewModel.onSessionExtended = { time in
-            sessionExtended = true
-            extensionTime = time
-        }
-        
         // When
-        await viewModel.extendSession(by: 15) // 15 minutes
-        
+        await viewModel.extendSession(by: 15)
+
         // Then
-        XCTAssertTrue(sessionExtended)
-        XCTAssertEqual(extensionTime, 15 * 60) // 15 minutes in seconds
-        XCTAssertEqual(viewModel.session?.duration, originalDuration + 900) // Original + 15 minutes
+        XCTAssertEqual(viewModel.session?.duration, originalDuration + 900)
         XCTAssertFalse(viewModel.showingExtendDialog)
     }
     
-    func testExtendSessionWithoutActiveSession() async {
-        // Given - no active session
-        var sessionExtended = false
-        
-        viewModel.onSessionExtended = { _ in
-            sessionExtended = true
-        }
-        
-        // When
-        await viewModel.extendSession(by: 15)
-        
-        // Then
-        XCTAssertFalse(sessionExtended)
-    }
-    
-    func testEndSession() async {
-        // Given
-        let testSession = try! IntentionSession(appGroups: [], applications: [], duration: 1800)
-        viewModel.updateSession(testSession)
-        var sessionEnded = false
-        
-        viewModel.onSessionEnded = {
-            sessionEnded = true
-        }
-        
-        // When
-        await viewModel.endSession()
-        
-        // Then
-        XCTAssertTrue(sessionEnded)
-        XCTAssertFalse(viewModel.session?.isActive == true)
-    }
-    
-    func testEndSessionWithoutActiveSession() async {
-        // Given - no active session
-        var sessionEnded = false
-        
-        viewModel.onSessionEnded = {
-            sessionEnded = true
-        }
-        
-        // When
-        await viewModel.endSession()
-        
-        // Then
-        XCTAssertFalse(sessionEnded)
-    }
-    
-    // MARK: - UI Actions Tests
-    
-    func testToggleControls() {
-        // Given
-        XCTAssertFalse(viewModel.showingControls)
-        
-        // When
-        viewModel.toggleControls()
-        
-        // Then
-        XCTAssertTrue(viewModel.showingControls)
-        
-        // When - toggle again
-        viewModel.toggleControls()
-        
-        // Then
-        XCTAssertFalse(viewModel.showingControls)
-    }
-    
     func testShowExtendDialog() {
-        // Given
-        viewModel.showingControls = true
-        
         // When
         viewModel.showExtendDialog()
-        
+
         // Then
         XCTAssertTrue(viewModel.showingExtendDialog)
-        XCTAssertFalse(viewModel.showingControls) // Should hide controls
     }
     
     func testCancelExtendDialog() {

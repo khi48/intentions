@@ -90,24 +90,18 @@ final class SessionStatusViewModel: Sendable {
         }
     }
     
-    /// Individual apps associated with current session
-    private(set) var sessionApps: [DiscoveredApp] = []
-
     /// Application tokens from the session (for direct display)
     private(set) var sessionTokens: [ApplicationToken] = []
 
     /// Quick action associated with the session (if it's a quick action session)
     private(set) var associatedQuickAction: QuickAction?
     
-    /// Whether showing session controls
-    var showingControls: Bool = false
-    
     /// Whether showing extend session dialog
     var showingExtendDialog: Bool = false
-    
+
     /// Extension time options (in minutes)
     let extensionOptions: [Int] = [5, 10, 15, 30]
-    
+
     /// Selected extension time
     var selectedExtensionTime: Int = 15
     
@@ -120,13 +114,7 @@ final class SessionStatusViewModel: Sendable {
     
     // MARK: - Timer
 
-    nonisolated(unsafe) private var timer: Timer?
-    
-    // MARK: - Callbacks (Legacy - will be removed)
-    
-    var onSessionExpired: (() async -> Void)?
-    var onSessionExtended: ((TimeInterval) async -> Void)?
-    var onSessionEnded: (() async -> Void)?
+    private var timer: Timer?
     
     // MARK: - Initialization
     
@@ -151,16 +139,12 @@ final class SessionStatusViewModel: Sendable {
             Task {
                 await self.loadSessionData()
                 await self.loadAssociatedQuickAction()
-                // TEMPORARILY DISABLED: Testing if notifications cause SpringBoard crash
-                // await self.notificationService.scheduleSessionNotifications(for: session)
             }
         }
     }
     
-    deinit {
-        timer?.invalidate()
-        timer = nil
-    }
+    // Timer uses [weak self] and will become a no-op when self is deallocated.
+    // Explicit cleanup happens via stopTimer() in updateSession(nil).
     
     // MARK: - Session Management
     
@@ -173,12 +157,6 @@ final class SessionStatusViewModel: Sendable {
             updateRemainingTime()
             if !wasActive {
                 startTimer()
-
-                // TEMPORARILY DISABLED: Testing if notifications cause SpringBoard crash
-                // Schedule notifications for new session
-                // Task {
-                //     await notificationService.scheduleSessionNotifications(for: session)
-                // }
             }
 
             Task {
@@ -188,7 +166,6 @@ final class SessionStatusViewModel: Sendable {
         } else {
             stopTimer()
             remainingTime = 0
-            sessionApps = []
             sessionTokens = []
 
             // Cancel notifications when session ends
@@ -216,12 +193,6 @@ final class SessionStatusViewModel: Sendable {
                 session = extendedSession
                 updateRemainingTime()
 
-                // TEMPORARILY DISABLED: Testing if notifications cause SpringBoard crash
-                // Reschedule notifications for extended session
-                // await notificationService.scheduleSessionNotifications(for: extendedSession)
-
-                await onSessionExtended?(extensionTime)
-
                 // Close dialog
                 showingExtendDialog = false
                 
@@ -248,11 +219,7 @@ final class SessionStatusViewModel: Sendable {
                 // Cancel any pending notifications
                 await notificationService.cancelSessionNotifications()
 
-                // Directly call ContentViewModel to handle blocking logic
                 await contentViewModel.endCurrentSession()
-
-                // Keep legacy callback for backward compatibility during transition
-                await onSessionEnded?()
 
             } catch {
                 // CRITICAL: Even if saving fails, we MUST restore blocking
@@ -264,16 +231,9 @@ final class SessionStatusViewModel: Sendable {
     }
     
     // MARK: - UI Actions
-    
-    /// Toggle session controls visibility
-    func toggleControls() {
-        showingControls.toggle()
-    }
-    
-    /// Show extend session dialog
+
     func showExtendDialog() {
         showingExtendDialog = true
-        showingControls = false
     }
     
     /// Cancel extend dialog
@@ -288,28 +248,9 @@ final class SessionStatusViewModel: Sendable {
             return
         }
 
-        // Store the ApplicationTokens directly - no need to convert
         sessionTokens = Array(session.requestedApplications)
-
-        // For now, create simple placeholder DiscoveredApps for backward compatibility
-        var allSessionApps: [DiscoveredApp] = []
-        for (index, token) in session.requestedApplications.enumerated() {
-            let discoveredApp = DiscoveredApp(
-                displayName: "App \(index + 1)", // Placeholder name - in real app this would come from the app metadata
-                bundleIdentifier: "com.app\(index + 1).bundle", // Placeholder - would be real bundle ID
-                token: token,
-                category: "Allowed"
-            )
-            allSessionApps.append(discoveredApp)
-        }
-
-        sessionApps = allSessionApps
     }
-    
 
-
-
-    
     // MARK: - Timer Management
     
     private func startTimer() {
@@ -338,12 +279,7 @@ final class SessionStatusViewModel: Sendable {
         if remainingTime <= 0 {
             stopTimer()
             Task {
-                // End the session via manual UI timer expiration
-                // This will complete the session, clear state, and re-block apps
                 await contentViewModel.endCurrentSession()
-
-                // Keep legacy callback for backward compatibility during transition
-                await onSessionExpired?()
             }
         }
     }

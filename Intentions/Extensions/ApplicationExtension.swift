@@ -16,6 +16,5 @@ import ManagedSettings
 extension Token: @unchecked @retroactive Sendable {}
 
 // MARK: - Codable Extensions for Persistence
-// ApplicationToken and ActivityCategoryToken are already Codable!
-// The CategoryMappingService proves this works with direct JSON encoding/decoding.
+// ApplicationToken and ActivityCategoryToken are already Codable.
 // No extensions needed - they support Codable natively.

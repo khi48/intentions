@@ -14,13 +14,21 @@ import SwiftUI
 struct ContentView: View {
     @State private var viewModel: ContentViewModel
 
+    @State private var initError: String?
+
     init() {
         do {
             let vm = try ContentViewModel()
             self._viewModel = State(wrappedValue: vm)
+            self._initError = State(wrappedValue: nil)
         } catch {
-            // If ContentViewModel initialization fails, we have a critical app failure
-            fatalError("Failed to initialize ContentViewModel: \(error)")
+            // Create a fallback view model with mock services so the app can show an error
+            let fallbackVM = try! ContentViewModel(
+                screenTimeService: MockScreenTimeService(),
+                dataService: MockDataPersistenceService()
+            )
+            self._viewModel = State(wrappedValue: fallbackVM)
+            self._initError = State(wrappedValue: "Failed to initialize app: \(error.localizedDescription)")
         }
     }
     private let managedSettingsStore = ManagedSettingsStore()
@@ -49,6 +57,14 @@ struct ContentView: View {
             }
         } message: {
             Text(viewModel.errorMessage ?? "")
+        }
+        .alert("Initialization Error", isPresented: Binding(
+            get: { initError != nil },
+            set: { _ in initError = nil }
+        )) {
+            Button("OK") { initError = nil }
+        } message: {
+            Text(initError ?? "")
         }
     }
 }
@@ -83,7 +99,6 @@ private struct MainTabView: View {
                         navigationManager.resetSettingsNavigationWithoutAnimation()
                         settingsViewModel?.resetSheetState()
                     }
-                } else {
                 }
             }
         )) {
@@ -99,7 +114,6 @@ private struct MainTabView: View {
                 dataService: viewModel.dataServiceProvider,
                 setupCoordinator: viewModel.setupCoordinator,
                 hasActiveSession: viewModel.activeSession != nil,
-                authorizationStatus: viewModel.authorizationStatus,
                 onScheduleSettingsChanged: { settings in
                     await viewModel.updateScheduleSettings(settings)
                 },

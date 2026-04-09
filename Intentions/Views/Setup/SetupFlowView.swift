@@ -12,14 +12,13 @@ import SwiftUI
 enum SetupPage {
     case landing
     case screenTimePermission
-    case categoryMapping
     case alwaysAllowedInfo
     case widgetSetup
 }
 
 /// Main setup flow view with simple state machine
 struct SetupFlowView: View {
-    
+
     @State private var currentPage: SetupPage = .landing
     @State private var setupCoordinator: SetupCoordinator
 
@@ -50,9 +49,9 @@ struct SetupFlowView: View {
         self.forceSetup = forceSetup
         self.onComplete = onComplete
     }
-    
+
     // MARK: - Body
-    
+
     var body: some View {
         Group {
             if embedInNavigationView {
@@ -63,15 +62,10 @@ struct SetupFlowView: View {
                 setupContent
             }
         }
-        .onAppear {
-        }
-        .onDisappear {
-        }
     }
 
     private var setupContent: some View {
         ZStack {
-            // Background
             LinearGradient(
                 colors: [AppConstants.Colors.surface, AppConstants.Colors.surface],
                 startPoint: .topLeading,
@@ -79,11 +73,9 @@ struct SetupFlowView: View {
             )
             .ignoresSafeArea()
 
-            // Page Content
             Group {
                 switch currentPage {
                 case .landing:
-                    // No scroll view for landing
                     VStack(spacing: 24) {
                         landingPageContent
                         Spacer(minLength: 50)
@@ -100,23 +92,13 @@ struct SetupFlowView: View {
                         .padding()
                     }
 
-                case .categoryMapping:
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            progressSection(step: 2)
-                            categoryMappingContent
-                            Spacer(minLength: 50)
-                        }
-                        .padding()
-                    }
-
                 case .alwaysAllowedInfo:
                     alwaysAllowedInfoContent
 
                 case .widgetSetup:
                     ScrollView {
                         VStack(spacing: 24) {
-                            progressSection(step: 3)
+                            progressSection(step: 2)
                             widgetSetupContent
                             Spacer(minLength: 50)
                         }
@@ -130,10 +112,10 @@ struct SetupFlowView: View {
             await initializeSetup()
         }
     }
-    
-    
+
+
     // MARK: - Progress Section
-    
+
     private func progressSection(step: Int) -> some View {
         VStack(spacing: 12) {
             HStack(spacing: 6) {
@@ -151,7 +133,7 @@ struct SetupFlowView: View {
                     .frame(height: 2)
                     .frame(maxWidth: 20)
 
-                // Step 2: Category Mapping
+                // Step 2: Always Allowed Info
                 Circle()
                     .fill(step >= 2 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
                     .frame(width: 10, height: 10)
@@ -165,7 +147,7 @@ struct SetupFlowView: View {
                     .frame(height: 2)
                     .frame(maxWidth: 20)
 
-                // Step 3: Always Allowed (no progress indicator, just info)
+                // Step 3: Widget Setup
                 Circle()
                     .fill(step >= 3 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
                     .frame(width: 10, height: 10)
@@ -173,52 +155,28 @@ struct SetupFlowView: View {
                         Circle()
                             .stroke(AppConstants.Colors.text, lineWidth: step == 3 ? 2 : 0)
                     )
-
-                Rectangle()
-                    .fill(step >= 4 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
-                    .frame(height: 2)
-                    .frame(maxWidth: 20)
-
-                // Step 4: Widget Setup (optional)
-                Circle()
-                    .fill(step >= 4 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
-                    .frame(width: 10, height: 10)
-                    .overlay(
-                        Circle()
-                            .stroke(AppConstants.Colors.text, lineWidth: step == 4 ? 2 : 0)
-                    )
             }
             .padding(.horizontal)
 
-            Text("Step \(step) of 4")
+            Text("Step \(step) of 3")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
     }
-    
+
     // MARK: - Page Content
-    
+
     private var landingPageContent: some View {
         SetupLandingView {
             currentPage = .screenTimePermission
         }
     }
-    
+
     private var screenTimePermissionContent: some View {
         ScreenTimeAuthorizationStepView(
             setupCoordinator: setupCoordinator,
             onComplete: {
                 await setupCoordinator.completeSetupStep(.screenTimeAuthorization)
-                currentPage = .categoryMapping
-            }
-        )
-    }
-    
-    private var categoryMappingContent: some View {
-        CategoryMappingStepView(
-            setupCoordinator: setupCoordinator,
-            onComplete: {
-                await setupCoordinator.completeSetupStep(.categoryMapping)
                 currentPage = .alwaysAllowedInfo
             }
         )
@@ -231,21 +189,20 @@ struct SetupFlowView: View {
             }
         )
     }
-    
+
     private var widgetSetupContent: some View {
-        // Temporary inline widget setup view until WidgetSetupStepView is added to project
         VStack(spacing: 24) {
             VStack(spacing: 16) {
                 ZStack {
                     Circle()
                         .fill(AppConstants.Colors.surface)
                         .frame(width: 80, height: 80)
-                    
+
                     Image(systemName: "widget.large.badge.plus")
                         .font(.system(size: 40))
                         .foregroundColor(AppConstants.Colors.text)
                 }
-                
+
                 Text("Add Intent Widget")
                     .font(.title2)
                     .fontWeight(.semibold)
@@ -256,11 +213,11 @@ struct SetupFlowView: View {
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
             }
-            
+
             VStack(spacing: 16) {
                 Text("Widget shows:")
                     .font(.headline)
-                
+
                 HStack(spacing: 20) {
                     VStack(spacing: 4) {
                         Image(systemName: "shield.fill")
@@ -269,7 +226,7 @@ struct SetupFlowView: View {
                         Text("Blocked")
                             .font(.caption)
                     }
-                    
+
                     VStack(spacing: 4) {
                         Image(systemName: "checkmark.circle")
                             .foregroundColor(AppConstants.Colors.text)
@@ -277,7 +234,7 @@ struct SetupFlowView: View {
                         Text("Open")
                             .font(.caption)
                     }
-                    
+
                     VStack(spacing: 4) {
                         Image(systemName: "questionmark.circle")
                             .foregroundColor(AppConstants.Colors.textSecondary)
@@ -290,14 +247,14 @@ struct SetupFlowView: View {
             .padding()
             .background(Color(.systemGray6))
             .cornerRadius(12)
-            
+
             Button("Start Using Intent") {
                 onComplete()
             }
             .buttonStyle(.bordered)
             .foregroundColor(AppConstants.Colors.text)
             .controlSize(.large)
-            
+
             Text("You can add the widget later from your device settings")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -305,19 +262,16 @@ struct SetupFlowView: View {
         }
         .padding()
     }
-    
-    
+
+
     // MARK: - Actions
-    
+
     private func initializeSetup() async {
         await setupCoordinator.validateSetupRequirements()
 
-        // Check if we should skip to a later page based on current state
         if let state = setupCoordinator.setupState {
             if state.isSetupSufficient && !forceSetup {
                 onComplete()
-            } else if state.screenTimeAuthorized && !forceSetup {
-                currentPage = .categoryMapping
             } else {
                 currentPage = .landing
             }
@@ -333,8 +287,7 @@ struct SetupFlowView: View {
 #Preview {
     SetupFlowView(
         setupCoordinator: SetupCoordinator(
-            screenTimeService: MockScreenTimeService(),
-            categoryMappingService: CategoryMappingService()
+            screenTimeService: MockScreenTimeService()
         )
     ) {
     }

@@ -148,48 +148,45 @@ struct SessionStatusView: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
-                
+
                 Spacer()
-                
-                Text("\(viewModel.sessionApps.count) apps")
+
+                Text("\(viewModel.sessionTokens.count) apps")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            
+
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {
-                    ForEach(viewModel.sessionApps.prefix(10)) { app in
+                    ForEach(Array(viewModel.sessionTokens.prefix(10).enumerated()), id: \.offset) { index, token in
                         VStack(spacing: 4) {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(AppConstants.Colors.surface)
+                            Label(token)
+                                .labelStyle(.iconOnly)
+                                .scaleEffect(40.0 / 25.0)
                                 .frame(width: 40, height: 40)
-                                .overlay(
-                                    Text(String(app.displayName.prefix(1)))
-                                        .font(.headline)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(AppConstants.Colors.text)
-                                )
-                            
-                            Text(app.displayName)
+                                .grayscale(1.0)
+
+                            Label(token)
+                                .labelStyle(.titleOnly)
                                 .font(.caption2)
                                 .lineLimit(1)
                                 .foregroundStyle(.secondary)
                         }
                         .frame(width: 50)
                     }
-                    
-                    if viewModel.sessionApps.count > 10 {
+
+                    if viewModel.sessionTokens.count > 10 {
                         VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 8)
                                 .fill(.gray.opacity(0.1))
                                 .frame(width: 40, height: 40)
                                 .overlay(
-                                    Text("+\(viewModel.sessionApps.count - 10)")
+                                    Text("+\(viewModel.sessionTokens.count - 10)")
                                         .font(.caption)
                                         .fontWeight(.semibold)
                                         .foregroundStyle(.gray)
                                 )
-                            
+
                             Text("more")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)

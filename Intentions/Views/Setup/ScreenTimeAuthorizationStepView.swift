@@ -281,8 +281,7 @@ struct ScreenTimeAuthorizationStepView: View {
 #Preview {
     ScreenTimeAuthorizationStepView(
         setupCoordinator: SetupCoordinator(
-            screenTimeService: MockScreenTimeService(),
-            categoryMappingService: CategoryMappingService()
+            screenTimeService: MockScreenTimeService()
         )
     ) {
     }

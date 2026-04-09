@@ -60,38 +60,14 @@ final class MockDataPersistenceServiceTests: XCTestCase {
     func testMockServiceReset() async throws {
         // Given
         try await mockService.save("test", forKey: "test")
-        
-        let appGroup = try AppGroup(name: "Test")
-        try await mockService.saveAppGroup(appGroup)
-        
+
         // When
         await mockService.reset()
-        
+
         // Then
         let loadedString = try await mockService.load(String.self, forKey: "test")
-        let appGroupCount = await mockService.getStoredAppGroupCount()
-        
+
         XCTAssertNil(loadedString)
-        XCTAssertEqual(appGroupCount, 0)
-    }
-    
-    @MainActor
-    func testMockServiceAppGroupOperations() async throws {
-        // Given
-        let appGroup = try AppGroup(name: "Test Group")
-        appGroup.applications = Set<ApplicationToken>()
-        appGroup.categories = Set<ActivityCategoryToken>()
-        
-        // When
-        try await mockService.saveAppGroup(appGroup)
-        let groups = try await mockService.loadAppGroups()
-        let retrievedGroup = await mockService.getAppGroup(id: appGroup.id)
-        
-        // Then
-        XCTAssertEqual(groups.count, 1)
-        XCTAssertEqual(groups.first?.name, "Test Group")
-        XCTAssertNotNil(retrievedGroup)
-        XCTAssertEqual(retrievedGroup?.id, appGroup.id)
     }
     
     @MainActor

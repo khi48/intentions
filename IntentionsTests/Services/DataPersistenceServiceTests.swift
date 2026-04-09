@@ -14,7 +14,6 @@ final class DataPersistenceServiceTests: XCTestCase {
         
         // Create in-memory test container
         let schema = Schema([
-            PersistentAppGroup.self,
             PersistentIntentionSession.self,
             PersistentScheduleSettings.self
         ])
@@ -78,90 +77,6 @@ final class DataPersistenceServiceTests: XCTestCase {
         
         // Then
         XCTAssertNil(result)
-    }
-    
-    // MARK: - App Group Tests
-    
-    func testSaveAndLoadAppGroup() async throws {
-        // Given
-        let appGroup = try createTestAppGroup()
-        
-        // When
-        try await service.saveAppGroup(appGroup)
-        let loadedGroups = try await service.loadAppGroups()
-        
-        // Then
-        XCTAssertEqual(loadedGroups.count, 1)
-        let loadedGroup = loadedGroups.first!
-        XCTAssertEqual(loadedGroup.id, appGroup.id)
-        XCTAssertEqual(loadedGroup.name, appGroup.name)
-        XCTAssertEqual(loadedGroup.applications.count, appGroup.applications.count)
-        XCTAssertEqual(loadedGroup.categories.count, appGroup.categories.count)
-    }
-    
-    func testUpdateExistingAppGroup() async throws {
-        // Given
-        let appGroup = try createTestAppGroup()
-        try await service.saveAppGroup(appGroup)
-        
-        // When - Update the group
-        appGroup.name = "Updated Name"
-        appGroup.updateModified()
-        try await service.saveAppGroup(appGroup)
-        
-        let loadedGroups = try await service.loadAppGroups()
-        
-        // Then
-        XCTAssertEqual(loadedGroups.count, 1)
-        let loadedGroup = loadedGroups.first!
-        XCTAssertEqual(loadedGroup.name, "Updated Name")
-        XCTAssertEqual(loadedGroup.lastModified.timeIntervalSince1970,
-                      appGroup.lastModified.timeIntervalSince1970, accuracy: 1.0)
-    }
-    
-    func testDeleteAppGroup() async throws {
-        // Given
-        let appGroup = try createTestAppGroup()
-        try await service.saveAppGroup(appGroup)
-        
-        // When
-        try await service.deleteAppGroup(appGroup.id)
-        let loadedGroups = try await service.loadAppGroups()
-        
-        // Then
-        XCTAssertTrue(loadedGroups.isEmpty)
-    }
-    
-    func testDeleteNonExistentAppGroup() async throws {
-        // Given
-        let nonExistentId = UUID()
-        
-        // When & Then
-        do {
-            try await service.deleteAppGroup(nonExistentId)
-            XCTFail("Expected AppError.dataNotFound")
-        } catch AppError.dataNotFound {
-            // Expected error
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
-    }
-    
-    func testLoadMultipleAppGroups() async throws {
-        // Given
-        let group1 = try createTestAppGroup(name: "Group 1")
-        let group2 = try createTestAppGroup(name: "Group 2")
-        
-        try await service.saveAppGroup(group1)
-        try await service.saveAppGroup(group2)
-        
-        // When
-        let loadedGroups = try await service.loadAppGroups()
-        
-        // Then
-        XCTAssertEqual(loadedGroups.count, 2)
-        XCTAssertTrue(loadedGroups.contains { $0.name == "Group 1" })
-        XCTAssertTrue(loadedGroups.contains { $0.name == "Group 2" })
     }
     
     // MARK: - Schedule Settings Tests
@@ -327,14 +242,6 @@ final class DataPersistenceServiceTests: XCTestCase {
     }
     
     // MARK: - Helper Methods
-    
-    private func createTestAppGroup(name: String = "Test Group") throws -> AppGroup {
-        let appGroup = try AppGroup(name: name)
-        // Since ApplicationToken can't be easily created in tests, we'll use empty sets
-        appGroup.applications = Set<ApplicationToken>()
-        appGroup.categories = Set<ActivityCategoryToken>()
-        return appGroup
-    }
     
     private func createTestScheduleSettings() -> ScheduleSettings {
         let settings = ScheduleSettings()

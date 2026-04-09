@@ -91,61 +91,38 @@ final class AuthorizationStatusTests: XCTestCase {
 final class NavigationIntegrationTests: XCTestCase {
     
     @MainActor
-    func testTabViewNavigation() {
+    func testTabViewNavigation() throws {
         // Test that ContentViewModel properly manages tab navigation
         let mockScreenTimeService = MockScreenTimeService()
         let mockDataService = MockDataPersistenceService()
-        let viewModel = ContentViewModel(
+        let viewModel = try ContentViewModel(
             screenTimeService: mockScreenTimeService,
             dataService: mockDataService
         )
-        
+
         // Test initial state
         XCTAssertEqual(viewModel.selectedTab, .home)
-        
+
         // Test navigation
-        viewModel.navigateToTab(.groups)
-        XCTAssertEqual(viewModel.selectedTab, .groups)
-        
         viewModel.navigateToTab(.settings)
         XCTAssertEqual(viewModel.selectedTab, .settings)
-        
+
         viewModel.navigateToTab(.home)
         XCTAssertEqual(viewModel.selectedTab, .home)
     }
     
     @MainActor
-    func testModalPresentation() async {
-        // Test that ContentViewModel properly manages modal states
+    func testTabNavigation() async {
         let mockScreenTimeService = MockScreenTimeService()
         let mockDataService = MockDataPersistenceService()
-        let viewModel = ContentViewModel(
+        let viewModel = try! ContentViewModel(
             screenTimeService: mockScreenTimeService,
             dataService: mockDataService
         )
-        
-        // Test initial state
-        XCTAssertFalse(viewModel.showingIntentionPrompt)
-        XCTAssertFalse(viewModel.showingSettings)
-        
-        // Test settings modal
-        viewModel.showSettings()
-        XCTAssertTrue(viewModel.showingSettings)
-        
-        // Test intention prompt when authorized
-        await mockScreenTimeService.setMockAuthorizationStatus(.approved)
-        await viewModel.initializeApp()
-        
-        viewModel.showIntentionPrompt()
-        XCTAssertTrue(viewModel.showingIntentionPrompt)
-        
-        // Test intention prompt when not authorized
-        await mockScreenTimeService.setMockAuthorizationStatus(.denied)
-        await viewModel.initializeApp()
-        
-        viewModel.showIntentionPrompt()
-        XCTAssertFalse(viewModel.showingIntentionPrompt) // Should not show
-        XCTAssertNotNil(viewModel.errorMessage) // Should show error
+
+        XCTAssertEqual(viewModel.selectedTab, .home)
+        viewModel.navigateToTab(.settings)
+        XCTAssertEqual(viewModel.selectedTab, .settings)
     }
 }
 
@@ -154,11 +131,11 @@ final class NavigationIntegrationTests: XCTestCase {
 final class ErrorHandlingTests: XCTestCase {
     
     @MainActor
-    func testErrorMessageDisplay() async {
+    func testErrorMessageDisplay() async throws {
         // Test error message handling
         let mockScreenTimeService = MockScreenTimeService()
         let mockDataService = MockDataPersistenceService()
-        let viewModel = ContentViewModel(
+        let viewModel = try ContentViewModel(
             screenTimeService: mockScreenTimeService,
             dataService: mockDataService
         )
@@ -177,11 +154,11 @@ final class ErrorHandlingTests: XCTestCase {
     }
     
     @MainActor
-    func testErrorTypes() async {
+    func testErrorTypes() async throws {
         // Test different error types are handled properly
         let mockScreenTimeService = MockScreenTimeService()
         let mockDataService = MockDataPersistenceService()
-        let viewModel = ContentViewModel(
+        let viewModel = try ContentViewModel(
             screenTimeService: mockScreenTimeService,
             dataService: mockDataService
         )
@@ -212,11 +189,11 @@ final class ErrorHandlingTests: XCTestCase {
 final class LoadingStateTests: XCTestCase {
     
     @MainActor
-    func testLoadingStateManagement() async {
+    func testLoadingStateManagement() async throws {
         // Test loading state during operations
         let mockScreenTimeService = MockScreenTimeService()
         let mockDataService = MockDataPersistenceService()
-        let viewModel = ContentViewModel(
+        let viewModel = try ContentViewModel(
             screenTimeService: mockScreenTimeService,
             dataService: mockDataService
         )

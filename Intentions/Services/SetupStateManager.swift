@@ -6,11 +6,13 @@
 //
 
 import Foundation
+import OSLog
 
 /// Manages persistence and validation of app setup state
-/// Ensures setup is only shown when necessary and tracks completion properly
 @MainActor
 final class SetupStateManager: Sendable {
+
+    private static let log = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Intentions", category: "SetupStateManager")
     
     // MARK: - Constants
     
@@ -73,14 +75,9 @@ final class SetupStateManager: Sendable {
         return state.isSetupSufficient
     }
     
-    /// Get the documents directory URL for file storage
-    private var documentsDirectory: URL {
-        fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-    }
-    
-    /// Get the setup state file URL
-    private var setupStateFileURL: URL {
-        documentsDirectory.appendingPathComponent(Self.setupStateFileName)
+    private var setupStateFileURL: URL? {
+        fileManager.urls(for: .documentDirectory, in: .userDomainMask).first?
+            .appendingPathComponent(Self.setupStateFileName)
     }
     
     // MARK: - UserDefaults Storage
@@ -103,44 +100,45 @@ final class SetupStateManager: Sendable {
             let data = try JSONEncoder().encode(state)
             userDefaults.set(data, forKey: Self.setupStateKey)
         } catch {
+            Self.log.error("Failed to save setup state to UserDefaults: \(error.localizedDescription)")
         }
     }
     
     // MARK: - File System Storage
     
     private func loadFromFileSystem() async -> SetupState? {
-        let fileURL = setupStateFileURL
-        
-        guard fileManager.fileExists(atPath: fileURL.path) else {
+        guard let fileURL = setupStateFileURL,
+              fileManager.fileExists(atPath: fileURL.path) else {
             return nil
         }
-        
+
         do {
             let data = try Data(contentsOf: fileURL)
-            let state = try JSONDecoder().decode(SetupState.self, from: data)
-            return state
+            return try JSONDecoder().decode(SetupState.self, from: data)
         } catch {
             return nil
         }
     }
     
     private func saveToFileSystem(_ state: SetupState) async {
-        let fileURL = setupStateFileURL
-        
+        guard let fileURL = setupStateFileURL else { return }
+
         do {
             let data = try JSONEncoder().encode(state)
             try data.write(to: fileURL)
         } catch {
+            Self.log.error("Failed to save setup state to file: \(error.localizedDescription)")
         }
     }
-    
+
     private func deleteFromFileSystem() async {
-        let fileURL = setupStateFileURL
-        
+        guard let fileURL = setupStateFileURL else { return }
+
         if fileManager.fileExists(atPath: fileURL.path) {
             do {
                 try fileManager.removeItem(at: fileURL)
             } catch {
+                Self.log.error("Failed to delete setup state file: \(error.localizedDescription)")
             }
         }
     }
@@ -150,33 +148,15 @@ final class SetupStateManager: Sendable {
 
 extension SetupStateManager {
     
-    /// Create a new setup state based on current system conditions
     func createCurrentSetupState(
-        screenTimeAuthorized: Bool,
-        categoryMappingCompleted: Bool,
-        systemHealthValidated: Bool
+        screenTimeAuthorized: Bool
     ) -> SetupState {
-        return SetupState(
-            screenTimeAuthorized: screenTimeAuthorized,
-            categoryMappingCompleted: categoryMappingCompleted,
-            systemHealthValidated: systemHealthValidated,
-            setupVersion: SetupState.currentSetupVersion,
-            completedDate: Date(),
-            lastValidatedDate: Date(),
-            userSkippedOptionalSteps: false
+        SetupState(
+            screenTimeAuthorized: screenTimeAuthorized
         )
     }
-    
-    /// Create a default "incomplete" setup state
+
     func createIncompleteSetupState() -> SetupState {
-        return SetupState(
-            screenTimeAuthorized: false,
-            categoryMappingCompleted: false,
-            systemHealthValidated: false,
-            setupVersion: SetupState.currentSetupVersion,
-            completedDate: Date(),
-            lastValidatedDate: Date(),
-            userSkippedOptionalSteps: false
-        )
+        SetupState()
     }
 }

@@ -35,8 +35,8 @@ final class ContentViewModelTests: XCTestCase {
     // MARK: - Helper Methods
     
     @MainActor
-    private func createViewModel() {
-        viewModel = ContentViewModel(
+    private func createViewModel() throws {
+        viewModel = try ContentViewModel(
             screenTimeService: mockScreenTimeService,
             dataService: mockDataService
         )
@@ -45,9 +45,9 @@ final class ContentViewModelTests: XCTestCase {
     // MARK: - Initialization Tests
     
     @MainActor
-    func testInitialization() {
+    func testInitialization() throws {
         // Given - Fresh view model
-        createViewModel()
+        try createViewModel()
         
         // When - Check initial state
         // Then
@@ -55,16 +55,16 @@ final class ContentViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.isLoading)
         XCTAssertNil(viewModel.errorMessage)
         XCTAssertNil(viewModel.activeSession)
-        XCTAssertFalse(viewModel.showingIntentionPrompt)
-        XCTAssertFalse(viewModel.showingSettings)
+        XCTAssertFalse(viewModel.showingSetupFlow)
+        XCTAssertFalse(viewModel.showingSetupFlow)
         XCTAssertEqual(viewModel.selectedTab, .home)
         XCTAssertFalse(viewModel.isAppReady)
     }
     
     @MainActor
-    func testInitializeAppSuccess() async {
+    func testInitializeAppSuccess() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.approved)
         
         // When
@@ -78,9 +78,9 @@ final class ContentViewModelTests: XCTestCase {
     }
     
     @MainActor
-    func testInitializeAppWithDeniedAuthorization() async {
+    func testInitializeAppWithDeniedAuthorization() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.denied)
         
         // When
@@ -92,9 +92,9 @@ final class ContentViewModelTests: XCTestCase {
     }
     
     @MainActor
-    func testLoadActiveSessionFromPersistence() async {
+    func testLoadActiveSessionFromPersistence() async throws {
         // Given - Create a test session and save it
-        createViewModel()
+        try createViewModel()
         let testSession = try! IntentionSession(appGroups: [], applications: [], duration: 1800)
         try! await mockDataService.saveIntentionSession(testSession)
         await mockScreenTimeService.setMockAuthorizationStatus(.approved)
@@ -110,9 +110,9 @@ final class ContentViewModelTests: XCTestCase {
     // MARK: - Authorization Tests
     
     @MainActor
-    func testRequestAuthorizationSuccess() async {
+    func testRequestAuthorizationSuccess() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.notDetermined)
         
         // When
@@ -126,9 +126,9 @@ final class ContentViewModelTests: XCTestCase {
     }
     
     @MainActor
-    func testRequestAuthorizationFailure() async {
+    func testRequestAuthorizationFailure() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setShouldSucceedAuthorization(false)
         
         // When
@@ -142,9 +142,9 @@ final class ContentViewModelTests: XCTestCase {
     }
     
     @MainActor
-    func testIsAppReadyProperty() async {
+    func testIsAppReadyProperty() async throws {
         // Given - Not determined status
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.notDetermined)
         await viewModel.initializeApp()
         XCTAssertFalse(viewModel.isAppReady)
@@ -167,62 +167,10 @@ final class ContentViewModelTests: XCTestCase {
     // MARK: - Navigation Tests
     
     @MainActor
-    func testShowIntentionPromptWhenAuthorized() async {
+    func testNavigateToTab() throws {
         // Given
-        createViewModel()
-        await mockScreenTimeService.setMockAuthorizationStatus(.approved)
-        await viewModel.initializeApp()
-        
-        // When
-        viewModel.showIntentionPrompt()
-        
-        // Then
-        XCTAssertTrue(viewModel.showingIntentionPrompt)
-        XCTAssertNil(viewModel.errorMessage)
-    }
-    
-    @MainActor
-    func testShowIntentionPromptWhenNotAuthorized() async {
-        // Given
-        createViewModel()
-        await mockScreenTimeService.setMockAuthorizationStatus(.denied)
-        await viewModel.initializeApp()
-        
-        // When
-        viewModel.showIntentionPrompt()
-        
-        // Wait for the async Task to complete
-        try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
-        
-        // Then
-        XCTAssertFalse(viewModel.showingIntentionPrompt)
-        XCTAssertNotNil(viewModel.errorMessage)
-        XCTAssertEqual(viewModel.errorMessage, "Please authorize Screen Time access first")
-    }
-    
-    @MainActor
-    func testShowSettings() {
-        // Given
-        createViewModel()
-        
-        // When
-        viewModel.showSettings()
-        
-        // Then
-        XCTAssertTrue(viewModel.showingSettings)
-    }
-    
-    @MainActor
-    func testNavigateToTab() {
-        // Given
-        createViewModel()
+        try createViewModel()
         XCTAssertEqual(viewModel.selectedTab, .home)
-        
-        // When
-        viewModel.navigateToTab(.groups)
-        
-        // Then
-        XCTAssertEqual(viewModel.selectedTab, .groups)
         
         // When
         viewModel.navigateToTab(.settings)
@@ -234,9 +182,9 @@ final class ContentViewModelTests: XCTestCase {
     // MARK: - Session Management Tests
     
     @MainActor
-    func testStartSessionSuccess() async {
+    func testStartSessionSuccess() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.approved)
         await viewModel.initializeApp()
         let testSession = try! IntentionSession(appGroups: [], applications: [], duration: 1800)
@@ -246,7 +194,7 @@ final class ContentViewModelTests: XCTestCase {
         
         // Then
         XCTAssertEqual(viewModel.activeSession?.id, testSession.id)
-        XCTAssertFalse(viewModel.showingIntentionPrompt)
+        XCTAssertFalse(viewModel.showingSetupFlow)
         XCTAssertFalse(viewModel.isLoading)
         XCTAssertNil(viewModel.errorMessage)
         
@@ -257,9 +205,9 @@ final class ContentViewModelTests: XCTestCase {
     }
     
     @MainActor
-    func testStartSessionWithApplications() async {
+    func testStartSessionWithApplications() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.approved)
         await viewModel.initializeApp()
         
@@ -281,9 +229,9 @@ final class ContentViewModelTests: XCTestCase {
     }
     
     @MainActor
-    func testStartSessionFailure() async {
+    func testStartSessionFailure() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.approved)
         await viewModel.initializeApp()
         mockDataService.shouldFailSave = true
@@ -300,9 +248,9 @@ final class ContentViewModelTests: XCTestCase {
     }
     
     @MainActor
-    func testEndCurrentSessionSuccess() async {
+    func testEndCurrentSessionSuccess() async throws {
         // Given - Start with an active session
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.approved)
         await viewModel.initializeApp()
         let testSession = try! IntentionSession(appGroups: [], applications: [], duration: 1800)
@@ -328,9 +276,9 @@ final class ContentViewModelTests: XCTestCase {
     }
     
     @MainActor
-    func testEndCurrentSessionWhenNoActiveSession() async {
+    func testEndCurrentSessionWhenNoActiveSession() async throws {
         // Given - No active session
-        createViewModel()
+        try createViewModel()
         XCTAssertNil(viewModel.activeSession)
         
         // When
@@ -343,9 +291,9 @@ final class ContentViewModelTests: XCTestCase {
     }
     
     @MainActor
-    func testEndCurrentSessionFailure() async {
+    func testEndCurrentSessionFailure() async throws {
         // Given - Start with an active session
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.approved)
         await viewModel.initializeApp()
         let testSession = try! IntentionSession(appGroups: [], applications: [], duration: 1800)
@@ -366,9 +314,9 @@ final class ContentViewModelTests: XCTestCase {
     // MARK: - Error Handling Tests
     
     @MainActor
-    func testHandleError() async {
+    func testHandleError() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         let testError = AppError.sessionNotFound
         
         // When
@@ -380,9 +328,9 @@ final class ContentViewModelTests: XCTestCase {
     }
     
     @MainActor
-    func testHandleNonAppError() async {
+    func testHandleNonAppError() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         let testError = NSError(domain: "test", code: 123, userInfo: [NSLocalizedDescriptionKey: "Test error"])
         
         // When
@@ -394,9 +342,9 @@ final class ContentViewModelTests: XCTestCase {
     }
     
     @MainActor
-    func testClearError() async {
+    func testClearError() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         await viewModel.handleError(AppError.sessionNotFound)
         XCTAssertNotNil(viewModel.errorMessage)
         
@@ -410,9 +358,9 @@ final class ContentViewModelTests: XCTestCase {
     // MARK: - Loading State Tests
     
     @MainActor
-    func testLoadingStateDuringInitialization() async {
+    func testLoadingStateDuringInitialization() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.approved)
         
         // When - Start initialization (but don't await)
@@ -429,9 +377,9 @@ final class ContentViewModelTests: XCTestCase {
     }
     
     @MainActor
-    func testLoadingStateDuringAuthorization() async {
+    func testLoadingStateDuringAuthorization() async throws {
         // Given
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setAuthorizationDelay(0.1) // Add small delay
         
         // When - Start authorization (but don't await)
@@ -447,9 +395,9 @@ final class ContentViewModelTests: XCTestCase {
     // MARK: - Integration Tests
     
     @MainActor
-    func testCompleteWorkflow() async {
+    func testCompleteWorkflow() async throws {
         // Given - Fresh view model
-        createViewModel()
+        try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.notDetermined)
         
         // When - Initialize app
@@ -497,30 +445,26 @@ final class AppTabTests: XCTestCase {
     func testAppTabCases() {
         // Test all cases exist
         let allCases = AppTab.allCases
-        XCTAssertEqual(allCases.count, 3)
+        XCTAssertEqual(allCases.count, 2)
         XCTAssertTrue(allCases.contains(.home))
-        XCTAssertTrue(allCases.contains(.groups))
         XCTAssertTrue(allCases.contains(.settings))
     }
-    
+
     func testAppTabIdentifiable() {
         // Test Identifiable conformance
         XCTAssertEqual(AppTab.home.id, "Home")
-        XCTAssertEqual(AppTab.groups.id, "Groups")
         XCTAssertEqual(AppTab.settings.id, "Settings")
     }
-    
+
     func testAppTabSystemImages() {
         // Test system images are defined
         XCTAssertEqual(AppTab.home.systemImage, "house.fill")
-        XCTAssertEqual(AppTab.groups.systemImage, "square.stack.3d.up.fill")
         XCTAssertEqual(AppTab.settings.systemImage, "gear")
     }
-    
+
     func testAppTabRawValues() {
         // Test raw values
         XCTAssertEqual(AppTab.home.rawValue, "Home")
-        XCTAssertEqual(AppTab.groups.rawValue, "Groups")
         XCTAssertEqual(AppTab.settings.rawValue, "Settings")
     }
 }

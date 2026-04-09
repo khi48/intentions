@@ -30,23 +30,18 @@ final class QuickActionsViewModel: ObservableObject, Sendable {
     @Published var quickActionToDelete: QuickAction? = nil
     
     // MARK: - Dependencies
-    
-    private var dataService: DataPersisting?
-    
+
+    private let dataService: DataPersisting
+
     // MARK: - Initialization
-    
-    init() {}
-    
-    /// Set the data service (called from view)
-    func setDataService(_ service: DataPersisting) {
-        self.dataService = service
+
+    init(dataService: DataPersisting) {
+        self.dataService = dataService
     }
     
     // MARK: - Data Loading
     
     func loadData() async {
-        guard let dataService = dataService else { return }
-        
         await withLoading {
             do {
                 // Load quick actions
@@ -63,8 +58,6 @@ final class QuickActionsViewModel: ObservableObject, Sendable {
     
     /// Save a quick action (create or update)
     func saveQuickAction(_ quickAction: QuickAction) async {
-        guard let dataService = dataService else { return }
-        
         await withLoading {
             do {
                 // Update existing or add new
@@ -108,7 +101,6 @@ final class QuickActionsViewModel: ObservableObject, Sendable {
                 }
 
                 // Save to persistence
-                guard let dataService = dataService else { return }
                 try await dataService.save(quickActions, forKey: "quickActions")
 
             } catch {
@@ -119,8 +111,6 @@ final class QuickActionsViewModel: ObservableObject, Sendable {
 
     /// Delete a quick action
     func deleteQuickAction(_ quickAction: QuickAction) async {
-        guard let dataService = dataService else { return }
-        
         await withLoading {
             do {
                 // Remove from array

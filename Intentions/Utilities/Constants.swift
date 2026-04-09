@@ -9,12 +9,41 @@ import Foundation
 import SwiftUI
 
 enum AppConstants {
-    
-    // MARK: - Widget Sharing
-    enum Widget {
-        /// UserDefaults keys for sharing data with widgets
-        static let blockingStatusKey = "intent.widget.blockingStatus"
-        static let lastUpdateKey = "intent.widget.lastUpdate"
+
+    // MARK: - App Group
+
+    static let appGroupId = "group.oh.Intent"
+
+    // MARK: - UserDefaults Keys
+
+    enum Keys {
+        // Widget
+        static let widgetBlockingStatus = "intentions.widget.blockingStatus"
+        static let widgetLastUpdate = "intentions.widget.lastUpdate"
+        static let widgetSessionTitle = "intentions.widget.sessionTitle"
+        static let widgetSessionEndTime = "intentions.widget.sessionEndTime"
+
+        // Session
+        static let currentSessionId = "intentions.currentSessionId"
+        static let sessionExpired = "intentions.session.expired"
+        static let sessionExpirationTime = "intentions.session.expirationTime"
+        static let sessionExpiredBy = "intentions.session.expiredBy"
+
+        // Schedule
+        static let scheduleIsEnabled = "intentions.schedule.isEnabled"
+        static let scheduleStartHour = "intentions.schedule.startHour"
+        static let scheduleEndHour = "intentions.schedule.endHour"
+        static let scheduleActiveDays = "intentions.schedule.activeDays"
+
+        // DeviceActivity
+        static let lastScheduledActivity = "intentions.lastScheduledActivity"
+        static let lastScheduledEndTime = "intentions.lastScheduledEndTime"
+        static let lastScheduleTime = "intentions.lastScheduleTime"
+        static let lastScheduledDuration = "intentions.lastScheduledDuration"
+
+        // Activity naming
+        static let sessionActivityPrefix = "intentions.session."
+        static let sessionThresholdEvent = "intentions.session.threshold"
     }
     
     // MARK: - Session Management
@@ -201,23 +230,6 @@ extension TimeInterval {
         UInt64(self * Double(AppConstants.Time.nanosPerSecond))
     }
     
-    /// Format time interval as MM:SS string (deprecated - use formattedDuration instead)
-    var formattedMinutesSeconds: String {
-        let minutes = Int(self) / 60
-        return "\(minutes)m"
-    }
-
-    /// Format time interval as HH:MM string (deprecated - use formattedDuration instead)
-    var formattedHoursMinutes: String {
-        let hours = Int(self) / 3600
-        let minutes = (Int(self) % 3600) / 60
-        if minutes == 0 {
-            return "\(hours)h"
-        } else {
-            return "\(hours)h \(minutes)m"
-        }
-    }
-
     /// Format time interval as duration string (e.g., "5m", "1h 30m")
     var formattedDuration: String {
         let totalSeconds = Int(self)

@@ -37,7 +37,7 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
     /// Get the App Group container URL for shared data storage
     /// Creates the directory if it doesn't exist
     private static func getAppGroupContainerURL() -> URL {
-        let appGroupID = "group.oh.Intent"
+        let appGroupID = AppConstants.appGroupId
 
         // Try to get App Group container URL
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
@@ -67,7 +67,7 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         let modelConfiguration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
-            groupContainer: .identifier("group.oh.Intent")
+            groupContainer: .identifier(AppConstants.appGroupId)
         )
 
         if let container = container {
