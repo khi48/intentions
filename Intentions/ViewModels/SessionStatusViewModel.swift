@@ -115,7 +115,13 @@ final class SessionStatusViewModel: Sendable {
     // MARK: - Timer
 
     private var timer: Timer?
-    
+
+    nonisolated deinit {
+        MainActor.assumeIsolated {
+            timer?.invalidate()
+        }
+    }
+
     // MARK: - Initialization
     
     init(

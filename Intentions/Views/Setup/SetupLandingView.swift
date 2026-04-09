@@ -69,24 +69,17 @@ struct SetupLandingView: View {
                 )
 
                 setupStep(
-                    icon: "square.grid.3x3.topleft.filled",
-                    title: "App Category Mapping",
-                    description: "Configure which apps belong to which categories for intelligent blocking",
-                    stepNumber: 2
-                )
-
-                setupStep(
                     icon: "checkmark.shield.fill",
                     title: "Essential Apps",
                     description: "Learn about configuring apps that stay accessible",
-                    stepNumber: 3
+                    stepNumber: 2
                 )
 
                 setupStep(
                     icon: "widget.large.badge.plus",
                     title: "Widget Setup",
                     description: "Add the Intent widget to see your blocking status at a glance",
-                    stepNumber: 4
+                    stepNumber: 3
                 )
             }
         }

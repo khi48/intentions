@@ -273,13 +273,24 @@ extension QuickAction: Hashable, Equatable {
 extension Color {
     /// Convert Color to hex string representation
     func toHex() -> String? {
-        guard let components = cgColor?.components else { return nil }
-        
-        let r = Float(components[0])
-        let g = Float(components[1])
-        let b = Float(components[2])
-        
-        return String(format: "#%02lX%02lX%02lX", 
+        guard let components = cgColor?.components, let count = cgColor?.numberOfComponents else { return nil }
+
+        let r: Float
+        let g: Float
+        let b: Float
+
+        if count >= 3 {
+            r = Float(components[0])
+            g = Float(components[1])
+            b = Float(components[2])
+        } else {
+            // Grayscale color space (gray + alpha)
+            r = Float(components[0])
+            g = Float(components[0])
+            b = Float(components[0])
+        }
+
+        return String(format: "#%02lX%02lX%02lX",
                      lroundf(r * 255),
                      lroundf(g * 255),
                      lroundf(b * 255))

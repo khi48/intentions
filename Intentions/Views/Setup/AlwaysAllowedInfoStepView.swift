@@ -146,7 +146,7 @@ struct AlwaysAllowedInfoStepView: View {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.title2)
-                    .foregroundColor(AppConstants.Colors.text)
+                    .foregroundColor(iconColor)
                     .frame(width: 32)
 
                 Text(title)

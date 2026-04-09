@@ -261,8 +261,8 @@ private struct QuickActionDragRelocateDelegate: DropDelegate {
     func dropEntered(info: DropInfo) {
         guard let current = current, item != current else { return }
 
-        let from = quickActionsViewModel.quickActions.firstIndex(of: current)!
-        let to = quickActionsViewModel.quickActions.firstIndex(of: item)!
+        guard let from = quickActionsViewModel.quickActions.firstIndex(of: current),
+              let to = quickActionsViewModel.quickActions.firstIndex(of: item) else { return }
 
         if from != to {
             Task {

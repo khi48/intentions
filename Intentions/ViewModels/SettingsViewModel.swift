@@ -34,7 +34,7 @@ final class SettingsViewModel: Sendable {
     
     // MARK: - Initialization
     
-    init(dataService: DataPersisting = MockDataPersistenceService()) {
+    init(dataService: DataPersisting) {
         self.dataService = dataService
     }
     

@@ -369,9 +369,9 @@ final class ContentViewModel: Sendable {
                 try await dataService.saveIntentionSession(staleSession)
             }
 
-            // Delete completed sessions older than 30 days
-            let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-            for oldSession in allSessions.filter({ !$0.isActive && $0.endTime < thirtyDaysAgo }) {
+            // Delete completed sessions older than retention period
+            let cutoff = Calendar.current.date(byAdding: .day, value: -AppConstants.DataCleanup.sessionRetentionDays, to: Date()) ?? Date()
+            for oldSession in allSessions.filter({ !$0.isActive && $0.endTime < cutoff }) {
                 try await dataService.deleteIntentionSession(oldSession.id)
             }
 
