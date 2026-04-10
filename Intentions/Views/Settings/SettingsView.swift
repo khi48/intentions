@@ -151,15 +151,51 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(AppConstants.Colors.background)
             } else {
-                List {
-                    scheduleSection
-                    setupSection
-                    statisticsSection
-                    generalSection
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Stats banner
+                        statsBanner
+
+                        // Protected Hours
+                        sectionLabel("Protected Hours")
+                        blockingToggleRow
+                        settingsRow("Hours", value: viewModel.formattedActiveHours, disabled: isScheduleEditingDisabled) {
+                            viewModel.showScheduleEditor()
+                        }
+                        settingsRow("Days", value: viewModel.activeDaysText, disabled: isScheduleEditingDisabled) {
+                            viewModel.showScheduleEditor()
+                        }
+
+                        if isScheduleEditingDisabled {
+                            HStack(spacing: 6) {
+                                Image(systemName: "info.circle")
+                                    .font(.caption2)
+                                Text(scheduleEditingDisabledReason)
+                                    .font(.caption)
+                            }
+                            .foregroundColor(AppConstants.Colors.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 8)
+                        }
+
+                        // General
+                        sectionLabel("General")
+                        NavigationLink(value: SettingsDestination.notifications) {
+                            settingsRowContent("Notifications")
+                        }
+                        .overlay(alignment: .bottom) { rowDivider }
+                        NavigationLink(value: SettingsDestination.setupFlow) {
+                            settingsRowContent("App Setup")
+                        }
+                        .overlay(alignment: .bottom) { rowDivider }
+                        Button(action: { openAccessibilitySettings() }) {
+                            settingsRowContent("Enable Greyscale")
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 40)
                 }
-                .listStyle(.insetGrouped)
                 .background(AppConstants.Colors.background)
-                .scrollContentBackground(.hidden)
                 .navigationDestination(for: SettingsDestination.self) { destination in
                     switch destination {
                     case .notifications:
@@ -214,111 +250,132 @@ struct SettingsView: View {
         .onAppear { onViewModelReady?(viewModel) }
     }
 
+    // MARK: - Stats Banner
+
+    private var statsBanner: some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(viewModel.todaySessionCount)")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(AppConstants.Colors.text)
+                Text("SESSIONS TODAY")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(AppConstants.Colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(AppConstants.Colors.textSecondary.opacity(0.15), lineWidth: 1)
+            )
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(viewModel.weeklySessionCount)")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(AppConstants.Colors.text)
+                Text("THIS WEEK")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(AppConstants.Colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(AppConstants.Colors.textSecondary.opacity(0.15), lineWidth: 1)
+            )
+        }
+        .padding(.vertical, 4)
+    }
+
     // MARK: - Sections
 
-    private var scheduleSection: some View {
-        Section {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Protected Hours")
-                        .font(.headline)
-                    Text("Control when apps are blocked by default")
-                        .font(.caption)
-                        .foregroundColor(AppConstants.Colors.textSecondary)
-                }
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(.caption)
+            .fontWeight(.medium)
+            .foregroundColor(AppConstants.Colors.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 20)
+            .padding(.bottom, 4)
+    }
 
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 4) {
-                    Toggle("", isOn: Binding(
-                        get: { viewModel.scheduleSettings.isEnabled },
-                        set: { newValue in
-                            if newValue {
-                                Task {
-                                    await viewModel.toggleScheduleEnabled()
-                                    await onScheduleSettingsChanged?(viewModel.scheduleSettings)
-                                }
-                            } else {
-                                showingDisableConfirmation = true
-                            }
+    private var blockingToggleRow: some View {
+        HStack {
+            Text("Blocking")
+                .font(.body)
+                .foregroundColor(AppConstants.Colors.text)
+            Spacer()
+            Text(viewModel.intentionsStateText)
+                .font(.subheadline)
+                .foregroundColor(AppConstants.Colors.textSecondary)
+                .padding(.trailing, 8)
+            Toggle("", isOn: Binding(
+                get: { viewModel.scheduleSettings.isEnabled },
+                set: { newValue in
+                    if newValue {
+                        Task {
+                            await viewModel.toggleScheduleEnabled()
+                            await onScheduleSettingsChanged?(viewModel.scheduleSettings)
                         }
-                    ))
-                    .labelsHidden()
+                    } else {
+                        showingDisableConfirmation = true
+                    }
+                }
+            ))
+            .labelsHidden()
+        }
+        .padding(.vertical, 14)
+        .overlay(alignment: .bottom) { rowDivider }
+    }
 
-                    Text(viewModel.intentionsStateText)
-                        .font(.caption)
+    private func settingsRow(_ title: String, value: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: disabled ? {} : action) {
+            HStack {
+                Text(title)
+                    .font(.body)
+                    .foregroundColor(disabled ? AppConstants.Colors.disabled : AppConstants.Colors.text)
+                Spacer()
+                Text(value)
+                    .font(.subheadline)
+                    .foregroundColor(disabled ? AppConstants.Colors.disabled : AppConstants.Colors.textSecondary)
+                if !disabled {
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
                         .foregroundColor(AppConstants.Colors.textSecondary)
                 }
             }
-
-            ScheduleDetailsRow(
-                title: "Blocking Hours",
-                value: viewModel.formattedActiveHours,
-                action: { viewModel.showScheduleEditor() },
-                isDisabled: isScheduleEditingDisabled
-            )
-
-            ScheduleDetailsRow(
-                title: "Blocking Days",
-                value: viewModel.activeDaysText,
-                action: { viewModel.showScheduleEditor() },
-                isDisabled: isScheduleEditingDisabled
-            )
-
-            if isScheduleEditingDisabled {
-                HStack {
-                    Image(systemName: "info.circle")
-                        .foregroundColor(AppConstants.Colors.textSecondary)
-                    Text(scheduleEditingDisabledReason)
-                        .font(.caption)
-                        .foregroundColor(AppConstants.Colors.textSecondary)
-                }
-                .padding(.top, 4)
-            }
-        } header: {
-            Text("Protected Hours")
+            .padding(.vertical, 14)
+            .overlay(alignment: .bottom) { rowDivider }
         }
+        .buttonStyle(.plain)
+        .disabled(disabled)
     }
 
-    private var setupSection: some View {
-        Section {
-            NavigationLink(value: SettingsDestination.setupFlow) {
-                SettingsRow(
-                    title: SettingsDestination.setupFlow.title,
-                    subtitle: "Configure app permissions",
-                    icon: SettingsDestination.setupFlow.systemImage
-                )
-            }
-
-            Button(action: { openAccessibilitySettings() }) {
-                SettingsRow(
-                    title: "Enable Greyscale",
-                    subtitle: "Opens Settings app. Navigate to: Accessibility > Display & Text Size > Color Filters > Grayscale",
-                    icon: "eye.slash"
-                )
-            }
-        } header: {
-            Text("Setup")
+    private func settingsRowContent(_ title: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.body)
+                .foregroundColor(AppConstants.Colors.text)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption2)
+                .foregroundColor(AppConstants.Colors.textSecondary)
         }
+        .padding(.vertical, 14)
     }
 
-    private var statisticsSection: some View {
-        Section("Usage Statistics") {
-            StatisticRow(title: "Today's Sessions", value: "\(viewModel.todaySessionCount)", icon: "calendar")
-            StatisticRow(title: "This Week", value: "\(viewModel.weeklySessionCount)", icon: "chart.line.uptrend.xyaxis")
-        }
-    }
-
-    private var generalSection: some View {
-        Section("General") {
-            NavigationLink(value: SettingsDestination.notifications) {
-                SettingsRow(
-                    title: SettingsDestination.notifications.title,
-                    subtitle: "Session warnings and reminders",
-                    icon: SettingsDestination.notifications.systemImage
-                )
-            }
-        }
+    private var rowDivider: some View {
+        Rectangle()
+            .fill(AppConstants.Colors.textSecondary.opacity(0.15))
+            .frame(height: 0.5)
     }
 
     // MARK: - Helpers

@@ -33,66 +33,81 @@ struct QuickActionEditorSheet: View {
     @State private var errorMessage: String?
     @State private var lastSaveTapTime: Date = .distantPast
     @State private var lastPickerTapTime: Date = .distantPast
+    @State private var showingIconPicker: Bool = false
 
     var isEditing: Bool {
         editingQuickAction != nil
     }
 
+    private let availableIcons = [
+        "bolt.fill", "star.fill", "flame.fill", "heart.fill", "crown.fill",
+        "laptopcomputer", "book.fill", "gamecontroller.fill", "cup.and.saucer.fill",
+        "music.note", "camera.fill", "message.fill", "phone.fill", "envelope.fill",
+        "location.fill", "car.fill", "airplane", "bicycle", "figure.walk"
+    ]
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 ScrollView {
-                    VStack(spacing: 24) {
-                        // Header
-                        headerSection
+                    VStack(spacing: 0) {
+                        // Live mini preview card
+                        miniPreviewCard
+                            .padding(.top, 14)
+                            .padding(.bottom, 10)
 
-                        // Quick action name input
-                        nameSection
+                        // Name + tappable icon row
+                        nameIconRow
 
-                        // Icon selection
-                        iconSelectionSection
+                        // Duration pill selector
+                        durationPillsSection
 
-                        // Duration section
-                        durationSection
+                        // Apps row
+                        appsRow
 
-                        // App selection section
-                        appSelectionSection
-
-                        // Website access toggle
-                        websiteAccessSection
-
-                        // Selected items preview
+                        // Selected apps preview (if any)
                         if !selectedApps.isEmpty {
-                            selectedItemsPreview
+                            selectedAppsPreview
                         }
 
-                        // Delete quick action option (only when editing)
+                        // Website toggle row
+                        websiteRow
+
+                        // Delete (editing only)
                         if isEditing {
-                            deleteQuickActionSection
+                            deleteRow
                         }
                     }
-                    .padding()
-                    .padding(.bottom, 20) // Extra bottom padding for keyboard
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
                 }
                 .scrollDismissesKeyboard(.interactively)
+
+                // Bottom action button
+                Button(action: {
+                    Task { await saveQuickAction() }
+                }) {
+                    Text(isEditing ? "Update" : "Create")
+                        .font(.headline)
+                        .foregroundColor(AppConstants.Colors.background)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            isValidQuickAction && !isLoading
+                                ? AppConstants.Colors.text
+                                : AppConstants.Colors.textSecondary.opacity(0.3)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(!isValidQuickAction || isLoading)
+                .padding(.horizontal)
+                .padding(.bottom, 20)
             }
-            .navigationTitle(isEditing ? "Edit Quick Action" : "Create Quick Action")
+            .navigationTitle(isEditing ? "Edit Quick Action" : "New Quick Action")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        onCancel()
-                    }
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(isEditing ? "Update" : "Create") {
-                        Task {
-                            await saveQuickAction()
-                        }
-                    }
-                    .fontWeight(.semibold)
-                    .disabled(!isValidQuickAction || isLoading)
+                    Button("Cancel") { onCancel() }
                 }
             }
             .familyActivityPicker(
@@ -110,359 +125,242 @@ struct QuickActionEditorSheet: View {
             } message: {
                 Text(errorMessage ?? "")
             }
+            .sheet(isPresented: $showingIconPicker) {
+                iconPickerSheet
+            }
         }
         .onAppear {
             setupForEditing()
         }
     }
 
-    // MARK: - Header Section
+    // MARK: - Mini Preview Card
 
-    private var headerSection: some View {
-        VStack(spacing: 8) {
-            Image(systemName: isEditing ? "pencil.circle.fill" : "plus.circle.fill")
-                .font(.system(size: 48))
-                .foregroundColor(AppConstants.Colors.text)
+    private var miniPreviewCard: some View {
+        HStack {
+            Spacer()
+            VStack(alignment: .leading, spacing: 0) {
+                Image(systemName: selectedIcon)
+                    .font(.caption)
+                    .foregroundColor(AppConstants.Colors.text)
+                    .frame(width: 22, height: 22)
+                    .background(AppConstants.Colors.text.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
 
-            Text(isEditing ? "Edit Quick Action" : "Create New Quick Action")
-                .font(.title2)
-                .fontWeight(.semibold)
+                Spacer()
 
-            Text("Create instant shortcuts to start sessions with your favorite apps")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+                Text(name.isEmpty ? "Untitled" : name)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(name.isEmpty ? AppConstants.Colors.textSecondary : AppConstants.Colors.text)
+                    .lineLimit(1)
+
+                Text("\(formatDuration(duration)) · \(selectedApps.count) apps")
+                    .font(.caption2)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+                    .padding(.top, 2)
+            }
+            .frame(width: 100, height: 100)
+            .padding(10)
+            .background(AppConstants.Colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(AppConstants.Colors.textSecondary.opacity(0.2), lineWidth: 1)
+            )
+            Spacer()
         }
     }
 
-    // MARK: - Name Section
+    // MARK: - Name + Icon Row
 
-    private var nameSection: some View {
+    private var nameIconRow: some View {
+        HStack(spacing: 10) {
+            // Tappable icon chip
+            Button(action: { showingIconPicker = true }) {
+                Image(systemName: selectedIcon)
+                    .font(.body)
+                    .foregroundColor(AppConstants.Colors.text)
+                    .frame(width: 34, height: 34)
+                    .background(AppConstants.Colors.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(AppConstants.Colors.textSecondary.opacity(0.3), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+
+            // Inline name field
+            TextField("Quick action name", text: $name)
+                .font(.body)
+                .submitLabel(.done)
+        }
+        .padding(.vertical, 14)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(AppConstants.Colors.textSecondary.opacity(0.15)).frame(height: 0.5)
+        }
+    }
+
+    // MARK: - Duration Pills
+
+    private var durationPillsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Quick Action Name")
-                .font(.headline)
-                .foregroundColor(.primary)
+            Text("DURATION")
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(AppConstants.Colors.textSecondary)
+                .padding(.top, 14)
 
-            VStack(alignment: .leading, spacing: 4) {
-                TextField("Enter name...", text: $name)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .submitLabel(.done)
-
-                // Validation area
-                HStack {
-                    if !name.isEmpty && name.count > 50 {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(AppConstants.Colors.textSecondary)
-                            .font(.caption)
-
-                        Text("Name exceeds maximum length of 50 characters")
-                            .font(.caption)
-                            .foregroundColor(AppConstants.Colors.textSecondary)
-                    }
-
-                    Spacer()
-                }
-                .frame(height: 16) // Fixed height prevents layout changes
+            HStack(spacing: 5) {
+                durationPill("5m", 5 * 60)
+                durationPill("15m", 15 * 60)
+                durationPill("30m", 30 * 60)
+                durationPill("1h", 60 * 60)
+                durationPill("1.5h", 90 * 60)
+                durationPill("2h", 2 * 60 * 60)
+            }
+            .padding(.bottom, 14)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(AppConstants.Colors.textSecondary.opacity(0.15)).frame(height: 0.5)
             }
         }
     }
 
-    // MARK: - Icon Selection Section
+    private func durationPill(_ label: String, _ value: TimeInterval) -> some View {
+        let isActive = abs(duration - value) < 60
+        return Button(action: { duration = value }) {
+            Text(label)
+                .font(.caption)
+                .fontWeight(isActive ? .semibold : .regular)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .background(isActive ? AppConstants.Colors.text.opacity(0.1) : AppConstants.Colors.surface)
+                .foregroundColor(isActive ? AppConstants.Colors.text : AppConstants.Colors.textSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isActive ? AppConstants.Colors.textSecondary : Color.clear, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
 
-    private var iconSelectionSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Icon")
-                .font(.headline)
-                .foregroundColor(.primary)
+    // MARK: - Apps Row
 
-            Text("Choose an icon to represent this quick action")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+    private var appsRow: some View {
+        Button(action: {
+            let now = Date()
+            guard now.timeIntervalSince(lastPickerTapTime) > 1.0 else { return }
+            lastPickerTapTime = now
+            showingFamilyActivityPicker = true
+        }) {
+            HStack {
+                Text("Apps")
+                    .font(.body)
+                    .foregroundColor(AppConstants.Colors.text)
+                Spacer()
+                Text(selectedApps.isEmpty ? "None" : "\(selectedApps.count) selected")
+                    .font(.subheadline)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+                Image(systemName: "chevron.right")
+                    .font(.caption2)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+            }
+            .padding(.vertical, 14)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(AppConstants.Colors.textSecondary.opacity(0.15)).frame(height: 0.5)
+            }
+        }
+        .buttonStyle(.plain)
+    }
 
+    // MARK: - Selected Apps Preview
+
+    private var selectedAppsPreview: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            FullAppIconsGrid(
+                applicationTokens: Array(selectedApps),
+                onRemove: { token in removeApp(token) }
+            )
+        }
+        .padding(.vertical, 12)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(AppConstants.Colors.textSecondary.opacity(0.15)).frame(height: 0.5)
+        }
+    }
+
+    // MARK: - Website Row
+
+    private var websiteRow: some View {
+        HStack {
+            Text("Allow all websites")
+                .font(.body)
+                .foregroundColor(AppConstants.Colors.text)
+            Spacer()
+            Toggle("", isOn: $allowAllWebsites)
+                .labelsHidden()
+        }
+        .padding(.vertical, 10)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(AppConstants.Colors.textSecondary.opacity(0.15)).frame(height: 0.5)
+        }
+    }
+
+    // MARK: - Delete Row
+
+    private var deleteRow: some View {
+        Button(action: {
+            guard let quickAction = editingQuickAction, let onDelete = onDelete else {
+                dismiss()
+                return
+            }
+            Task {
+                await onDelete(quickAction)
+                dismiss()
+            }
+        }) {
+            Text("Delete Quick Action")
+                .font(.body)
+                .foregroundColor(.red)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 16)
+    }
+
+    // MARK: - Icon Picker Sheet
+
+    private var iconPickerSheet: some View {
+        NavigationStack {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
                 ForEach(availableIcons, id: \.self) { icon in
-                    iconButton(icon)
+                    let isSelected = selectedIcon == icon
+                    Button(action: {
+                        selectedIcon = icon
+                        showingIconPicker = false
+                    }) {
+                        Image(systemName: icon)
+                            .font(.title2)
+                            .frame(width: 48, height: 48)
+                            .background(isSelected ? AppConstants.Colors.text : AppConstants.Colors.surface)
+                            .foregroundColor(isSelected ? AppConstants.Colors.background : AppConstants.Colors.text)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(AppConstants.UI.cornerRadius)
-        }
-    }
-
-    private func iconButton(_ icon: String) -> some View {
-        let isSelected = selectedIcon == icon
-
-        return Button(action: {
-            selectedIcon = icon
-        }) {
-            Image(systemName: icon)
-                .font(.title2)
-                .frame(width: 44, height: 44)
-                .background(isSelected ? AppConstants.Colors.text : AppConstants.Colors.surface)
-                .foregroundColor(isSelected ? AppConstants.Colors.background : AppConstants.Colors.text)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private let availableIcons = [
-        "bolt.fill", "star.fill", "flame.fill", "heart.fill", "crown.fill",
-        "laptopcomputer", "book.fill", "gamecontroller.fill", "cup.and.saucer.fill",
-        "music.note", "camera.fill", "message.fill", "phone.fill", "envelope.fill",
-        "location.fill", "car.fill", "airplane", "bicycle", "figure.walk"
-    ]
-
-    // MARK: - Duration Section
-
-    private var durationSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Session Duration")
-                .font(.headline)
-                .foregroundColor(.primary)
-
-            Text("How long should this session last when started?")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            VStack(spacing: 16) {
-                // Duration slider with current value
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Duration")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-
-                        Spacer()
-
-                        Text(formatDuration(duration))
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Slider(
-                        value: $duration,
-                        in: TimeInterval(AppConstants.Session.minimumDuration)...TimeInterval(AppConstants.Session.maximumDuration),
-                        step: 5 * 60 // 5-minute intervals
-                    ) {
-                        Text("Duration")
-                    } minimumValueLabel: {
-                        Text("5m")
-                            .font(.caption)
-                            .foregroundColor(AppConstants.Colors.textSecondary)
-                    } maximumValueLabel: {
-                        Text("2h")
-                            .font(.caption)
-                            .foregroundColor(AppConstants.Colors.textSecondary)
-                    }
-                    .tint(AppConstants.Colors.text)
-                }
-
-                // Quick duration buttons
-                HStack(spacing: 8) {
-                    durationButton("5m", 5*60)
-                    durationButton("15m", 15*60)
-                    durationButton("30m", 30*60)
-                    durationButton("1h", 60*60)
-                    durationButton("2h", 2*60*60)
+            .navigationTitle("Choose Icon")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { showingIconPicker = false }
                 }
             }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(AppConstants.UI.cornerRadius)
         }
-    }
-
-    // MARK: - Website Access Section
-
-    private var websiteAccessSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Allow All Websites")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-
-                    Text("Enable unrestricted access to all websites during this session")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
-
-                Toggle("", isOn: $allowAllWebsites)
-                    .labelsHidden()
-            }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(AppConstants.UI.cornerRadius)
-        }
-    }
-
-    // MARK: - App Selection Section
-
-    private var appSelectionSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Select Apps")
-                .font(.headline)
-                .foregroundColor(.primary)
-
-            Text(isEditing ? "Add more apps to this quick action" : "Choose the apps that will be included in this quick action")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            Button(action: {
-                // Debounce rapid taps to prevent multiple picker presentations
-                let now = Date()
-                let timeSinceLastTap = now.timeIntervalSince(lastPickerTapTime)
-
-                guard timeSinceLastTap > 1.0 else {
-                    return
-                }
-
-                lastPickerTapTime = now
-                showingFamilyActivityPicker = true
-            }) {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(AppConstants.Colors.text)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(isEditing ? "Add More Apps" : "Add Apps")
-                            .font(.headline)
-                            .foregroundColor(AppConstants.Colors.text)
-
-                        Text(isEditing ? "New selections will be added to existing ones" : "Tap to open app selector")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding()
-                .background(AppConstants.Colors.surface)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-            .buttonStyle(PlainButtonStyle())
-        }
-    }
-
-    // MARK: - Selected Items Preview
-
-    private var selectedItemsPreview: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Selected Items")
-                .font(.headline)
-                .foregroundColor(.primary)
-
-            VStack(spacing: 12) {
-                if !selectedApps.isEmpty {
-                    selectedAppsView
-                }
-            }
-            .padding()
-            .background(AppConstants.Colors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-    }
-
-    private var selectedAppsView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "app.badge")
-                    .foregroundColor(AppConstants.Colors.text)
-                Text("Individual Apps")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(AppConstants.Colors.textSecondary)
-                Spacer()
-                Text("\(selectedApps.count) selected")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            if !selectedApps.isEmpty {
-                FullAppIconsGrid(
-                    applicationTokens: Array(selectedApps),
-                    onRemove: { token in
-                        removeApp(token)
-                    }
-                )
-            }
-        }
-    }
-
-    // MARK: - Delete Section
-
-    private var deleteQuickActionSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Divider to separate from other content
-            Divider()
-                .padding(.vertical, 8)
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Delete Quick Action")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-
-                Text("This action cannot be undone. The quick action will be permanently removed.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Button(action: {
-                    guard let quickAction = editingQuickAction, let onDelete = onDelete else {
-                        dismiss()
-                        return
-                    }
-                    Task {
-                        await onDelete(quickAction)
-                        dismiss()
-                    }
-                }) {
-                    HStack {
-                        Image(systemName: "trash.fill")
-                            .font(.headline)
-                        Text("Delete \"\(name.isEmpty ? "Quick Action" : name)\"")
-                            .font(.headline)
-                            .fontWeight(.medium)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(AppConstants.Colors.textSecondary)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    // MARK: - Helper Views
-
-    private func durationButton(_ title: String, _ value: TimeInterval) -> some View {
-        let isSelected = abs(duration - value) < 60
-        let backgroundColor = isSelected ? AppConstants.Colors.text : AppConstants.Colors.surface
-        let textColor = isSelected ? AppConstants.Colors.background : AppConstants.Colors.textSecondary
-
-        return Button(action: {
-            duration = value
-        }) {
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(isSelected ? .medium : .regular)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(backgroundColor)
-                .foregroundColor(textColor)
-                .cornerRadius(8)
-        }
-        .buttonStyle(.plain)
+        .presentationDetents([.medium])
     }
 
     // MARK: - Computed Properties

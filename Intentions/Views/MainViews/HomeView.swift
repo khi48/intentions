@@ -204,14 +204,14 @@ private struct QuickActionsSection: View {
     
     private var gettingStartedCard: some View {
         VStack(spacing: 0) {
-            // Kicker: thin rules flanking a monospaced section label
+            // Kicker: thin rules flanking a small uppercase section label
             HStack(spacing: 10) {
                 Rectangle()
                     .fill(AppConstants.Colors.textSecondary.opacity(0.4))
                     .frame(width: 24, height: 1)
                 Text("QUICK ACTIONS")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .tracking(2)
+                    .font(.caption)
+                    .fontWeight(.medium)
                     .foregroundColor(AppConstants.Colors.textSecondary)
                 Rectangle()
                     .fill(AppConstants.Colors.textSecondary.opacity(0.4))
@@ -220,19 +220,13 @@ private struct QuickActionsSection: View {
             .padding(.top, 8)
             .padding(.bottom, 12)
 
-            // Serif headline
-            (
-                Text("Set your first ")
-                    .font(.system(size: 28, weight: .light, design: .serif))
-                    .foregroundColor(AppConstants.Colors.text)
-                +
-                Text("intention.")
-                    .font(.system(size: 28, weight: .light, design: .serif))
-                    .italic()
-                    .foregroundColor(AppConstants.Colors.textSecondary)
-            )
-            .multilineTextAlignment(.center)
-            .padding(.bottom, 28)
+            // Headline
+            Text("Set your first intention")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(AppConstants.Colors.text)
+                .multilineTextAlignment(.center)
+                .padding(.bottom, 28)
 
             // The altar card — a single prominent ghost card in the shape of
             // an eventual QuickActionCard, but larger. Tapping opens the editor.
@@ -240,7 +234,7 @@ private struct QuickActionsSection: View {
                 editorMode = .create
             }) {
                 VStack(spacing: 14) {
-                    // Emblem: pulsing ring around a large serif plus
+                    // Emblem: pulsing ring around a plus symbol
                     ZStack {
                         // Pulsing outer ring (animates outward and fades)
                         Circle()
@@ -254,23 +248,20 @@ private struct QuickActionsSection: View {
                             .stroke(AppConstants.Colors.textSecondary.opacity(0.5), lineWidth: 1)
                             .frame(width: 88, height: 88)
 
-                        // Large serif plus
-                        Text("+")
-                            .font(.system(size: 44, weight: .light, design: .serif))
+                        Image(systemName: "plus")
+                            .font(.system(size: 32, weight: .light))
                             .foregroundColor(AppConstants.Colors.text)
-                            .offset(y: -2)
                     }
                     .frame(width: 88, height: 88)
                     .padding(.bottom, 4)
 
                     Text("Create a quick action")
-                        .font(.system(size: 17, weight: .regular, design: .serif))
-                        .italic()
+                        .font(.headline)
                         .foregroundColor(AppConstants.Colors.text)
 
-                    Text("APPS  ·  DURATION")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .tracking(1.6)
+                    Text("APPS · DURATION")
+                        .font(.caption)
+                        .fontWeight(.medium)
                         .foregroundColor(AppConstants.Colors.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
