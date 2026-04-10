@@ -130,39 +130,27 @@ struct QuickActionEditorSheet: View {
     // MARK: - Mini Preview Card
 
     private var miniPreviewCard: some View {
-        HStack {
-            Spacer()
-            VStack(alignment: .leading, spacing: 0) {
-                Image(systemName: selectedIcon)
-                    .font(.caption)
-                    .foregroundColor(AppConstants.Colors.text)
-                    .frame(width: 22, height: 22)
-                    .background(AppConstants.Colors.text.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+        VStack(spacing: 12) {
+            Image(systemName: selectedIcon)
+                .font(.system(size: 32))
+                .foregroundStyle(AppConstants.Colors.text)
 
-                Spacer()
-
+            VStack(spacing: 4) {
                 Text(name.isEmpty ? "Untitled" : name)
-                    .font(.caption)
-                    .fontWeight(.semibold)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
                     .foregroundColor(name.isEmpty ? AppConstants.Colors.textSecondary : AppConstants.Colors.text)
                     .lineLimit(1)
 
-                Text("\(formatDuration(duration)) · \(selectedApps.count) apps")
-                    .font(.caption2)
+                Text(formatDuration(duration))
+                    .font(.caption)
                     .foregroundColor(AppConstants.Colors.textSecondary)
-                    .padding(.top, 2)
             }
-            .frame(width: 100, height: 100)
-            .padding(10)
-            .background(AppConstants.Colors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(AppConstants.Colors.textSecondary.opacity(0.2), lineWidth: 1)
-            )
-            Spacer()
         }
+        .frame(maxWidth: .infinity)
+        .frame(height: 120)
+        .background(AppConstants.Colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Name + Icon Row
