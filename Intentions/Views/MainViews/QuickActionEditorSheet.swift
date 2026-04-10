@@ -130,27 +130,31 @@ struct QuickActionEditorSheet: View {
     // MARK: - Mini Preview Card
 
     private var miniPreviewCard: some View {
-        VStack(spacing: 12) {
-            Image(systemName: selectedIcon)
-                .font(.system(size: 32))
-                .foregroundStyle(AppConstants.Colors.text)
+        HStack {
+            Spacer()
+            VStack(spacing: 12) {
+                Image(systemName: selectedIcon)
+                    .font(.system(size: 32))
+                    .foregroundStyle(AppConstants.Colors.text)
 
-            VStack(spacing: 4) {
-                Text(name.isEmpty ? "Untitled" : name)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(name.isEmpty ? AppConstants.Colors.textSecondary : AppConstants.Colors.text)
-                    .lineLimit(1)
+                VStack(spacing: 4) {
+                    Text(name.isEmpty ? "Untitled" : name)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(name.isEmpty ? AppConstants.Colors.textSecondary : AppConstants.Colors.text)
+                        .lineLimit(1)
 
-                Text(formatDuration(duration))
-                    .font(.caption)
-                    .foregroundColor(AppConstants.Colors.textSecondary)
+                    Text(formatDuration(duration))
+                        .font(.caption)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
+                }
             }
+            .frame(maxWidth: 160)
+            .frame(height: 120)
+            .background(AppConstants.Colors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            Spacer()
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 120)
-        .background(AppConstants.Colors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Name + Icon Row
