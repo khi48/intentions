@@ -65,11 +65,6 @@ struct QuickActionEditorSheet: View {
                         // Apps row
                         appsRow
 
-                        // Selected apps preview (if any)
-                        if !selectedApps.isEmpty {
-                            selectedAppsPreview
-                        }
-
                         // Website toggle row
                         websiteRow
 
