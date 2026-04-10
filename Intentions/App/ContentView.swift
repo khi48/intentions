@@ -48,6 +48,10 @@ struct ContentView: View {
         .task {
             await viewModel.initializeApp()
         }
+        .onOpenURL { url in
+            guard url.scheme == "intentions", url.host == "home" else { return }
+            viewModel.navigateToTab(.home)
+        }
         .alert("Error", isPresented: Binding(
             get: { viewModel.errorMessage != nil },
             set: { _ in viewModel.clearError() }

@@ -17,27 +17,6 @@ struct IntentApp: App {
         WindowGroup {
             ContentView()
                 .preferredColorScheme(.dark)
-                .onOpenURL { url in
-                    handleWidgetURL(url)
-                }
-        }
-    }
-    
-    
-    private func handleWidgetURL(_ url: URL) {
-
-        guard url.scheme == "intent" else {
-            return
-        }
-
-        switch url.host {
-        case "home":
-            // The app will naturally open to the home page via ContentView
-            // We could add specific navigation logic here if needed
-            break
-        default:
-            // Default to home page behavior
-            break
         }
     }
 }

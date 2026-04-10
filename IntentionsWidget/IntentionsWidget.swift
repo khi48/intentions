@@ -11,25 +11,16 @@ import SwiftUI
 // MARK: - Widget Data Management
 
 private struct WidgetDataManager {
-    private enum Constants {
-        static let appGroupId = "group.oh.Intent"
-        static let blockingStatusKey = "intentions.widget.blockingStatus"
-        static let lastUpdateKey = "intentions.widget.lastUpdate"
-        static let sessionTitleKey = "intentions.widget.sessionTitle"
-        static let sessionEndTimeKey = "intentions.widget.sessionEndTime"
-    }
-
     private static var sharedUserDefaults: UserDefaults {
-        CFPreferencesSynchronize(Constants.appGroupId as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
-        return UserDefaults(suiteName: Constants.appGroupId) ?? UserDefaults.standard
+        UserDefaults(suiteName: SharedConstants.appGroupId) ?? UserDefaults.standard
     }
 
     static func getBlockingStatus() -> Bool {
-        sharedUserDefaults.bool(forKey: Constants.blockingStatusKey)
+        sharedUserDefaults.bool(forKey: SharedConstants.WidgetKeys.blockingStatus)
     }
 
     static func getLastUpdateTime() -> Date? {
-        sharedUserDefaults.object(forKey: Constants.lastUpdateKey) as? Date
+        sharedUserDefaults.object(forKey: SharedConstants.WidgetKeys.lastUpdate) as? Date
     }
 
     static func isDataStale() -> Bool {
@@ -38,11 +29,11 @@ private struct WidgetDataManager {
     }
 
     static func getSessionTitle() -> String? {
-        sharedUserDefaults.string(forKey: Constants.sessionTitleKey)
+        sharedUserDefaults.string(forKey: SharedConstants.WidgetKeys.sessionTitle)
     }
 
     static func getSessionEndTime() -> Date? {
-        sharedUserDefaults.object(forKey: Constants.sessionEndTimeKey) as? Date
+        sharedUserDefaults.object(forKey: SharedConstants.WidgetKeys.sessionEndTime) as? Date
     }
 
     // Calculate remaining time for active session
@@ -96,10 +87,9 @@ struct IntentionsProvider: TimelineProvider {
             let sessionEndDate = Date().addingTimeInterval(remainingTime)
             reloadPolicy = .after(sessionEndDate)
         } else {
-            // No active session - rely entirely on push updates from main app
-            // Use .never policy since we call WidgetCenter.shared.reloadAllTimelines() when state changes
-            // This eliminates unnecessary polling
-            reloadPolicy = .never
+            // No active session - periodic fallback so the widget recovers if the app
+            // is killed before it can push an update via reloadAllTimelines().
+            reloadPolicy = .after(Date().addingTimeInterval(3600))
         }
 
         let timeline = Timeline(entries: entries, policy: reloadPolicy)
@@ -149,7 +139,7 @@ struct IntentionsWidgetEntryView: View {
             }
         }
     }
-    
+
     // MARK: - Circular Widget (Main lockscreen widget)
 
     private var circularView: some View {
@@ -165,9 +155,9 @@ struct IntentionsWidgetEntryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.top, 6)
         .widgetBackground()
-        .widgetURL(URL(string: "intent://home"))
+        .widgetURL(URL(string: "intentions://home"))
     }
-    
+
     // MARK: - Rectangular Widget (More detailed)
 
     private var rectangularView: some View {
@@ -199,9 +189,9 @@ struct IntentionsWidgetEntryView: View {
             .padding(.trailing, 8)
         }
         .widgetBackground()
-        .widgetURL(URL(string: "intent://home"))
+        .widgetURL(URL(string: "intentions://home"))
     }
-    
+
     // MARK: - Inline Widget (Minimal text)
 
     private var inlineView: some View {
@@ -215,46 +205,39 @@ struct IntentionsWidgetEntryView: View {
                 .foregroundColor(.white)
         }
         .widgetBackground()
-        .widgetURL(URL(string: "intent://home"))
+        .widgetURL(URL(string: "intentions://home"))
     }
-    
+
     // MARK: - Status Properties
 
     private var blockingIcon: String {
         if entry.isDataStale {
             return "questionmark.circle"
         } else if entry.sessionTitle != nil && entry.remainingTime != nil {
-            // Active session - show play/timer icon
             return "timer"
         } else if entry.isBlocking {
-            // Blocking without session - show shield
             return "shield.fill"
         } else {
-            // Open/accessible - show checkmark
             return "checkmark.circle"
         }
     }
-    
+
     private var blockingColor: Color {
         if entry.isDataStale {
             return Color.orange
         } else if entry.sessionTitle != nil && entry.remainingTime != nil {
-            // Active session - show blue/cyan for focus mode
             return Color.cyan
         } else if entry.isBlocking {
-            // Blocking - show red
             return Color.red
         } else {
-            // Open/accessible - show green
             return Color.green
         }
     }
-    
+
     private var blockingText: String {
         if entry.isDataStale {
             return "Status"
         } else if entry.sessionTitle != nil && entry.remainingTime != nil {
-            // Active session - show "Active" or session name (truncated)
             return "Active"
         } else if entry.isBlocking {
             return "Blocked"
@@ -262,13 +245,11 @@ struct IntentionsWidgetEntryView: View {
             return "Open"
         }
     }
-    
+
     private var rectangularTitleText: String {
         if let sessionTitle = entry.sessionTitle, entry.remainingTime != nil {
-            // Active session - show session name as title
             return sessionTitle
         } else {
-            // No active session - show "Intent"
             return "Intent"
         }
     }
@@ -277,7 +258,6 @@ struct IntentionsWidgetEntryView: View {
         if entry.isDataStale {
             return "Status unknown"
         } else if let remaining = entry.remainingTime {
-            // Active session - show remaining time
             let minutes = Int(remaining / 60)
             let hours = minutes / 60
             let mins = minutes % 60
@@ -294,32 +274,10 @@ struct IntentionsWidgetEntryView: View {
         }
     }
 
-    private var blockingStatusText: String {
-        if entry.isDataStale {
-            return "Status unknown"
-        } else if let sessionTitle = entry.sessionTitle, let remaining = entry.remainingTime {
-            // Active session - show session name and remaining time
-            let minutes = Int(remaining / 60)
-            let hours = minutes / 60
-            let mins = minutes % 60
-
-            if hours > 0 {
-                return "\(sessionTitle) (\(hours)h \(mins)m left)"
-            } else {
-                return "\(sessionTitle) (\(mins)m left)"
-            }
-        } else if entry.isBlocking {
-            return "Apps are blocked"
-        } else {
-            return "Apps are accessible"
-        }
-    }
-    
     private var inlineStatusText: String {
         if entry.isDataStale {
             return "Intent (Unknown)"
         } else if let sessionTitle = entry.sessionTitle, let remaining = entry.remainingTime {
-            // Active session - show compact time
             let minutes = Int(remaining / 60)
             let hours = minutes / 60
             let mins = minutes % 60

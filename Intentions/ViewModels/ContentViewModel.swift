@@ -114,6 +114,9 @@ final class ContentViewModel: Sendable {
                 }
             }
 
+            // Pre-load quick actions so the home view doesn't flash the empty state
+            await sharedQuickActionsViewModel.loadData()
+
             await loadScheduleSettings()
             await loadActiveSession()
             await checkSetupRequired()
@@ -400,6 +403,7 @@ final class ContentViewModel: Sendable {
             if !session.requestedApplications.isEmpty {
                 try await screenTimeService.allowApps(
                     session.requestedApplications,
+                    webDomains: session.requestedWebDomains,
                     allowWebsites: session.allowAllWebsites,
                     duration: session.duration,
                     sessionId: session.id

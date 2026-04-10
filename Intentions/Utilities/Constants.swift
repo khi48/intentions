@@ -12,16 +12,16 @@ enum AppConstants {
 
     // MARK: - App Group
 
-    static let appGroupId = "group.oh.Intent"
+    static let appGroupId = SharedConstants.appGroupId
 
     // MARK: - UserDefaults Keys
 
     enum Keys {
-        // Widget
-        static let widgetBlockingStatus = "intentions.widget.blockingStatus"
-        static let widgetLastUpdate = "intentions.widget.lastUpdate"
-        static let widgetSessionTitle = "intentions.widget.sessionTitle"
-        static let widgetSessionEndTime = "intentions.widget.sessionEndTime"
+        // Widget (shared with widget extension via SharedConstants)
+        static let widgetBlockingStatus = SharedConstants.WidgetKeys.blockingStatus
+        static let widgetLastUpdate = SharedConstants.WidgetKeys.lastUpdate
+        static let widgetSessionTitle = SharedConstants.WidgetKeys.sessionTitle
+        static let widgetSessionEndTime = SharedConstants.WidgetKeys.sessionEndTime
 
         // Session
         static let currentSessionId = "intentions.currentSessionId"
