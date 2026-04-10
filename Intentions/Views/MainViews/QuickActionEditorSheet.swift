@@ -276,16 +276,38 @@ struct QuickActionEditorSheet: View {
     // MARK: - Selected Apps Preview
 
     private var selectedAppsPreview: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("\(selectedApps.count) selected")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+                Spacer()
+                Button(action: {
+                    let now = Date()
+                    guard now.timeIntervalSince(lastPickerTapTime) > 1.0 else { return }
+                    lastPickerTapTime = now
+                    showingFamilyActivityPicker = true
+                }) {
+                    Text("Add more")
+                        .font(.caption)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
+                }
+            }
+
             FullAppIconsGrid(
                 applicationTokens: Array(selectedApps),
                 onRemove: { token in removeApp(token) }
             )
         }
-        .padding(.vertical, 12)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(AppConstants.Colors.textSecondary.opacity(0.15)).frame(height: 0.5)
-        }
+        .padding(14)
+        .background(AppConstants.Colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppConstants.Colors.textSecondary.opacity(0.15), lineWidth: 1)
+        )
+        .padding(.top, 4)
     }
 
     // MARK: - Website Row

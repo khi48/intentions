@@ -24,33 +24,114 @@ struct DisableBlockingConfirmationView: View {
 
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 28) {
-                    // Header Section - More compact
-                    headerSection
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Headline
+                        Text("Disable app blocking?")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AppConstants.Colors.text)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 24)
+                            .padding(.bottom, 6)
 
-                    // Intention Input Section
-                    intentionInputSection
+                        Text("Take a moment to reflect on why you need full access.")
+                            .font(.subheadline)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.bottom, 28)
 
-                    // Countdown Section - Give it breathing room
-                    if isCountdownActive {
-                        countdownSection
-                            .padding(.vertical, 20)
+                        // Reason input
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("REASON")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(AppConstants.Colors.textSecondary)
+
+                            TextField("Why do you need to disable blocking?", text: $intentionText)
+                                .font(.body)
+                                .autocorrectionDisabled()
+                                .textInputAutocapitalization(.sentences)
+                                .focused($isTextFieldFocused)
+                                .submitLabel(.done)
+                                .onSubmit { isTextFieldFocused = false }
+                                .onChange(of: intentionText) { _, newValue in
+                                    if newValue.count >= minimumCharacters && !isCountdownActive {
+                                        startCountdown()
+                                    }
+                                }
+                                .padding(.vertical, 14)
+                                .overlay(alignment: .bottom) {
+                                    Rectangle()
+                                        .fill(AppConstants.Colors.textSecondary.opacity(0.15))
+                                        .frame(height: 0.5)
+                                }
+
+                            HStack {
+                                Text("\(intentionText.count)/\(minimumCharacters) min")
+                                    .font(.caption)
+                                    .foregroundColor(intentionText.count >= minimumCharacters ? AppConstants.Colors.text : AppConstants.Colors.textSecondary)
+                                Spacer()
+                                if intentionText.count >= minimumCharacters {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.caption)
+                                        .foregroundColor(AppConstants.Colors.text)
+                                }
+                            }
+                        }
+                        .padding(.bottom, 28)
+
+                        // Countdown
+                        if isCountdownActive {
+                            VStack(spacing: 16) {
+                                ZStack {
+                                    Circle()
+                                        .stroke(AppConstants.Colors.textSecondary.opacity(0.2), lineWidth: 4)
+                                        .frame(width: 100, height: 100)
+
+                                    Circle()
+                                        .trim(from: 0, to: circleProgress)
+                                        .stroke(AppConstants.Colors.text, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                                        .frame(width: 100, height: 100)
+                                        .rotationEffect(.degrees(-90))
+
+                                    Text("\(Int(ceil(max(0, countdownSecondsRemaining))))s")
+                                        .font(.title2)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(AppConstants.Colors.text)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.bottom, 20)
+                        }
                     }
-
-                    // Spacer to push buttons down
-                    Spacer(minLength: isCountdownActive ? 20 : 60)
-
-                    // Action Buttons Section
-                    actionButtonsSection
+                    .padding(.horizontal)
                 }
-                .padding()
-                .frame(maxWidth: .infinity)
+                .scrollDismissesKeyboard(.interactively)
+
+                // Bottom button
+                Button(action: { onConfirm() }) {
+                    Text("Confirm Disable")
+                        .font(.headline)
+                        .foregroundColor(isConfirmEnabled ? AppConstants.Colors.background : AppConstants.Colors.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            isConfirmEnabled
+                                ? AppConstants.Colors.text
+                                : AppConstants.Colors.textSecondary.opacity(0.2)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(!isConfirmEnabled)
+                .padding(.horizontal)
+                .padding(.bottom, 20)
             }
-            .navigationTitle("Confirm Action")
+            .navigationTitle("Confirm")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         countdownCancellable?.cancel()
                         countdownCancellable = nil
@@ -66,111 +147,6 @@ struct DisableBlockingConfirmationView: View {
             countdownCancellable?.cancel()
             countdownCancellable = nil
         }
-    }
-
-    // MARK: - View Components
-
-    private var headerSection: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 40))
-                .foregroundColor(AppConstants.Colors.textSecondary)
-
-            Text("Disable App Blocking?")
-                .font(.title3)
-                .fontWeight(.semibold)
-
-            Text("Take a moment to reflect on why you need full access.")
-                .font(.subheadline)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var intentionInputSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-                    Text("What's your reason?")
-                        .font(.headline)
-
-                    TextField("Write your reason for disabling...", text: $intentionText)
-                        .textFieldStyle(.roundedBorder)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.sentences)
-                        .focused($isTextFieldFocused)
-                        .submitLabel(.done)
-                        .onSubmit {
-                            isTextFieldFocused = false
-                        }
-                        .onChange(of: intentionText) { oldValue, newValue in
-                            if newValue.count >= minimumCharacters && !isCountdownActive {
-                                startCountdown()
-                            }
-                        }
-
-                    HStack {
-                        Text("\(intentionText.count)/\(minimumCharacters) characters minimum")
-                            .font(.caption)
-                            .foregroundColor(intentionText.count >= minimumCharacters ? AppConstants.Colors.text : .secondary)
-
-                        Spacer()
-
-                        if intentionText.count >= minimumCharacters {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(AppConstants.Colors.text)
-                        }
-                    }
-
-        }
-    }
-
-    private var countdownSection: some View {
-        VStack(spacing: 20) {
-            Text("Is this really what you want?")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            ZStack {
-                Circle()
-                    .stroke(AppConstants.Colors.textSecondary.opacity(0.3), lineWidth: 6)
-                    .frame(width: 120, height: 120)
-
-                Circle()
-                    .trim(from: 0, to: circleProgress)
-                    .stroke(AppConstants.Colors.textSecondary, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                    .frame(width: 120, height: 120)
-                    .rotationEffect(.degrees(-90))
-
-                VStack(spacing: 4) {
-                    Text("\(Int(ceil(max(0, countdownSecondsRemaining))))")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(AppConstants.Colors.textSecondary)
-
-                    Text("seconds")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .frame(width: 120, height: 120)
-
-        }
-        .padding(.vertical, 16)
-        .padding(.horizontal, 20)
-        .background(AppConstants.Colors.surface)
-        .cornerRadius(16)
-    }
-
-    private var actionButtonsSection: some View {
-        Button("Confirm Disable") {
-            onConfirm()
-        }
-        .buttonStyle(.bordered)
-        .foregroundColor(isConfirmEnabled ? AppConstants.Colors.text : AppConstants.Colors.textSecondary)
-        .controlSize(.large)
-        .disabled(!isConfirmEnabled)
-        .tint(isConfirmEnabled ? AppConstants.Colors.text : AppConstants.Colors.textSecondary)
-        .opacity(isConfirmEnabled ? 1.0 : 0.5)
     }
 
     // MARK: - Computed Properties
