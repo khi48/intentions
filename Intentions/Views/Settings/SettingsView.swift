@@ -196,6 +196,8 @@ struct SettingsView: View {
                     .padding(.bottom, 40)
                 }
                 .background(AppConstants.Colors.background)
+                .navigationTitle("Settings")
+                .navigationBarTitleDisplayMode(.large)
                 .navigationDestination(for: SettingsDestination.self) { destination in
                     switch destination {
                     case .notifications:
@@ -218,8 +220,6 @@ struct SettingsView: View {
             }
         }
         .background(AppConstants.Colors.background)
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(.visible, for: .tabBar)
         .sheet(isPresented: $viewModel.showingScheduleEditor) {
             ScheduleSettingsView(

@@ -77,31 +77,29 @@ struct QuickActionEditorSheet: View {
                         if isEditing {
                             deleteRow
                         }
+                        // Bottom action button
+                        Button(action: {
+                            Task { await saveQuickAction() }
+                        }) {
+                            Text(isEditing ? "Update" : "Create")
+                                .font(.headline)
+                                .foregroundColor(AppConstants.Colors.background)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(
+                                    isValidQuickAction && !isLoading
+                                        ? AppConstants.Colors.text
+                                        : AppConstants.Colors.textSecondary.opacity(0.3)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .disabled(!isValidQuickAction || isLoading)
+                        .padding(.top, 24)
                     }
                     .padding(.horizontal)
                     .padding(.bottom, 20)
                 }
                 .scrollDismissesKeyboard(.interactively)
-
-                // Bottom action button
-                Button(action: {
-                    Task { await saveQuickAction() }
-                }) {
-                    Text(isEditing ? "Update" : "Create")
-                        .font(.headline)
-                        .foregroundColor(AppConstants.Colors.background)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            isValidQuickAction && !isLoading
-                                ? AppConstants.Colors.text
-                                : AppConstants.Colors.textSecondary.opacity(0.3)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .disabled(!isValidQuickAction || isLoading)
-                .padding(.horizontal)
-                .padding(.bottom, 20)
             }
             .navigationTitle(isEditing ? "Edit Quick Action" : "New Quick Action")
             .navigationBarTitleDisplayMode(.inline)

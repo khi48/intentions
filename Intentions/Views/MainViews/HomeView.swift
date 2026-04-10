@@ -89,25 +89,22 @@ private struct QuickActionsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Section header is hidden when empty — the altar card has its own internal kicker.
-            if !quickActionsViewModel.quickActions.isEmpty {
-                HStack {
-                    Text("Quick Actions")
-                        .font(.headline)
-                        .foregroundColor(AppConstants.Colors.text)
+            HStack {
+                Text("Quick Actions")
+                    .font(.headline)
+                    .foregroundColor(AppConstants.Colors.text)
 
-                    Spacer()
+                Spacer()
 
-                    Button(action: {
-                        editorMode = .create
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.title3)
-                            .foregroundColor(AppConstants.Colors.accent)
-                    }
+                Button(action: {
+                    editorMode = .create
+                }) {
+                    Image(systemName: "plus")
+                        .font(.title3)
+                        .foregroundColor(AppConstants.Colors.accent)
                 }
-                .padding(.horizontal)
             }
+            .padding(.horizontal)
 
             if quickActionsViewModel.quickActions.isEmpty {
                 // Show getting started card
@@ -204,28 +201,13 @@ private struct QuickActionsSection: View {
     
     private var gettingStartedCard: some View {
         VStack(spacing: 0) {
-            // Kicker: thin rules flanking a small uppercase section label
-            HStack(spacing: 10) {
-                Rectangle()
-                    .fill(AppConstants.Colors.textSecondary.opacity(0.4))
-                    .frame(width: 24, height: 1)
-                Text("QUICK ACTIONS")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(AppConstants.Colors.textSecondary)
-                Rectangle()
-                    .fill(AppConstants.Colors.textSecondary.opacity(0.4))
-                    .frame(width: 24, height: 1)
-            }
-            .padding(.top, 8)
-            .padding(.bottom, 12)
-
             // Headline
             Text("Set your first intention")
                 .font(.title2)
                 .fontWeight(.semibold)
                 .foregroundColor(AppConstants.Colors.text)
                 .multilineTextAlignment(.center)
+                .padding(.top, 8)
                 .padding(.bottom, 28)
 
             // The altar card — a single prominent ghost card in the shape of
@@ -258,11 +240,6 @@ private struct QuickActionsSection: View {
                     Text("Create a quick action")
                         .font(.headline)
                         .foregroundColor(AppConstants.Colors.text)
-
-                    Text("APPS · DURATION")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(AppConstants.Colors.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 340)
