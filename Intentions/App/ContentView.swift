@@ -45,7 +45,9 @@ struct ContentView: View {
                         viewModel.setIntentionQuote(quote)
                     }
                 ) {
-                    viewModel.completeSetupFlow()
+                    Task {
+                        await viewModel.completeSetupFlow()
+                    }
                 }
             } else {
                 MainTabView(viewModel: viewModel)

@@ -11,6 +11,19 @@ import SwiftUI
 import WidgetKit
 import OSLog
 
+/// Tracks the lifecycle state of the ScreenTimeService within ContentViewModel
+enum ScreenTimeServiceState: Sendable {
+    case uninitialized
+    case initializing
+    case ready
+    case failed(String)
+
+    var isReady: Bool {
+        if case .ready = self { return true }
+        return false
+    }
+}
+
 /// Main app state coordinator and navigation controller
 /// Manages global app state, authorization status, and navigation flow
 @MainActor
@@ -62,11 +75,13 @@ final class ContentViewModel: Sendable {
     /// Track the currently applied session to prevent duplicate session blocking
     private var currentlyAppliedSessionId: UUID? = nil
 
-    /// Flag to prevent duplicate ScreenTimeService initialization
-    private var isScreenTimeServiceInitialized: Bool = false
+    /// Lifecycle state of the ScreenTimeService
+    private(set) var screenTimeState: ScreenTimeServiceState = .uninitialized
 
     /// Observable flag for UI to track when ScreenTimeService is ready
-    var isScreenTimeServiceReady: Bool = false
+    var isScreenTimeServiceReady: Bool {
+        screenTimeState.isReady
+    }
 
     // MARK: - Dependencies
     
@@ -487,18 +502,22 @@ final class ContentViewModel: Sendable {
     }
 
     /// Handle completion of the unified setup flow
-    func completeSetupFlow() {
-        showingSetupFlow = false
+    func completeSetupFlow() async {
+        await initializeScreenTimeServiceAfterSetup()
 
-        // Re-initialize the app with the new authorization status
-        Task {
-            await initializeScreenTimeServiceAfterSetup()
+        if screenTimeState.isReady {
+            showingSetupFlow = false
+        } else {
+            await handleError(AppError.serviceUnavailable(
+                "Screen Time initialization failed. Please try again."
+            ))
         }
     }
-    
+
     /// Initialize ScreenTimeService after setup completion
     private func initializeScreenTimeServiceAfterSetup() async {
-        guard !isScreenTimeServiceInitialized else { return }
+        guard case .uninitialized = screenTimeState else { return }
+        screenTimeState = .initializing
 
         await withLoading {
             do {
@@ -506,7 +525,7 @@ final class ContentViewModel: Sendable {
 
                 guard authorizationStatus == .approved,
                       setupCoordinator.setupState?.isSetupSufficient == true else {
-                    isScreenTimeServiceReady = false
+                    screenTimeState = .uninitialized
                     return
                 }
 
@@ -521,9 +540,9 @@ final class ContentViewModel: Sendable {
                 await cleanupOldSessionsBeforeBlocking()
                 await applyDefaultBlocking()
 
-                isScreenTimeServiceInitialized = true
-                isScreenTimeServiceReady = true
+                screenTimeState = .ready
             } catch {
+                screenTimeState = .failed(error.localizedDescription)
                 logger.error("ScreenTimeService initialization error: \(error.localizedDescription)")
                 await handleError(error)
             }
