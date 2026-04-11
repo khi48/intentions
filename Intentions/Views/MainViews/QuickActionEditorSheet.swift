@@ -66,6 +66,14 @@ struct QuickActionEditorSheet: View {
                         // Apps row
                         appsRow
 
+                        // App limit warning
+                        if selectedApps.count >= 50 {
+                            Text("Apple limits app selection to 50 apps per session.")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                                .padding(.top, 4)
+                        }
+
                         // Website toggle row
                         websiteRow
 
@@ -246,9 +254,9 @@ struct QuickActionEditorSheet: View {
                     .font(.body)
                     .foregroundColor(AppConstants.Colors.text)
                 Spacer()
-                Text(selectedApps.isEmpty ? "None" : "\(selectedApps.count) selected")
+                Text(selectedApps.isEmpty ? "None" : "\(selectedApps.count)/50 selected")
                     .font(.subheadline)
-                    .foregroundColor(AppConstants.Colors.textSecondary)
+                    .foregroundColor(selectedApps.count >= 50 ? .orange : AppConstants.Colors.textSecondary)
                 Image(systemName: "chevron.right")
                     .font(.caption2)
                     .foregroundColor(AppConstants.Colors.textSecondary)
