@@ -74,17 +74,10 @@ struct DisableBlockingConfirmationView: View {
             // Stats row: streak left, time stats right
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
-                    if let streak = streakDays {
-                        Text("\(streak) days")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(AppConstants.Colors.text)
-                    } else {
-                        Text("New")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(AppConstants.Colors.text)
-                    }
+                    Text("\(streakDays ?? 0) days")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(AppConstants.Colors.text)
                     Text("streak")
                         .font(.caption)
                         .foregroundColor(AppConstants.Colors.textSecondary)

@@ -62,16 +62,16 @@ struct SetupLandingView: View {
 
             VStack(spacing: 12) {
                 setupStep(
-                    icon: "hourglass.circle.fill",
-                    title: "Screen Time Permissions",
-                    description: "Grant access to manage app blocking during focused sessions",
+                    icon: "quote.opening",
+                    title: "Set Your Intention",
+                    description: "Write a personal reminder for why you want to block apps",
                     stepNumber: 1
                 )
 
                 setupStep(
-                    icon: "quote.opening",
-                    title: "Set Your Intention",
-                    description: "Write a personal reminder for why you want to block apps",
+                    icon: "hourglass.circle.fill",
+                    title: "Screen Time Permissions",
+                    description: "Grant access to manage app blocking during focused sessions",
                     stepNumber: 2
                 )
 

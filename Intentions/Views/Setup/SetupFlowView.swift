@@ -89,21 +89,21 @@ struct SetupFlowView: View {
                     }
                     .padding()
 
-                case .screenTimePermission:
+                case .intentionQuote:
                     ScrollView {
                         VStack(spacing: 24) {
                             progressSection(step: 1)
-                            screenTimePermissionContent
+                            intentionQuoteContent
                             Spacer(minLength: 50)
                         }
                         .padding()
                     }
 
-                case .intentionQuote:
+                case .screenTimePermission:
                     ScrollView {
                         VStack(spacing: 24) {
                             progressSection(step: 2)
-                            intentionQuoteContent
+                            screenTimePermissionContent
                             Spacer(minLength: 50)
                         }
                         .padding()
@@ -171,7 +171,7 @@ struct SetupFlowView: View {
 
     private var landingPageContent: some View {
         SetupLandingView {
-            currentPage = .screenTimePermission
+            currentPage = .intentionQuote
         }
     }
 
@@ -180,7 +180,7 @@ struct SetupFlowView: View {
             setupCoordinator: setupCoordinator,
             onComplete: {
                 await setupCoordinator.completeSetupStep(.screenTimeAuthorization)
-                currentPage = .intentionQuote
+                currentPage = .alwaysAllowedInfo
             }
         )
     }
@@ -238,7 +238,7 @@ struct SetupFlowView: View {
                 Task {
                     await setupCoordinator.completeSetupStep(.intentionQuote)
                 }
-                currentPage = .alwaysAllowedInfo
+                currentPage = .screenTimePermission
             }) {
                 HStack {
                     Text("Continue")
