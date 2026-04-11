@@ -243,7 +243,7 @@ struct SettingsView: View {
                 onConfirm: {
                     showingDisableConfirmation = false
                     Task {
-                        await viewModel.toggleScheduleEnabled()
+                        await viewModel.recordDisableAndToggle()
                         await onScheduleSettingsChanged?(viewModel.scheduleSettings)
                     }
                 },
