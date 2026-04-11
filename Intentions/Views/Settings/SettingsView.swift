@@ -236,6 +236,10 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showingDisableConfirmation) {
             DisableBlockingConfirmationView(
+                streakDays: viewModel.streakDays,
+                protectedTimeText: viewModel.formattedProtectedTimeToday,
+                remainingTimeText: viewModel.formattedRemainingTime,
+                intentionQuote: viewModel.scheduleSettings.intentionQuote,
                 onConfirm: {
                     showingDisableConfirmation = false
                     Task {
