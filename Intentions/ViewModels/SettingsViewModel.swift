@@ -78,7 +78,13 @@ final class SettingsViewModel: Sendable {
         scheduleSettings.isEnabled.toggle()
         await updateScheduleSettings(scheduleSettings)
     }
-    
+
+    func recordDisableAndToggle() async {
+        scheduleSettings.lastDisabledAt = Date()
+        scheduleSettings.isEnabled = false
+        await updateScheduleSettings(scheduleSettings)
+    }
+
     // MARK: - Statistics
     
     private func updateStatistics() async {
@@ -189,6 +195,34 @@ final class SettingsViewModel: Sendable {
         } else {
             let sortedDays = scheduleSettings.activeDays.sorted { $0.rawValue < $1.rawValue }
             return sortedDays.map { $0.shortName }.joined(separator: ", ")
+        }
+    }
+
+    // MARK: - Disable Confirmation Data
+
+    var streakDays: Int? {
+        scheduleSettings.streakDays
+    }
+
+    var formattedProtectedTimeToday: String {
+        let totalMinutes = scheduleSettings.protectedMinutesToday
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m protected"
+        } else {
+            return "\(minutes)m protected"
+        }
+    }
+
+    var formattedRemainingTime: String {
+        let totalMinutes = scheduleSettings.remainingProtectedMinutesToday
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m remaining"
+        } else {
+            return "\(minutes)m remaining"
         }
     }
 }
