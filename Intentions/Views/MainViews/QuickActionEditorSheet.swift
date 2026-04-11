@@ -67,7 +67,12 @@ struct QuickActionEditorSheet: View {
                         appsRow
 
                         // App limit warning
-                        if selectedApps.count >= 50 {
+                        if selectedApps.count > 50 {
+                            Text("Too many apps selected. Apple limits selection to 50 apps per session.")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.top, 4)
+                        } else if selectedApps.count == 50 {
                             Text("Apple limits app selection to 50 apps per session.")
                                 .font(.caption)
                                 .foregroundColor(.orange)
@@ -254,9 +259,9 @@ struct QuickActionEditorSheet: View {
                     .font(.body)
                     .foregroundColor(AppConstants.Colors.text)
                 Spacer()
-                Text(selectedApps.isEmpty ? "None" : "\(selectedApps.count)/50 selected")
+                Text("\(selectedApps.count)/50 selected")
                     .font(.subheadline)
-                    .foregroundColor(selectedApps.count >= 50 ? .orange : AppConstants.Colors.textSecondary)
+                    .foregroundColor(selectedApps.count > 50 ? .red : selectedApps.count == 50 ? .orange : AppConstants.Colors.textSecondary)
                 Image(systemName: "chevron.right")
                     .font(.caption2)
                     .foregroundColor(AppConstants.Colors.textSecondary)
@@ -385,7 +390,8 @@ struct QuickActionEditorSheet: View {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         return !trimmedName.isEmpty &&
                trimmedName.count <= 50 &&
-               !selectedApps.isEmpty
+               !selectedApps.isEmpty &&
+               selectedApps.count <= 50
     }
 
     // MARK: - Actions
