@@ -105,7 +105,7 @@ struct SetupFlowView: View {
                 case .intentionQuote:
                     ScrollView {
                         VStack(spacing: 24) {
-                            progressSection(step: 2)
+                            progressSection(step: 3)
                             intentionQuoteContent
                             Spacer(minLength: 50)
                         }
@@ -115,7 +115,7 @@ struct SetupFlowView: View {
                 case .widgetSetup:
                     ScrollView {
                         VStack(spacing: 24) {
-                            progressSection(step: 3)
+                            progressSection(step: 4)
                             widgetSetupContent
                             Spacer(minLength: 50)
                         }
@@ -221,24 +221,29 @@ struct SetupFlowView: View {
                 .focused($isIntentionFieldFocused)
                 .textInputAutocapitalization(.sentences)
 
-            Button("Continue") {
+            Button(action: {
                 let trimmed = intentionQuoteText.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
                     onIntentionQuoteSet?(trimmed)
                 }
                 currentPage = .widgetSetup
+            }) {
+                HStack {
+                    Text("Continue")
+                        .font(.headline)
+                    Image(systemName: "arrow.right")
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(AppConstants.Colors.buttonPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .buttonStyle(.bordered)
-            .foregroundColor(AppConstants.Colors.text)
-            .controlSize(.large)
+            .padding(.horizontal)
+            .padding(.top, 8)
 
-            Button("Skip") {
-                currentPage = .widgetSetup
-            }
-            .font(.caption)
-            .foregroundColor(.secondary)
+            Spacer(minLength: 40)
         }
-        .padding()
     }
 
     private var widgetSetupContent: some View {
