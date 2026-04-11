@@ -109,21 +109,21 @@ struct SetupFlowView: View {
                         .padding()
                     }
 
-                case .widgetSetup:
+                case .alwaysAllowedInfo:
                     ScrollView {
                         VStack(spacing: 24) {
                             progressSection(step: 3)
-                            widgetSetupContent
+                            alwaysAllowedInfoContent
                             Spacer(minLength: 50)
                         }
                         .padding()
                     }
 
-                case .alwaysAllowedInfo:
+                case .widgetSetup:
                     ScrollView {
                         VStack(spacing: 24) {
                             progressSection(step: 4)
-                            alwaysAllowedInfoContent
+                            widgetSetupContent
                             Spacer(minLength: 50)
                         }
                         .padding()
@@ -188,7 +188,7 @@ struct SetupFlowView: View {
     private var alwaysAllowedInfoContent: some View {
         AlwaysAllowedInfoStepView(
             onContinue: {
-                onComplete()
+                currentPage = .widgetSetup
             }
         )
     }
@@ -238,7 +238,7 @@ struct SetupFlowView: View {
                 Task {
                     await setupCoordinator.completeSetupStep(.intentionQuote)
                 }
-                currentPage = .widgetSetup
+                currentPage = .alwaysAllowedInfo
             }) {
                 HStack {
                     Text("Continue")
@@ -318,10 +318,10 @@ struct SetupFlowView: View {
             .cornerRadius(12)
 
             Button(action: {
-                currentPage = .alwaysAllowedInfo
+                onComplete()
             }) {
                 HStack {
-                    Text("Continue")
+                    Text("Start Using Intent")
                         .font(.headline)
                     Image(systemName: "arrow.right")
                 }

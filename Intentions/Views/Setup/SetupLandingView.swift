@@ -76,16 +76,16 @@ struct SetupLandingView: View {
                 )
 
                 setupStep(
-                    icon: "widget.large.badge.plus",
-                    title: "Widget Setup",
-                    description: "Add the Intent widget to see your blocking status at a glance",
+                    icon: "checkmark.shield.fill",
+                    title: "Essential Apps",
+                    description: "Learn about configuring apps that stay accessible",
                     stepNumber: 3
                 )
 
                 setupStep(
-                    icon: "checkmark.shield.fill",
-                    title: "Essential Apps",
-                    description: "Learn about configuring apps that stay accessible",
+                    icon: "widget.large.badge.plus",
+                    title: "Widget Setup",
+                    description: "Add the Intent widget to see your blocking status at a glance",
                     stepNumber: 4
                 )
             }

@@ -118,7 +118,7 @@ struct AlwaysAllowedInfoStepView: View {
             // Continue button
             Button(action: onContinue) {
                 HStack {
-                    Text("Start Using Intent")
+                    Text("Continue")
                         .font(.headline)
                     Image(systemName: "arrow.right")
                 }
