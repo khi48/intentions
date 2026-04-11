@@ -13,26 +13,30 @@ struct AlwaysAllowedInfoStepView: View {
     let onContinue: () -> Void
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // Header icon and title
-                VStack(spacing: 16) {
+        VStack(spacing: 24) {
+            // Header icon and title
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(AppConstants.Colors.surface)
+                        .frame(width: 80, height: 80)
+
                     Image(systemName: "checkmark.shield.fill")
-                        .font(.system(size: 64))
+                        .font(.system(size: 40))
                         .foregroundColor(AppConstants.Colors.text)
-
-                    Text("Essential Apps")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(AppConstants.Colors.text)
-
-                    Text("Configure apps that you always need access to")
-                        .font(.subheadline)
-                        .foregroundColor(AppConstants.Colors.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
                 }
-                .padding(.top, 40)
+
+                Text("Essential Apps")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppConstants.Colors.text)
+
+                Text("Configure apps that you always need access to")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
 
                 // Information card
                 VStack(alignment: .leading, spacing: 20) {
@@ -94,7 +98,6 @@ struct AlwaysAllowedInfoStepView: View {
                 .padding(20)
                 .background(AppConstants.Colors.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
-                .padding(.horizontal)
 
                 // Note
                 VStack(spacing: 12) {
@@ -111,28 +114,24 @@ struct AlwaysAllowedInfoStepView: View {
                     .background(AppConstants.Colors.background)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .padding(.horizontal)
 
-                // Continue button
-                Button(action: onContinue) {
-                    HStack {
-                        Text("Continue")
-                            .font(.headline)
-                        Image(systemName: "arrow.right")
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(AppConstants.Colors.buttonPrimary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            // Continue button
+            Button(action: onContinue) {
+                HStack {
+                    Text("Start Using Intent")
+                        .font(.headline)
+                    Image(systemName: "arrow.right")
                 }
-                .padding(.horizontal)
-                .padding(.top, 8)
-
-                Spacer(minLength: 40)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(AppConstants.Colors.buttonPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+            .padding(.top, 8)
+
+            Spacer(minLength: 40)
         }
-        .background(AppConstants.Colors.background)
     }
 
     // MARK: - Helper Views

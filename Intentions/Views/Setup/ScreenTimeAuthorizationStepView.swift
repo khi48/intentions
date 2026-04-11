@@ -129,14 +129,20 @@ struct ScreenTimeAuthorizationStepView: View {
         Group {
             switch authorizationStatus {
             case .approved:
-                Button("Continue") {
-                    Task {
-                        await completeStep()
+                Button(action: {
+                    Task { await completeStep() }
+                }) {
+                    HStack {
+                        Text("Continue")
+                            .font(.headline)
+                        Image(systemName: "arrow.right")
                     }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(AppConstants.Colors.buttonPrimary)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.bordered)
-            .foregroundColor(AppConstants.Colors.text)
-                .controlSize(.large)
                 
             case .denied:
                 VStack(spacing: 12) {

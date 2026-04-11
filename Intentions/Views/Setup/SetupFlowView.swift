@@ -99,13 +99,10 @@ struct SetupFlowView: View {
                         .padding()
                     }
 
-                case .alwaysAllowedInfo:
-                    alwaysAllowedInfoContent
-
                 case .intentionQuote:
                     ScrollView {
                         VStack(spacing: 24) {
-                            progressSection(step: 3)
+                            progressSection(step: 2)
                             intentionQuoteContent
                             Spacer(minLength: 50)
                         }
@@ -115,8 +112,18 @@ struct SetupFlowView: View {
                 case .widgetSetup:
                     ScrollView {
                         VStack(spacing: 24) {
-                            progressSection(step: 4)
+                            progressSection(step: 3)
                             widgetSetupContent
+                            Spacer(minLength: 50)
+                        }
+                        .padding()
+                    }
+
+                case .alwaysAllowedInfo:
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            progressSection(step: 4)
+                            alwaysAllowedInfoContent
                             Spacer(minLength: 50)
                         }
                         .padding()
@@ -173,7 +180,7 @@ struct SetupFlowView: View {
             setupCoordinator: setupCoordinator,
             onComplete: {
                 await setupCoordinator.completeSetupStep(.screenTimeAuthorization)
-                currentPage = .alwaysAllowedInfo
+                currentPage = .intentionQuote
             }
         )
     }
@@ -181,12 +188,16 @@ struct SetupFlowView: View {
     private var alwaysAllowedInfoContent: some View {
         AlwaysAllowedInfoStepView(
             onContinue: {
-                currentPage = .intentionQuote
+                onComplete()
             }
         )
     }
 
     @FocusState private var isIntentionFieldFocused: Bool
+
+    private var isIntentionQuoteValid: Bool {
+        intentionQuoteText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 5
+    }
 
     private var intentionQuoteContent: some View {
         VStack(spacing: 24) {
@@ -223,9 +234,7 @@ struct SetupFlowView: View {
 
             Button(action: {
                 let trimmed = intentionQuoteText.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty {
-                    onIntentionQuoteSet?(trimmed)
-                }
+                onIntentionQuoteSet?(trimmed)
                 Task {
                     await setupCoordinator.completeSetupStep(.intentionQuote)
                 }
@@ -236,12 +245,13 @@ struct SetupFlowView: View {
                         .font(.headline)
                     Image(systemName: "arrow.right")
                 }
-                .foregroundColor(.white)
+                .foregroundColor(isIntentionQuoteValid ? .white : AppConstants.Colors.textSecondary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(AppConstants.Colors.buttonPrimary)
+                .background(isIntentionQuoteValid ? AppConstants.Colors.buttonPrimary : AppConstants.Colors.buttonPrimary.opacity(0.3))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+            .disabled(!isIntentionQuoteValid)
             .padding(.horizontal)
             .padding(.top, 8)
 
@@ -307,19 +317,30 @@ struct SetupFlowView: View {
             .background(Color(.systemGray6))
             .cornerRadius(12)
 
-            Button("Start Using Intent") {
-                onComplete()
+            Button(action: {
+                currentPage = .alwaysAllowedInfo
+            }) {
+                HStack {
+                    Text("Continue")
+                        .font(.headline)
+                    Image(systemName: "arrow.right")
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(AppConstants.Colors.buttonPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .buttonStyle(.bordered)
-            .foregroundColor(AppConstants.Colors.text)
-            .controlSize(.large)
+            .padding(.horizontal)
+            .padding(.top, 8)
 
             Text("You can add the widget later from your device settings")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
+
+            Spacer(minLength: 40)
         }
-        .padding()
     }
 
 

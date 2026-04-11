@@ -69,9 +69,9 @@ struct SetupLandingView: View {
                 )
 
                 setupStep(
-                    icon: "checkmark.shield.fill",
-                    title: "Essential Apps",
-                    description: "Learn about configuring apps that stay accessible",
+                    icon: "quote.opening",
+                    title: "Set Your Intention",
+                    description: "Write a personal reminder for why you want to block apps",
                     stepNumber: 2
                 )
 
@@ -80,6 +80,13 @@ struct SetupLandingView: View {
                     title: "Widget Setup",
                     description: "Add the Intent widget to see your blocking status at a glance",
                     stepNumber: 3
+                )
+
+                setupStep(
+                    icon: "checkmark.shield.fill",
+                    title: "Essential Apps",
+                    description: "Learn about configuring apps that stay accessible",
+                    stepNumber: 4
                 )
             }
         }
@@ -131,13 +138,18 @@ struct SetupLandingView: View {
     
     private var getStartedButton: some View {
         VStack(spacing: 12) {
-            Button("Get Started") {
-                onGetStarted()
+            Button(action: { onGetStarted() }) {
+                HStack {
+                    Text("Get Started")
+                        .font(.headline)
+                    Image(systemName: "arrow.right")
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(AppConstants.Colors.buttonPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .buttonStyle(.bordered)
-            .foregroundColor(AppConstants.Colors.text)
-            .controlSize(.large)
-            .font(.headline)
 
             Text("This setup takes about 2 minutes")
                 .font(.caption)
