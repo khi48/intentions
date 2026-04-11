@@ -35,7 +35,10 @@ struct ContentView: View {
     
     var body: some View {
         Group {
-            if viewModel.showingSetupFlow {
+            if !viewModel.hasInitialized {
+                Color(AppConstants.Colors.background)
+                    .ignoresSafeArea()
+            } else if viewModel.showingSetupFlow {
                 SetupFlowView(
                     setupCoordinator: viewModel.setupCoordinator,
                     onIntentionQuoteSet: { quote in

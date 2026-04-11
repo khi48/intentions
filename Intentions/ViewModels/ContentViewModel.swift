@@ -38,6 +38,9 @@ final class ContentViewModel: Sendable {
     /// Current schedule settings
     private var scheduleSettings: ScheduleSettings = ScheduleSettings()
     
+    /// Whether initial app loading has completed
+    var hasInitialized: Bool = false
+
     /// Whether we're showing the unified setup flow
     var showingSetupFlow: Bool = false
 
@@ -121,6 +124,7 @@ final class ContentViewModel: Sendable {
             await loadActiveSession()
             await checkSetupRequired()
         }
+        hasInitialized = true
     }
     
     /// Load schedule settings from persistence
