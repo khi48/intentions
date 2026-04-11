@@ -397,17 +397,8 @@ struct QuickActionEditorSheet: View {
     // MARK: - Actions
 
     private func updateSelectedItems(from selection: FamilyActivitySelection) {
-        // Convert new selections to tokens
-        let newApps = Set(selection.applications.compactMap { $0.token })
-        let newWebDomains = Set(selection.webDomains.compactMap { $0.token })
-
-        // Only add items that aren't already selected (additive behavior)
-        let appsToAdd = newApps.subtracting(selectedApps)
-        let webDomainsToAdd = newWebDomains.subtracting(selectedWebDomains)
-
-        // Add new items to existing selections
-        selectedApps.formUnion(appsToAdd)
-        selectedWebDomains.formUnion(webDomainsToAdd)
+        selectedApps = Set(selection.applications.compactMap { $0.token })
+        selectedWebDomains = Set(selection.webDomains.compactMap { $0.token })
     }
 
     private func removeApp(_ token: ApplicationToken) {
