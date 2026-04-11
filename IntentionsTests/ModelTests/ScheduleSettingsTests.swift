@@ -177,12 +177,85 @@ final class ScheduleSettingsTests: XCTestCase {
         let settings = ScheduleSettings()
         let pacificTimeZone = TimeZone(identifier: "America/Los_Angeles")!
         settings.timeZone = pacificTimeZone
-        
+
         // When - Encode and decode
         let data = try JSONEncoder().encode(settings)
         let decoded = try JSONDecoder().decode(ScheduleSettings.self, from: data)
-        
+
         // Then
         XCTAssertEqual(decoded.timeZone.identifier, pacificTimeZone.identifier)
+    }
+
+    // MARK: - Streak Tests
+
+    func testStreakDaysWhenNeverDisabled() {
+        let settings = ScheduleSettings()
+        settings.lastDisabledAt = nil
+        XCTAssertNil(settings.streakDays)
+    }
+
+    func testStreakDaysWhenDisabledToday() {
+        let settings = ScheduleSettings()
+        settings.lastDisabledAt = Date()
+        XCTAssertEqual(settings.streakDays, 0)
+    }
+
+    func testStreakDaysWhenDisabledDaysAgo() {
+        let settings = ScheduleSettings()
+        let threeDaysAgo = Calendar.current.date(byAdding: .day, value: -3, to: Date())!
+        settings.lastDisabledAt = threeDaysAgo
+        XCTAssertEqual(settings.streakDays, 3)
+    }
+
+    // MARK: - Time Stats Tests
+
+    func testProtectedMinutesTodayBeforeSchedule() {
+        let settings = ScheduleSettings()
+        settings.activeHours = 22...23 // Late night schedule
+
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: Date())
+
+        if hour < 22 {
+            XCTAssertEqual(settings.protectedMinutesToday, 0)
+        }
+    }
+
+    func testRemainingProtectedMinutesAfterSchedule() {
+        let settings = ScheduleSettings()
+        settings.activeHours = 0...1 // Early morning schedule
+
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: Date())
+
+        if hour >= 1 {
+            XCTAssertEqual(settings.remainingProtectedMinutesToday, 0)
+        }
+    }
+
+    // MARK: - Codable Tests for New Fields
+
+    func testCodableWithNewFields() throws {
+        let settings = ScheduleSettings()
+        settings.lastDisabledAt = Date(timeIntervalSince1970: 1700000000)
+        settings.intentionQuote = "Be more present"
+
+        let data = try JSONEncoder().encode(settings)
+        let decoded = try JSONDecoder().decode(ScheduleSettings.self, from: data)
+
+        XCTAssertEqual(decoded.lastDisabledAt, settings.lastDisabledAt)
+        XCTAssertEqual(decoded.intentionQuote, "Be more present")
+    }
+
+    func testCodableBackwardsCompatibility() throws {
+        let settings = ScheduleSettings()
+        settings.lastDisabledAt = nil
+        settings.intentionQuote = nil
+
+        let data = try JSONEncoder().encode(settings)
+        let decoded = try JSONDecoder().decode(ScheduleSettings.self, from: data)
+
+        XCTAssertNil(decoded.lastDisabledAt)
+        XCTAssertNil(decoded.intentionQuote)
     }
 }
