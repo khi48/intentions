@@ -63,8 +63,11 @@ final class SetupCoordinator: Sendable {
 
         let actualState: SetupState
         if let savedState = savedState {
-            // Update saved state to reflect current system reality
-            if savedState.screenTimeAuthorized != screenTimeAuth {
+            // Update saved state to reflect current system reality, but don't downgrade
+            // auth status to false when the system reports .notDetermined on cold launch
+            let shouldUpdateAuth = savedState.screenTimeAuthorized != screenTimeAuth
+                && !(savedState.screenTimeAuthorized && authStatus == .notDetermined)
+            if shouldUpdateAuth {
                 actualState = savedState.withScreenTimeAuthorized(screenTimeAuth)
                 await stateManager.saveSetupState(actualState)
             } else {

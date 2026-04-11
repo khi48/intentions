@@ -457,15 +457,16 @@ final class ContentViewModel: Sendable {
         // Validate setup state using the coordinator (pass cached auth status to avoid redundant check)
         await setupCoordinator.validateSetupRequirements(cachedAuthStatus: authorizationStatus)
 
-        // Use the coordinator's shouldShowSetup property which handles all the logic
-        let needsSetup = setupCoordinator.shouldShowSetup && activeSession == nil
+        // Only show setup flow when setup is genuinely incomplete (not just version-outdated),
+        // and there's no active session
+        let setupState = setupCoordinator.setupState
+        let needsSetup = setupState?.isSetupSufficient != true && activeSession == nil
 
         if needsSetup {
             showingSetupFlow = true
         } else {
             // Setup is complete - initialize ScreenTimeService if needed
             await initializeScreenTimeServiceAfterSetup()
-
         }
     }
     
