@@ -128,7 +128,10 @@ final class ContentViewModel: Sendable {
                 await NotificationService.shared.checkAuthorizationStatus()
                 let notificationStatus = NotificationService.shared.authorizationStatus
                 if notificationStatus == .notDetermined {
-                    _ = await NotificationService.shared.requestPermissions()
+                    let granted = await NotificationService.shared.requestPermissions()
+                    if !granted {
+                        self.logger.info("User declined notification permissions")
+                    }
                 }
             }
 
