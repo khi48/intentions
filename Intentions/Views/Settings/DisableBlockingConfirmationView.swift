@@ -73,16 +73,21 @@ struct DisableBlockingConfirmationView: View {
         VStack(spacing: 0) {
             // Stats row: streak left, time stats right
             HStack(alignment: .top) {
-                if let streak = streakDays {
-                    VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 2) {
+                    if let streak = streakDays {
                         Text("\(streak) days")
                             .font(.title2)
                             .fontWeight(.semibold)
                             .foregroundColor(AppConstants.Colors.text)
-                        Text("streak")
-                            .font(.caption)
-                            .foregroundColor(AppConstants.Colors.textSecondary)
+                    } else {
+                        Text("New")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AppConstants.Colors.text)
                     }
+                    Text("streak")
+                        .font(.caption)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
@@ -199,9 +204,6 @@ struct DisableBlockingConfirmationView: View {
     }
 
     private var buttonLabel: String {
-        if !isCountdownActive {
-            return "Disable"
-        }
         let seconds = Int(ceil(max(0, countdownSecondsRemaining)))
         if seconds > 0 {
             return "Disable · \(seconds)s"
