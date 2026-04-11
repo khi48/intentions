@@ -148,6 +148,7 @@ private struct QuickActionsSection: View {
                                 quickActionsViewModel: quickActionsViewModel,
                                 current: $draggingQuickAction
                             ))
+                            .accessibilityHint("Long press to reorder")
                         }
                     }
                     .animation(.default, value: quickActionsViewModel.quickActions)
@@ -264,6 +265,8 @@ private struct QuickActionsSection: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Create a quick action")
+            .accessibilityHint("Double tap to open the quick action editor")
         }
         .padding(.horizontal)
         .onAppear {
@@ -357,6 +360,7 @@ private struct QuickActionCard: View {
                 Image(systemName: icon)
                     .font(.system(size: 32))
                     .foregroundStyle(AppConstants.Colors.text)
+                    .accessibilityHidden(true)
 
                 VStack(spacing: 4) {
                     Text(title)
@@ -378,6 +382,9 @@ private struct QuickActionCard: View {
         .disabled(!isReady)
         .opacity(isReady ? 1.0 : 0.6)
         .animation(.easeInOut(duration: 0.3), value: isReady)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), \(subtitle)")
+        .accessibilityHint(isReady ? "Double tap to start session" : "Screen Time not ready")
         .contextMenu {
             Button(action: onEdit) {
                 Label("Edit", systemImage: "pencil")

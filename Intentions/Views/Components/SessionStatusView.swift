@@ -102,6 +102,8 @@ struct SessionStatusView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Time remaining: \(viewModel.formattedRemainingTime)")
     }
     
     // MARK: - Progress Bar
@@ -111,14 +113,14 @@ struct SessionStatusView: View {
             ProgressView(value: viewModel.progress)
                 .progressViewStyle(LinearProgressViewStyle(tint: AppConstants.Colors.textSecondary))
                 .scaleEffect(y: 3)
-            
+
             HStack {
                 Text("\(Int(viewModel.progress * 100))% complete")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                
+
                 Spacer()
-                
+
                 if viewModel.progress > 0.8 {
                     Text("Almost done!")
                         .font(.caption)
@@ -126,6 +128,8 @@ struct SessionStatusView: View {
                 }
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(Int(viewModel.progress * 100)) percent complete")
     }
     
     // MARK: - Action Buttons
@@ -150,6 +154,8 @@ struct SessionStatusView: View {
         .buttonStyle(.bordered)
         .foregroundColor(.gray)
         .disabled(viewModel.isLoading)
+        .accessibilityLabel("End current session")
+        .accessibilityHint("Double tap to end your focused session and re-block apps")
     }
 }
 
