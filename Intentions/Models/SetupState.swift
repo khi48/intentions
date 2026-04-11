@@ -15,6 +15,9 @@ struct SetupState: Codable, Sendable {
     /// Whether Screen Time authorization has been granted
     let screenTimeAuthorized: Bool
 
+    /// Whether the user has completed the intention quote step
+    let intentionQuoteCompleted: Bool
+
     // MARK: - Metadata
 
     /// Version of setup requirements (for future migrations)
@@ -28,27 +31,40 @@ struct SetupState: Codable, Sendable {
 
     // MARK: - Current Setup Version
 
-    static let currentSetupVersion = 1
+    static let currentSetupVersion = 2
 
     // MARK: - Initialization
 
     init(
         screenTimeAuthorized: Bool = false,
+        intentionQuoteCompleted: Bool = false,
         setupVersion: Int = currentSetupVersion,
         completedDate: Date = Date(),
         lastValidatedDate: Date = Date()
     ) {
         self.screenTimeAuthorized = screenTimeAuthorized
+        self.intentionQuoteCompleted = intentionQuoteCompleted
         self.setupVersion = setupVersion
         self.completedDate = completedDate
         self.lastValidatedDate = lastValidatedDate
+    }
+
+    // MARK: - Codable (backwards compatibility)
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        screenTimeAuthorized = try container.decode(Bool.self, forKey: .screenTimeAuthorized)
+        intentionQuoteCompleted = try container.decodeIfPresent(Bool.self, forKey: .intentionQuoteCompleted) ?? false
+        setupVersion = try container.decode(Int.self, forKey: .setupVersion)
+        completedDate = try container.decode(Date.self, forKey: .completedDate)
+        lastValidatedDate = try container.decode(Date.self, forKey: .lastValidatedDate)
     }
 
     // MARK: - Validation
 
     /// Whether setup is sufficient to run the app
     var isSetupSufficient: Bool {
-        screenTimeAuthorized
+        screenTimeAuthorized && intentionQuoteCompleted
     }
 
     /// Whether setup state is current (not outdated)
@@ -66,6 +82,17 @@ struct SetupState: Codable, Sendable {
     func withScreenTimeAuthorized(_ authorized: Bool) -> SetupState {
         SetupState(
             screenTimeAuthorized: authorized,
+            intentionQuoteCompleted: intentionQuoteCompleted,
+            setupVersion: setupVersion,
+            completedDate: completedDate,
+            lastValidatedDate: Date()
+        )
+    }
+
+    func withIntentionQuoteCompleted(_ completed: Bool) -> SetupState {
+        SetupState(
+            screenTimeAuthorized: screenTimeAuthorized,
+            intentionQuoteCompleted: completed,
             setupVersion: setupVersion,
             completedDate: completedDate,
             lastValidatedDate: Date()
@@ -75,6 +102,7 @@ struct SetupState: Codable, Sendable {
     func withUpdatedValidation() -> SetupState {
         SetupState(
             screenTimeAuthorized: screenTimeAuthorized,
+            intentionQuoteCompleted: intentionQuoteCompleted,
             setupVersion: setupVersion,
             completedDate: completedDate,
             lastValidatedDate: Date()
@@ -87,6 +115,7 @@ struct SetupState: Codable, Sendable {
 enum SetupStep: String, CaseIterable, Sendable {
     case landing = "landing"
     case screenTimeAuthorization = "screen_time_auth"
+    case intentionQuote = "intention_quote"
 
     var displayName: String {
         switch self {
@@ -94,6 +123,8 @@ enum SetupStep: String, CaseIterable, Sendable {
             return "Getting Started"
         case .screenTimeAuthorization:
             return "Screen Time Permission"
+        case .intentionQuote:
+            return "Set Your Intention"
         }
     }
 
@@ -101,7 +132,7 @@ enum SetupStep: String, CaseIterable, Sendable {
         switch self {
         case .landing:
             return false
-        case .screenTimeAuthorization:
+        case .screenTimeAuthorization, .intentionQuote:
             return true
         }
     }

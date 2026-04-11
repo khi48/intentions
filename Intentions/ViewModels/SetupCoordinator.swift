@@ -85,7 +85,7 @@ final class SetupCoordinator: Sendable {
 
     func resetSetupStateForRerun() {
         if setupState != nil {
-            setupState = SetupState(screenTimeAuthorized: false)
+            setupState = SetupState(screenTimeAuthorized: false, intentionQuoteCompleted: false)
             shouldShowSetup = true
         }
     }
@@ -100,6 +100,8 @@ final class SetupCoordinator: Sendable {
         case .screenTimeAuthorization:
             let authorized = await screenTimeService.authorizationStatus() == .approved
             updatedState = currentState.withScreenTimeAuthorized(authorized)
+        case .intentionQuote:
+            updatedState = currentState.withIntentionQuoteCompleted(true)
         }
 
         setupState = updatedState
@@ -134,6 +136,9 @@ final class SetupCoordinator: Sendable {
         if !state.screenTimeAuthorized {
             pending.append(.screenTimeAuthorization)
         }
+        if !state.intentionQuoteCompleted {
+            pending.append(.intentionQuote)
+        }
         return pending
     }
 
@@ -142,6 +147,9 @@ final class SetupCoordinator: Sendable {
         var completed: [SetupStep] = []
         if state.screenTimeAuthorized {
             completed.append(.screenTimeAuthorization)
+        }
+        if state.intentionQuoteCompleted {
+            completed.append(.intentionQuote)
         }
         return completed
     }

@@ -226,6 +226,9 @@ struct SetupFlowView: View {
                 if !trimmed.isEmpty {
                     onIntentionQuoteSet?(trimmed)
                 }
+                Task {
+                    await setupCoordinator.completeSetupStep(.intentionQuote)
+                }
                 currentPage = .widgetSetup
             }) {
                 HStack {
