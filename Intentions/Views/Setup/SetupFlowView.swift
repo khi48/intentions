@@ -13,6 +13,7 @@ enum SetupPage {
     case landing
     case screenTimePermission
     case alwaysAllowedInfo
+    case intentionQuote
     case widgetSetup
 }
 
@@ -21,8 +22,10 @@ struct SetupFlowView: View {
 
     @State private var currentPage: SetupPage = .landing
     @State private var setupCoordinator: SetupCoordinator
+    @State private var intentionQuoteText: String = ""
 
     let onComplete: () -> Void
+    let onIntentionQuoteSet: ((String) -> Void)?
     let embedInNavigationView: Bool
     let forceSetup: Bool
 
@@ -30,11 +33,13 @@ struct SetupFlowView: View {
 
     init(
         setupCoordinator: SetupCoordinator,
+        onIntentionQuoteSet: ((String) -> Void)? = nil,
         onComplete: @escaping () -> Void
     ) {
         self._setupCoordinator = State(initialValue: setupCoordinator)
         self.embedInNavigationView = true
         self.forceSetup = false
+        self.onIntentionQuoteSet = onIntentionQuoteSet
         self.onComplete = onComplete
     }
 
@@ -42,11 +47,13 @@ struct SetupFlowView: View {
         setupCoordinator: SetupCoordinator,
         embedInNavigationView: Bool = true,
         forceSetup: Bool = false,
+        onIntentionQuoteSet: ((String) -> Void)? = nil,
         onComplete: @escaping () -> Void
     ) {
         self._setupCoordinator = State(initialValue: setupCoordinator)
         self.embedInNavigationView = embedInNavigationView
         self.forceSetup = forceSetup
+        self.onIntentionQuoteSet = onIntentionQuoteSet
         self.onComplete = onComplete
     }
 
@@ -95,10 +102,20 @@ struct SetupFlowView: View {
                 case .alwaysAllowedInfo:
                     alwaysAllowedInfoContent
 
-                case .widgetSetup:
+                case .intentionQuote:
                     ScrollView {
                         VStack(spacing: 24) {
                             progressSection(step: 2)
+                            intentionQuoteContent
+                            Spacer(minLength: 50)
+                        }
+                        .padding()
+                    }
+
+                case .widgetSetup:
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            progressSection(step: 3)
                             widgetSetupContent
                             Spacer(minLength: 50)
                         }
@@ -119,46 +136,25 @@ struct SetupFlowView: View {
     private func progressSection(step: Int) -> some View {
         VStack(spacing: 12) {
             HStack(spacing: 6) {
-                // Step 1: Screen Time
-                Circle()
-                    .fill(step >= 1 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
-                    .frame(width: 10, height: 10)
-                    .overlay(
-                        Circle()
-                            .stroke(AppConstants.Colors.text, lineWidth: step == 1 ? 2 : 0)
-                    )
-
-                Rectangle()
-                    .fill(step >= 2 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
-                    .frame(height: 2)
-                    .frame(maxWidth: 20)
-
-                // Step 2: Always Allowed Info
-                Circle()
-                    .fill(step >= 2 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
-                    .frame(width: 10, height: 10)
-                    .overlay(
-                        Circle()
-                            .stroke(AppConstants.Colors.text, lineWidth: step == 2 ? 2 : 0)
-                    )
-
-                Rectangle()
-                    .fill(step >= 3 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
-                    .frame(height: 2)
-                    .frame(maxWidth: 20)
-
-                // Step 3: Widget Setup
-                Circle()
-                    .fill(step >= 3 ? AppConstants.Colors.text : Color.gray.opacity(0.3))
-                    .frame(width: 10, height: 10)
-                    .overlay(
-                        Circle()
-                            .stroke(AppConstants.Colors.text, lineWidth: step == 3 ? 2 : 0)
-                    )
+                ForEach(1...4, id: \.self) { i in
+                    Circle()
+                        .fill(step >= i ? AppConstants.Colors.text : Color.gray.opacity(0.3))
+                        .frame(width: 10, height: 10)
+                        .overlay(
+                            Circle()
+                                .stroke(AppConstants.Colors.text, lineWidth: step == i ? 2 : 0)
+                        )
+                    if i < 4 {
+                        Rectangle()
+                            .fill(step > i ? AppConstants.Colors.text : Color.gray.opacity(0.3))
+                            .frame(height: 2)
+                            .frame(maxWidth: 20)
+                    }
+                }
             }
             .padding(.horizontal)
 
-            Text("Step \(step) of 3")
+            Text("Step \(step) of 4")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -185,9 +181,64 @@ struct SetupFlowView: View {
     private var alwaysAllowedInfoContent: some View {
         AlwaysAllowedInfoStepView(
             onContinue: {
-                currentPage = .widgetSetup
+                currentPage = .intentionQuote
             }
         )
+    }
+
+    @FocusState private var isIntentionFieldFocused: Bool
+
+    private var intentionQuoteContent: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(AppConstants.Colors.surface)
+                        .frame(width: 80, height: 80)
+
+                    Image(systemName: "quote.opening")
+                        .font(.system(size: 40))
+                        .foregroundColor(AppConstants.Colors.text)
+                }
+
+                Text("Set Your Intention")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+
+                Text("Why are you setting up app blocking? Write a short reminder to yourself — it'll be shown if you ever try to disable protection.")
+                    .font(.body)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+            }
+
+            TextField("e.g. I want to be more present with my family", text: $intentionQuoteText, axis: .vertical)
+                .lineLimit(2...4)
+                .font(.body)
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+                .focused($isIntentionFieldFocused)
+                .textInputAutocapitalization(.sentences)
+
+            Button("Continue") {
+                let trimmed = intentionQuoteText.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    onIntentionQuoteSet?(trimmed)
+                }
+                currentPage = .widgetSetup
+            }
+            .buttonStyle(.bordered)
+            .foregroundColor(AppConstants.Colors.text)
+            .controlSize(.large)
+
+            Button("Skip") {
+                currentPage = .widgetSetup
+            }
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+        .padding()
     }
 
     private var widgetSetupContent: some View {

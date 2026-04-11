@@ -465,6 +465,14 @@ final class ContentViewModel: Sendable {
         }
     }
     
+    /// Save the user's intention quote from the setup flow
+    func setIntentionQuote(_ quote: String) {
+        scheduleSettings.intentionQuote = quote
+        Task {
+            try? await dataService.saveScheduleSettings(scheduleSettings)
+        }
+    }
+
     /// Handle completion of the unified setup flow
     func completeSetupFlow() {
         showingSetupFlow = false

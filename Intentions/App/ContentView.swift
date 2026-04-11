@@ -37,7 +37,10 @@ struct ContentView: View {
         Group {
             if viewModel.showingSetupFlow {
                 SetupFlowView(
-                    setupCoordinator: viewModel.setupCoordinator
+                    setupCoordinator: viewModel.setupCoordinator,
+                    onIntentionQuoteSet: { quote in
+                        viewModel.setIntentionQuote(quote)
+                    }
                 ) {
                     viewModel.completeSetupFlow()
                 }
