@@ -1,0 +1,120 @@
+<h2>Disable Blocking — Alternative Designs</h2>
+<p class="subtitle">3 different approaches for the confirmation screen. Click to select your favorite.</p>
+
+<div class="cards">
+
+  <!-- Option A: Current Design (baseline) -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:20px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:320px; margin:0 auto;">
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:18px; font-weight:600; margin-bottom:4px;">Disable app blocking?</div>
+          <div style="font-size:13px; color:#999;">Take a moment to reflect on why you need full access.</div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:10px; color:#999; letter-spacing:1px; margin-bottom:6px;">REASON</div>
+          <div style="border-bottom:1px solid #333; padding:10px 0; color:#666; font-size:14px;">Why do you need to disable blocking?</div>
+          <div style="font-size:11px; color:#666; margin-top:4px;">0/15 min</div>
+        </div>
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="width:80px; height:80px; border-radius:50%; border:3px solid #333; margin:0 auto; display:flex; align-items:center; justify-content:center;">
+            <span style="font-size:20px; font-weight:bold;">10s</span>
+          </div>
+        </div>
+        <div style="background:#333; border-radius:10px; padding:14px; text-align:center; color:#666; font-size:15px; font-weight:600;">Confirm Disable</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Current Design</h3>
+      <p>Text reason + circular countdown timer. All on one screen. Simple but can feel like "just waiting it out."</p>
+    </div>
+  </div>
+
+  <!-- Option B: Slide to Confirm -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:20px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:320px; margin:0 auto;">
+        <div style="text-align:center; margin-bottom:20px;">
+          <div style="font-size:40px; margin-bottom:8px;">🔓</div>
+          <div style="font-size:18px; font-weight:600; margin-bottom:4px;">Remove Protection</div>
+          <div style="font-size:13px; color:#999; line-height:1.4;">All apps will become accessible.<br>Blocking resumes at the next protected period.</div>
+        </div>
+        <div style="margin-bottom:20px;">
+          <div style="font-size:10px; color:#999; letter-spacing:1px; margin-bottom:6px;">WHY ARE YOU DISABLING?</div>
+          <div style="border-bottom:1px solid #333; padding:10px 0; color:#666; font-size:14px;">I need to...</div>
+        </div>
+        <div style="background:#1a1a1a; border-radius:50px; padding:6px; position:relative; height:52px; margin-bottom:12px;">
+          <div style="background:#fff; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+            <span style="color:#000; font-size:16px;">→</span>
+          </div>
+          <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#555; font-size:14px; font-weight:500;">Slide to disable</div>
+        </div>
+        <div style="text-align:center; font-size:11px; color:#555;">This action is logged</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Slide to Confirm</h3>
+      <p>Replaces countdown with a deliberate slide gesture (like iPhone power-off). Feels more intentional — you actively do something rather than passively wait.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Stepped Reflection -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:20px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:320px; margin:0 auto;">
+        <div style="display:flex; gap:4px; margin-bottom:20px;">
+          <div style="flex:1; height:3px; background:#fff; border-radius:2px;"></div>
+          <div style="flex:1; height:3px; background:#fff; border-radius:2px;"></div>
+          <div style="flex:1; height:3px; background:#333; border-radius:2px;"></div>
+        </div>
+        <div style="text-align:center; margin-bottom:20px;">
+          <div style="font-size:13px; color:#999; margin-bottom:8px;">STEP 2 OF 3</div>
+          <div style="font-size:18px; font-weight:600; margin-bottom:4px;">What do you need?</div>
+          <div style="font-size:13px; color:#999;">Write what you're planning to do with unrestricted access.</div>
+        </div>
+        <div style="background:#1a1a1a; border-radius:12px; padding:16px; min-height:80px; margin-bottom:20px;">
+          <div style="color:#666; font-size:14px;">I need to check my banking app and respond to work emails...</div>
+        </div>
+        <div style="display:flex; gap:12px;">
+          <div style="flex:1; border:1px solid #333; border-radius:10px; padding:14px; text-align:center; color:#999; font-size:15px;">Back</div>
+          <div style="flex:1; background:#fff; border-radius:10px; padding:14px; text-align:center; color:#000; font-size:15px; font-weight:600;">Next</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Stepped Reflection</h3>
+      <p>3-step flow: (1) acknowledge you're disabling protection, (2) write your reason, (3) confirm with countdown. Each step is its own screen. More friction but more deliberate.</p>
+    </div>
+  </div>
+
+  <!-- Option D: Breathe + Confirm -->
+  <div class="card" data-choice="d" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:20px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:320px; margin:0 auto;">
+        <div style="text-align:center; margin-bottom:20px;">
+          <div style="font-size:18px; font-weight:600; margin-bottom:4px;">Pause and reflect</div>
+          <div style="font-size:13px; color:#999;">Before disabling, take a breath.</div>
+        </div>
+        <div style="text-align:center; margin-bottom:24px;">
+          <div style="width:120px; height:120px; border-radius:50%; border:2px solid #333; margin:0 auto; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);">
+            <div style="text-align:center;">
+              <div style="font-size:24px; font-weight:300; letter-spacing:2px;">Breathe</div>
+              <div style="font-size:11px; color:#666; margin-top:4px;">inhale... hold... exhale</div>
+            </div>
+          </div>
+        </div>
+        <div style="background:#1a1a1a; border-radius:12px; padding:14px; margin-bottom:16px;">
+          <div style="font-size:10px; color:#999; letter-spacing:1px; margin-bottom:6px;">WHAT DO YOU NEED ACCESS FOR?</div>
+          <div style="color:#666; font-size:14px;">Type your reason...</div>
+        </div>
+        <div style="background:#333; border-radius:10px; padding:14px; text-align:center; color:#666; font-size:15px; font-weight:600;">Disable Blocking</div>
+        <div style="text-align:center; margin-top:8px; font-size:11px; color:#555;">Available after breathing exercise</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>D — Breathing Pause</h3>
+      <p>Replaces the countdown with an animated breathing exercise (pulsing circle). Reframes the wait as mindfulness rather than a penalty. The button unlocks after one full breath cycle (~12s).</p>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intent — Editor Proposals v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #f4efe6;
+  --ink-dim: #9a9389;
+  --ink-faint: #5a5348;
+  --ink-ghost: #2f2b25;
+  --bg: #0a0908;
+  --screen: #0e0d0b;
+  --sheet: #141211;
+  --field: #1b1917;
+  --line: #2a2622;
+  --line-soft: #1f1c19;
+  --sys: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif;
+  --serif: 'Fraunces', 'Georgia', serif;
+  --sans: 'Manrope', -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--sans); font-weight: 300;
+  min-height: 100vh; -webkit-font-smoothing: antialiased;
+}
+body {
+  background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(244,239,230,.03), transparent), var(--bg);
+  padding: 5rem 2rem 4rem;
+}
+
+/* ---- page header ---- */
+.page-header {
+  max-width: 1680px; margin: 0 auto 5rem;
+  display: grid; grid-template-columns: 1fr auto;
+  align-items: end; gap: 2rem;
+  padding-bottom: 3rem; border-bottom: 1px solid var(--line);
+}
+.page-header h1 {
+  font-family: var(--serif); font-weight: 300;
+  font-size: clamp(2.6rem,5vw,4.4rem);
+  letter-spacing: -.03em; line-height: .95; font-style: italic;
+}
+.page-header h1 em { font-style: normal; color: var(--ink-dim); }
+.page-header .meta {
+  font-family: var(--mono); font-size: .7rem;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-faint); text-align: right; line-height: 1.8;
+}
+.page-header .meta span { display: block; }
+.page-header .meta strong { color: var(--ink-dim); font-weight: 500; }
+
+/* ---- grid ---- */
+.proposals-grid {
+  max-width: 1680px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 4rem 3rem;
+}
+.proposal { display: flex; flex-direction: column; align-items: center; gap: 2rem; }
+.proposal-label {
+  width: 100%; display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.25rem 1.5rem; align-items: baseline;
+  padding-bottom: 1.5rem; border-bottom: 1px solid var(--line);
+}
+.proposal-label .num {
+  font-family: var(--serif); font-weight: 300;
+  font-size: 3.6rem; line-height: .8; letter-spacing: -.04em;
+  color: var(--ink-dim); grid-row: span 2;
+}
+.proposal-label .name { font-family: var(--serif); font-weight: 300; font-size: 1.6rem; font-style: italic; line-height: 1; }
+.proposal-label .tag { font-family: var(--mono); font-size: .65rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); }
+
+/* ---- iphone ---- */
+.iphone {
+  width: 320px; aspect-ratio: 390/844;
+  background: #050403; border-radius: 48px; padding: 10px;
+  position: relative;
+  box-shadow: 0 0 0 1px rgba(244,239,230,.06), 0 60px 120px -40px rgba(0,0,0,.9), 0 30px 60px -30px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.iphone::before { content:''; position: absolute; right:-2px; top:140px; width:2px; height:60px; background:#1a1816; border-radius:1px; }
+.iphone::after { content:''; position: absolute; left:-2px; top:110px; width:2px; height:100px; background:#1a1816; border-radius:1px; }
+.screen { position: relative; width:100%; height:100%; background: var(--screen); border-radius:39px; overflow:hidden; display:flex; flex-direction:column; }
+.di { position:absolute; top:11px; left:50%; transform:translateX(-50%); width:95px; height:28px; background:#000; border-radius:20px; z-index:10; }
+.dim { position:absolute; inset:0; background: linear-gradient(180deg,#0e0d0b,#0a0908 60%); opacity:.5; }
+.sheet { position:absolute; top:54px; left:0; right:0; bottom:0; background:var(--sheet); border-radius:14px 14px 0 0; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 -20px 40px -20px rgba(0,0,0,.8); }
+.grab { width:36px; height:5px; background:rgba(244,239,230,.15); border-radius:3px; margin:6px auto 0; }
+.snav { display:flex; align-items:center; justify-content:space-between; padding:8px 18px 12px; font-family:var(--sys); font-size:15px; border-bottom:.5px solid var(--line-soft); }
+.snav .c { color:var(--ink); opacity:.85; }
+.snav .t { font-weight:600; font-size:14px; color:var(--ink); }
+.snav .s { color:var(--ink-dim); font-weight:500; }
+.snav .s.a { color:var(--ink); }
+.sbody { flex:1; overflow:hidden; display:flex; flex-direction:column; font-family:var(--sys); min-height:0; }
+
+/* shared components */
+.toggle { width:40px; height:24px; border-radius:13px; background:rgba(244,239,230,.1); padding:2px; display:flex; flex-shrink:0; }
+.toggle .knob { width:20px; height:20px; border-radius:50%; background:var(--ink-dim); }
+.toggle.on { background:var(--ink); } .toggle.on .knob { background:var(--sheet); margin-left:auto; }
+.chev { color:var(--ink-faint); font-size:12px; }
+.pill-row { display:flex; gap:5px; }
+.pill { flex:1; padding:8px 0; border-radius:8px; background:var(--field); font-size:12px; text-align:center; color:var(--ink-dim); border:1px solid transparent; }
+.pill.a { background:rgba(244,239,230,.1); color:var(--ink); border-color:var(--ink-dim); }
+.ilbl { font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); }
+
+/* =====================================================
+   1A — PREVIEW: STICKY MINI CARD
+   Preview card pinned to top, everything scrolls below.
+   Compact rows with inline labels.
+   ===================================================== */
+.p1a .sbody { padding:0; }
+.p1a .preview-dock {
+  display:flex; justify-content:center;
+  padding:16px 14px 12px;
+  border-bottom:.5px solid var(--line-soft);
+  background: linear-gradient(180deg, rgba(244,239,230,.015), transparent);
+}
+.p1a .mini {
+  width:110px; aspect-ratio:1; background:var(--field);
+  border-radius:14px; border:1px solid var(--line);
+  padding:11px; display:flex; flex-direction:column;
+  justify-content:space-between;
+  box-shadow:0 6px 16px -8px rgba(0,0,0,.5);
+}
+.p1a .mini .ic { width:22px; height:22px; border-radius:6px; background:rgba(244,239,230,.08); display:grid; place-items:center; }
+.p1a .mini .ic svg { width:12px; height:12px; stroke:var(--ink); stroke-width:1.5; fill:none; }
+.p1a .mini .nm { font-size:13px; font-weight:600; color:var(--ink); line-height:1.15; }
+.p1a .mini .sb { font-size:9px; color:var(--ink-dim); margin-top:1px; }
+.p1a .form { padding:0 14px; flex:1; overflow:hidden; }
+.p1a .fr { display:flex; align-items:center; gap:10px; padding:13px 0; border-bottom:.5px solid var(--line-soft); }
+.p1a .fr:last-child { border-bottom:0; }
+.p1a .fr .ic-sm { width:30px; height:30px; border-radius:8px; background:var(--field); display:grid; place-items:center; border:1px solid var(--line); flex-shrink:0; }
+.p1a .fr .ic-sm svg { width:14px; height:14px; stroke:var(--ink); stroke-width:1.5; fill:none; }
+.p1a .fr .inp { flex:1; font-family:var(--sys); font-size:15px; color:var(--ink); }
+.p1a .fr .k { font-size:14px; color:var(--ink); flex:1; }
+.p1a .fr .v { font-size:13px; color:var(--ink-dim); display:flex; align-items:center; gap:6px; }
+
+/* =====================================================
+   1B — PREVIEW: INLINE HEADER CARD
+   Card embedded into the nav bar area as a wider banner.
+   Form as tight stacked rows underneath.
+   ===================================================== */
+.p1b .sbody { padding:0; }
+.p1b .banner {
+  margin:10px 14px 0; padding:14px;
+  background:var(--field); border-radius:14px;
+  border:1px solid var(--line);
+  display:flex; gap:14px; align-items:center;
+  position:relative;
+}
+.p1b .banner .ic-lg { width:44px; height:44px; border-radius:10px; background:rgba(244,239,230,.06); display:grid; place-items:center; flex-shrink:0; }
+.p1b .banner .ic-lg svg { width:22px; height:22px; stroke:var(--ink); stroke-width:1.5; fill:none; }
+.p1b .banner .info { flex:1; }
+.p1b .banner .nm { font-size:17px; font-weight:600; color:var(--ink); }
+.p1b .banner .sub { font-size:12px; color:var(--ink-dim); margin-top:2px; }
+.p1b .banner .live-tag {
+  position:absolute; top:-6px; right:14px;
+  font-family:var(--mono); font-size:8px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink-faint);
+  background:var(--sheet); padding:2px 5px;
+}
+.p1b .sections { padding:0 14px; }
+.p1b .sec-label { padding:18px 0 6px; }
+.p1b .row { display:flex; align-items:center; padding:13px 0; border-bottom:.5px solid var(--line-soft); }
+.p1b .row:last-child { border-bottom:0; }
+.p1b .row .k { font-size:14px; color:var(--ink); flex:1; }
+.p1b .row .v { font-size:13px; color:var(--ink-dim); display:flex; align-items:center; gap:6px; }
+
+/* =====================================================
+   1C — PREVIEW: FULL-WIDTH CARD TOP
+   Card takes full width at top like a hero, form below
+   is a grouped-table iOS style.
+   ===================================================== */
+.p1c .sbody { padding:0; }
+.p1c .hero {
+  margin:10px 14px 0; padding:20px 16px;
+  background: linear-gradient(140deg, var(--field), rgba(244,239,230,.02));
+  border-radius:14px; border:1px solid var(--line);
+  display:flex; align-items:flex-end; justify-content:space-between;
+  min-height:100px;
+  box-shadow:0 8px 20px -8px rgba(0,0,0,.5);
+}
+.p1c .hero .left {}
+.p1c .hero .ic-xl { width:38px; height:38px; border-radius:10px; background:rgba(244,239,230,.08); display:grid; place-items:center; margin-bottom:10px; }
+.p1c .hero .ic-xl svg { width:20px; height:20px; stroke:var(--ink); stroke-width:1.5; fill:none; }
+.p1c .hero .nm { font-size:20px; font-weight:600; color:var(--ink); }
+.p1c .hero .sub { font-size:12px; color:var(--ink-dim); margin-top:2px; }
+.p1c .hero .dur-badge {
+  padding:6px 12px; background:rgba(244,239,230,.08);
+  border-radius:8px; border:1px solid var(--line);
+  font-size:14px; font-weight:600; color:var(--ink);
+}
+.p1c .group { margin:12px 14px 0; background:var(--field); border-radius:12px; overflow:hidden; }
+.p1c .gr { display:flex; align-items:center; padding:14px; border-top:.5px solid var(--line); }
+.p1c .gr:first-child { border-top:0; }
+.p1c .gr .k { font-size:14px; color:var(--ink); flex:1; }
+.p1c .gr .v { font-size:13px; color:var(--ink-dim); display:flex; align-items:center; gap:6px; }
+.p1c .gl { padding:6px 14px 0; font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.05em; font-weight:500; }
+
+/* =====================================================
+   4A — BUILDER: CENTRED CARD + BOTTOM TOOLBAR
+   Large centred card with tap-to-edit. All secondary
+   actions in a compact bottom bar.
+   ===================================================== */
+.p4a .sbody { padding:0; display:flex; flex-direction:column; }
+.p4a .tip { font-size:11px; color:var(--ink-faint); text-align:center; padding:14px 20px 4px; }
+.p4a .stage { flex:1; display:flex; justify-content:center; align-items:flex-start; padding:12px 28px; }
+.p4a .card {
+  width:100%; max-width:220px; aspect-ratio:.88;
+  background:var(--field); border-radius:18px;
+  border:1px solid var(--line); padding:16px;
+  display:flex; flex-direction:column; justify-content:space-between;
+  position:relative;
+  box-shadow:0 12px 32px -12px rgba(0,0,0,.6);
+}
+.p4a .card .edit-ic {
+  width:48px; height:48px; border-radius:12px;
+  border:1px dashed var(--ink-dim);
+  background:rgba(244,239,230,.04);
+  display:grid; place-items:center;
+}
+.p4a .card .edit-ic svg { width:22px; height:22px; stroke:var(--ink); stroke-width:1.5; fill:none; }
+.p4a .card .edit-ic .lbl {
+  position:absolute; top:-6px; left:-6px;
+  font-family:var(--mono); font-size:7px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-faint);
+  background:var(--field); padding:1px 4px; border-radius:2px;
+}
+.p4a .card .name-block {}
+.p4a .card .edit-nm {
+  font-size:20px; font-weight:600; color:var(--ink); line-height:1.1;
+  border-bottom:1px dashed var(--ink-faint); padding-bottom:3px;
+  display:inline;
+}
+.p4a .card .edit-dr {
+  font-size:13px; color:var(--ink-dim); margin-top:6px;
+  border-bottom:1px dashed var(--ink-faint); padding-bottom:2px;
+  display:inline-block;
+}
+.p4a .toolbar {
+  border-top:.5px solid var(--line); padding:12px 18px 20px;
+  display:flex; justify-content:space-between; align-items:center;
+  background:var(--sheet);
+}
+.p4a .toolbar .tb-btn {
+  display:flex; align-items:center; gap:8px;
+  font-size:14px; color:var(--ink);
+}
+.p4a .toolbar .tb-btn .chip {
+  width:24px; height:24px; border:1px dashed var(--ink-faint);
+  border-radius:6px; display:grid; place-items:center;
+  color:var(--ink-dim); font-size:14px;
+}
+.p4a .toolbar .tb-btn .chip.filled {
+  border-style:solid; border-color:var(--ink-dim);
+  background:rgba(244,239,230,.06);
+}
+.p4a .toolbar .tb-right { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-dim); }
+
+/* =====================================================
+   4B — BUILDER: STACKED SECTIONS ON THE CARD
+   Card is bigger and has clear labelled "zones"
+   with dividers — like a blueprint.
+   ===================================================== */
+.p4b .sbody { padding:0; display:flex; flex-direction:column; }
+.p4b .stage { flex:1; display:flex; justify-content:center; align-items:flex-start; padding:14px 20px; }
+.p4b .blueprint {
+  width:100%; max-width:250px;
+  background:var(--field); border-radius:18px;
+  border:1px solid var(--line); overflow:hidden;
+  box-shadow:0 12px 32px -12px rgba(0,0,0,.6);
+}
+.p4b .bp-zone {
+  padding:16px; border-bottom:.5px solid var(--line);
+  display:flex; align-items:center; gap:12px;
+  position:relative;
+}
+.p4b .bp-zone:last-child { border-bottom:0; }
+.p4b .bp-zone .zone-label {
+  position:absolute; top:6px; right:12px;
+  font-family:var(--mono); font-size:7px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-faint);
+}
+.p4b .bp-zone .bp-ic {
+  width:44px; height:44px; border-radius:10px;
+  border:1px dashed var(--ink-dim);
+  background:rgba(244,239,230,.04);
+  display:grid; place-items:center; flex-shrink:0;
+}
+.p4b .bp-zone .bp-ic svg { width:20px; height:20px; stroke:var(--ink); stroke-width:1.5; fill:none; }
+.p4b .bp-zone .bp-nm { font-size:18px; font-weight:600; color:var(--ink); line-height:1.15; }
+.p4b .bp-zone .bp-nm.empty { color:var(--ink-faint); font-weight:400; }
+.p4b .bp-zone .bp-dur {
+  padding:8px 14px; background:rgba(244,239,230,.06);
+  border-radius:8px; border:1px solid var(--line);
+  font-size:15px; font-weight:600; color:var(--ink);
+  text-align:center; flex:1;
+}
+.p4b .bp-zone .bp-dur .unit { font-size:10px; font-weight:400; color:var(--ink-dim); display:block; margin-top:1px; }
+.p4b .bp-apps {
+  display:flex; align-items:center; gap:8px;
+  padding:14px 16px; border-bottom:.5px solid var(--line);
+}
+.p4b .bp-apps .dot { width:28px; height:28px; border-radius:7px; background:rgba(244,239,230,.06); border:1px solid var(--line); }
+.p4b .bp-apps .add-dot { border-style:dashed; border-color:var(--ink-faint); display:grid; place-items:center; font-size:14px; color:var(--ink-dim); }
+.p4b .bp-apps .apps-lbl { flex:1; font-size:13px; color:var(--ink-dim); }
+.p4b .bp-web {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; font-size:13px; color:var(--ink-dim);
+}
+
+/* =====================================================
+   4C — BUILDER: INLINE EDIT CARD + DURATION DIAL
+   Card shows a visual dial for the timer,
+   everything else editable by tap.
+   ===================================================== */
+.p4c .sbody { padding:0; display:flex; flex-direction:column; }
+.p4c .stage { flex:1; display:flex; flex-direction:column; align-items:center; padding:10px 20px 0; gap:16px; }
+.p4c .identity-row {
+  display:flex; align-items:center; gap:12px;
+  width:100%; max-width:260px;
+  padding:12px 14px; background:var(--field);
+  border-radius:12px; border:1px solid var(--line);
+}
+.p4c .identity-row .ed-ic {
+  width:40px; height:40px; border-radius:10px;
+  border:1px dashed var(--ink-dim);
+  background:rgba(244,239,230,.04);
+  display:grid; place-items:center; flex-shrink:0;
+}
+.p4c .identity-row .ed-ic svg { width:18px; height:18px; stroke:var(--ink); stroke-width:1.5; fill:none; }
+.p4c .identity-row .ed-nm { flex:1; font-size:17px; font-weight:600; color:var(--ink); }
+.p4c .identity-row .ed-nm.empty { color:var(--ink-faint); font-weight:400; }
+.p4c .dial-area { position:relative; width:180px; height:180px; }
+.p4c .dial-ring {
+  position:absolute; inset:0;
+  border-radius:50%;
+  border:2px solid var(--line);
+}
+.p4c .dial-fill {
+  position:absolute; inset:0;
+  border-radius:50%;
+  border:2px solid var(--ink);
+  clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%, 50% 50%);
+}
+.p4c .dial-center {
+  position:absolute; inset:30px;
+  border-radius:50%;
+  background:var(--field);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  border:1px solid var(--line);
+}
+.p4c .dial-center .d-val { font-size:28px; font-weight:600; color:var(--ink); letter-spacing:-.02em; }
+.p4c .dial-center .d-lbl { font-size:10px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.08em; margin-top:2px; }
+.p4c .dial-ticks {
+  position:absolute; inset:0;
+}
+.p4c .dur-shortcuts {
+  display:flex; gap:6px; width:100%; max-width:260px;
+}
+.p4c .dur-shortcuts .ds { flex:1; padding:8px 0; text-align:center; font-size:12px; color:var(--ink-dim); background:var(--field); border-radius:8px; border:1px solid transparent; }
+.p4c .dur-shortcuts .ds.a { border-color:var(--ink-dim); color:var(--ink); }
+.p4c .bottom {
+  border-top:.5px solid var(--line); padding:12px 18px 20px;
+  display:flex; justify-content:space-between; align-items:center;
+  width:100%; background:var(--sheet); margin-top:auto;
+}
+.p4c .bottom .bl { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink); }
+.p4c .bottom .bl .chip { width:24px; height:24px; border:1px dashed var(--ink-faint); border-radius:6px; display:grid; place-items:center; color:var(--ink-dim); font-size:14px; }
+.p4c .bottom .br { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-dim); }
+.p4c .toggle-sm { width:34px; height:20px; border-radius:12px; background:rgba(244,239,230,.1); padding:2px; display:flex; }
+.p4c .toggle-sm .knob { width:16px; height:16px; border-radius:50%; background:var(--ink-dim); }
+
+/* ---- notes ---- */
+.notes { max-width:340px; font-family:var(--sans); font-size:.78rem; font-weight:300; line-height:1.55; color:var(--ink-dim); text-align:center; padding:0 .5rem; }
+.notes strong { font-weight:500; color:var(--ink); }
+
+@media (max-width:720px) {
+  body { padding:2rem 1rem 3rem; }
+  .page-header { grid-template-columns:1fr; margin-bottom:3rem; }
+  .page-header .meta { text-align:left; }
+  .proposals-grid { gap:3rem 2rem; }
+}
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1><em>Editor v2</em> —<br>preview <em>&</em> builder</h1>
+  <div class="meta">
+    <span><strong>BASE</strong> &nbsp; LIVING PREVIEW × CARD BUILDER</span>
+    <span><strong>VARIANTS</strong> &nbsp; 3 EACH</span>
+    <span><strong>PALETTE</strong> &nbsp; WARM GREYSCALE</span>
+  </div>
+</header>
+
+<div class="proposals-grid">
+
+  <!-- ===== 1A — PREVIEW: STICKY MINI ===== -->
+  <div class="proposal">
+    <div class="proposal-label">
+      <div class="num">1a</div>
+      <div class="name">Sticky Mini</div>
+      <div class="tag">Preview · Pinned mini card</div>
+    </div>
+    <div class="iphone p1a">
+      <div class="screen">
+        <div class="di"></div><div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="snav"><span class="c">Cancel</span><span class="t">New Quick Action</span><span class="s a">Create</span></div>
+          <div class="sbody">
+            <div class="preview-dock">
+              <div class="mini">
+                <div class="ic"><svg viewBox="0 0 20 20"><path d="M10 3v14M3 10h14" stroke-linecap="round"/></svg></div>
+                <div><div class="nm">Deep work</div><div class="sb">1h 30m · 3 apps</div></div>
+              </div>
+            </div>
+            <div class="form">
+              <div class="fr">
+                <div class="ic-sm"><svg viewBox="0 0 20 20"><path d="M10 3v14M3 10h14" stroke-linecap="round"/></svg></div>
+                <span class="inp">Deep work</span>
+                <span class="chev">›</span>
+              </div>
+              <div class="fr"><span class="k">Duration</span><span class="v">1h 30m <span class="chev">›</span></span></div>
+              <div style="padding:10px 0 4px;"><span class="ilbl">Duration</span></div>
+              <div class="pill-row" style="padding-bottom:12px; border-bottom:.5px solid var(--line-soft);">
+                <div class="pill">5m</div><div class="pill">15m</div><div class="pill">30m</div><div class="pill">1h</div><div class="pill a">1.5h</div><div class="pill">2h</div>
+              </div>
+              <div class="fr"><span class="k">Apps</span><span class="v">3 selected <span class="chev">›</span></span></div>
+              <div class="fr"><span class="k">Allow websites</span><div class="toggle"><div class="knob"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="notes">Small card docked at top — always visible as you fill out the form. Icon picker is part of the name row. Duration pills below the label. <strong>Familiar form pattern</strong> with a visual anchor.</p>
+  </div>
+
+  <!-- ===== 1B — PREVIEW: BANNER ===== -->
+  <div class="proposal">
+    <div class="proposal-label">
+      <div class="num">1b</div>
+      <div class="name">Banner Preview</div>
+      <div class="tag">Preview · Horizontal card</div>
+    </div>
+    <div class="iphone p1b">
+      <div class="screen">
+        <div class="di"></div><div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="snav"><span class="c">Cancel</span><span class="t">New Quick Action</span><span class="s a">Create</span></div>
+          <div class="sbody">
+            <div class="banner">
+              <span class="live-tag">PREVIEW</span>
+              <div class="ic-lg"><svg viewBox="0 0 20 20"><path d="M10 3v14M3 10h14" stroke-linecap="round"/></svg></div>
+              <div class="info"><div class="nm">Deep work</div><div class="sub">1h 30m · 3 apps · No web</div></div>
+            </div>
+            <div class="sections">
+              <div class="sec-label ilbl">Identity</div>
+              <div class="row"><span class="k">Name</span><span class="v">Deep work <span class="chev">›</span></span></div>
+              <div class="row"><span class="k">Icon</span><span class="v">bolt.fill <span class="chev">›</span></span></div>
+              <div class="sec-label ilbl">Session</div>
+              <div class="row"><span class="k">Duration</span><span class="v">1h 30m <span class="chev">›</span></span></div>
+              <div class="row"><span class="k">Apps</span><span class="v">3 selected <span class="chev">›</span></span></div>
+              <div class="row"><span class="k">Allow websites</span><div class="toggle"><div class="knob"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="notes">Preview as a wide banner card with icon, name, and summary in one line. Below it, minimal rows grouped by <strong>Identity</strong> and <strong>Session</strong>. Every field is a single tap-to-edit row.</p>
+  </div>
+
+  <!-- ===== 1C — PREVIEW: HERO CARD ===== -->
+  <div class="proposal">
+    <div class="proposal-label">
+      <div class="num">1c</div>
+      <div class="name">Hero Card</div>
+      <div class="tag">Preview · Large top card</div>
+    </div>
+    <div class="iphone p1c">
+      <div class="screen">
+        <div class="di"></div><div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="snav"><span class="c">Cancel</span><span class="t">New Quick Action</span><span class="s a">Create</span></div>
+          <div class="sbody">
+            <div class="hero">
+              <div class="left">
+                <div class="ic-xl"><svg viewBox="0 0 20 20"><path d="M10 3v14M3 10h14" stroke-linecap="round"/></svg></div>
+                <div class="nm">Deep work</div>
+                <div class="sub">3 apps · No websites</div>
+              </div>
+              <div class="dur-badge">1h 30m</div>
+            </div>
+            <div class="gl">Details</div>
+            <div class="group">
+              <div class="gr"><span class="k">Name</span><span class="v">Deep work <span class="chev">›</span></span></div>
+              <div class="gr"><span class="k">Icon</span><span class="v">bolt.fill <span class="chev">›</span></span></div>
+              <div class="gr"><span class="k">Duration</span><span class="v">1h 30m <span class="chev">›</span></span></div>
+            </div>
+            <div class="gl">Access</div>
+            <div class="group">
+              <div class="gr"><span class="k">Apps</span><span class="v">3 selected <span class="chev">›</span></span></div>
+              <div class="gr"><span class="k">Allow websites</span><div class="toggle"><div class="knob"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="notes">Full-width hero card at the top with a gradient, showing icon + name + duration badge. Below, iOS grouped-table rows. <strong>Most visual weight</strong> on the preview, form recedes into familiar system UI.</p>
+  </div>
+
+  <!-- ===== 4A — BUILDER: CENTRED CARD ===== -->
+  <div class="proposal">
+    <div class="proposal-label">
+      <div class="num">4a</div>
+      <div class="name">Centred Card</div>
+      <div class="tag">Builder · Tap to edit</div>
+    </div>
+    <div class="iphone p4a">
+      <div class="screen">
+        <div class="di"></div><div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="snav"><span class="c">Cancel</span><span class="t">New Quick Action</span><span class="s a">Create</span></div>
+          <div class="sbody">
+            <div class="tip">Tap any field on the card to edit</div>
+            <div class="stage">
+              <div class="card">
+                <div class="edit-ic" style="position:relative;">
+                  <span class="lbl">TAP</span>
+                  <svg viewBox="0 0 20 20"><path d="M10 3v14M3 10h14" stroke-linecap="round"/></svg>
+                </div>
+                <div class="name-block">
+                  <span class="edit-nm">Deep work</span>
+                  <div class="edit-dr">1h 30m</div>
+                </div>
+              </div>
+            </div>
+            <div class="toolbar">
+              <div class="tb-btn"><div class="chip filled">3</div><span>Apps</span></div>
+              <div class="tb-right"><span>Web</span><div class="toggle"><div class="knob"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="notes">The card IS the form. Icon, name, and duration are tappable fields on the card itself. Apps and website toggle live in a persistent bottom toolbar. <strong>Direct manipulation</strong> — what you see is what you get.</p>
+  </div>
+
+  <!-- ===== 4B — BUILDER: BLUEPRINT ===== -->
+  <div class="proposal">
+    <div class="proposal-label">
+      <div class="num">4b</div>
+      <div class="name">Blueprint</div>
+      <div class="tag">Builder · Zoned card</div>
+    </div>
+    <div class="iphone p4b">
+      <div class="screen">
+        <div class="di"></div><div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="snav"><span class="c">Cancel</span><span class="t">New Quick Action</span><span class="s a">Create</span></div>
+          <div class="sbody">
+            <div class="stage">
+              <div class="blueprint">
+                <div class="bp-zone">
+                  <span class="zone-label">ICON</span>
+                  <div class="bp-ic"><svg viewBox="0 0 20 20"><path d="M10 3v14M3 10h14" stroke-linecap="round"/></svg></div>
+                  <span class="bp-nm">Deep work</span>
+                </div>
+                <div class="bp-zone">
+                  <span class="zone-label">DURATION</span>
+                  <div class="bp-dur">1h 30m<span class="unit">session length</span></div>
+                </div>
+                <div class="bp-apps">
+                  <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                  <div class="dot add-dot">+</div>
+                  <span class="apps-lbl">3 apps</span>
+                </div>
+                <div class="bp-web">
+                  <span>Allow websites</span>
+                  <div class="toggle"><div class="knob"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="notes">The card is taller and divided into labelled zones — like a blueprint or spec sheet. Each zone is one field. Apps show as dots with a + button. Everything is self-contained in one object. <strong>Best for</strong> making the structure explicit and discoverable.</p>
+  </div>
+
+  <!-- ===== 4C — BUILDER: DIAL ===== -->
+  <div class="proposal">
+    <div class="proposal-label">
+      <div class="num">4c</div>
+      <div class="name">Dial Builder</div>
+      <div class="tag">Builder · Duration dial</div>
+    </div>
+    <div class="iphone p4c">
+      <div class="screen">
+        <div class="di"></div><div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="snav"><span class="c">Cancel</span><span class="t">New Quick Action</span><span class="s a">Create</span></div>
+          <div class="sbody">
+            <div class="stage">
+              <div class="identity-row">
+                <div class="ed-ic"><svg viewBox="0 0 20 20"><path d="M10 3v14M3 10h14" stroke-linecap="round"/></svg></div>
+                <span class="ed-nm">Deep work</span>
+                <span class="chev">›</span>
+              </div>
+              <div class="dial-area">
+                <div class="dial-ring"></div>
+                <div class="dial-fill"></div>
+                <div class="dial-center">
+                  <span class="d-val">1:30</span>
+                  <span class="d-lbl">Hours</span>
+                </div>
+              </div>
+              <div class="dur-shortcuts">
+                <div class="ds">15m</div><div class="ds">30m</div><div class="ds">1h</div><div class="ds a">1.5h</div><div class="ds">2h</div>
+              </div>
+            </div>
+            <div class="bottom">
+              <div class="bl"><div class="chip">+</div><span>3 apps</span></div>
+              <div class="br"><span>Web</span><div class="toggle-sm"><div class="knob"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="notes">Name + icon in a compact top row. Duration is a visual dial that can be dragged — makes the time feel concrete. Shortcut pills below for common presets. Apps and website in the bottom bar. <strong>Best for</strong> making duration feel like the primary decision.</p>
+  </div>
+
+</div>
+
+</body>
+</html>

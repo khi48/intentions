@@ -1,0 +1,137 @@
+<h2>Disable Blocking — E+F Combinations</h2>
+<p class="subtitle">Combining: original intention quote, streak/stats, last disable reason, write + wait. Click to select.</p>
+
+<div class="cards">
+
+  <!-- Option I: Full Mirror -->
+  <div class="card" data-choice="i" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:20px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:320px; margin:0 auto;">
+        <!-- Original intention -->
+        <div style="background:#1a1a1a; border-radius:12px; padding:16px; margin-bottom:14px; border-left:3px solid #444;">
+          <div style="font-size:10px; color:#666; letter-spacing:1px; margin-bottom:6px;">YOUR INTENTION</div>
+          <div style="font-size:14px; color:#ccc; font-style:italic; line-height:1.4;">"I want to stop reaching for my phone out of habit and be more present with my family."</div>
+        </div>
+        <!-- Stats row -->
+        <div style="display:flex; justify-content:space-between; margin-bottom:14px; padding:0 4px;">
+          <div style="text-align:center; flex:1;">
+            <div style="font-size:20px; font-weight:700;">6 days</div>
+            <div style="font-size:10px; color:#666; margin-top:2px;">Streak</div>
+          </div>
+          <div style="width:1px; background:#333;"></div>
+          <div style="text-align:center; flex:1;">
+            <div style="font-size:20px; font-weight:700;">4h 12m</div>
+            <div style="font-size:10px; color:#666; margin-top:2px;">Protected today</div>
+          </div>
+          <div style="width:1px; background:#333;"></div>
+          <div style="text-align:center; flex:1;">
+            <div style="font-size:20px; font-weight:700;">1h 48m</div>
+            <div style="font-size:10px; color:#666; margin-top:2px;">Remaining</div>
+          </div>
+        </div>
+        <!-- Last disable -->
+        <div style="font-size:11px; color:#555; text-align:center; margin-bottom:16px;">
+          Last disabled 6 days ago — <span style="color:#777;">"needed to check flights"</span>
+        </div>
+        <!-- Reason input -->
+        <div style="margin-bottom:14px;">
+          <div style="font-size:10px; color:#999; letter-spacing:1px; margin-bottom:6px;">WHY IS THIS TIME DIFFERENT?</div>
+          <div style="border-bottom:1px solid #333; padding:10px 0; color:#555; font-size:14px;">I need to because...</div>
+          <div style="font-size:11px; color:#444; margin-top:4px;">0/15 min</div>
+        </div>
+        <!-- Countdown + button -->
+        <div style="text-align:center; margin-bottom:10px;">
+          <div style="width:60px; height:60px; border-radius:50%; border:3px solid #333; margin:0 auto; display:flex; align-items:center; justify-content:center;">
+            <span style="font-size:16px; font-weight:bold; color:#555;">10s</span>
+          </div>
+        </div>
+        <div style="background:#333; border-radius:10px; padding:14px; text-align:center; color:#666; font-size:15px;">Disable Anyway</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>I — Full Mirror</h3>
+      <p>Everything top-to-bottom: intention quote → stats → last disable → reason → countdown. Comprehensive but tall — may require scrolling on smaller phones.</p>
+    </div>
+  </div>
+
+  <!-- Option J: Compact Confrontation -->
+  <div class="card" data-choice="j" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:20px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:320px; margin:0 auto;">
+        <!-- Intention + streak combined -->
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:13px; color:#999; margin-bottom:4px;">You've kept your intention for</div>
+          <div style="font-size:36px; font-weight:200; letter-spacing:1px;">6 days</div>
+        </div>
+        <div style="background:#1a1a1a; border-radius:12px; padding:14px; margin-bottom:14px; text-align:center;">
+          <div style="font-size:14px; color:#ccc; font-style:italic; line-height:1.4;">"I want to stop reaching for my phone out of habit and be more present with my family."</div>
+        </div>
+        <!-- Last disable as quiet aside -->
+        <div style="font-size:12px; color:#555; text-align:center; margin-bottom:18px; line-height:1.5;">
+          Last time you disabled, you said:<br><span style="color:#777;">"needed to check flights"</span> · 6 days ago
+        </div>
+        <!-- Divider -->
+        <div style="height:1px; background:#222; margin-bottom:16px;"></div>
+        <!-- Reason input -->
+        <div style="margin-bottom:14px;">
+          <div style="font-size:10px; color:#999; letter-spacing:1px; margin-bottom:6px;">WHY IS THIS TIME DIFFERENT?</div>
+          <div style="background:#1a1a1a; border-radius:10px; padding:14px;">
+            <div style="color:#555; font-size:14px;">Write your reason...</div>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:6px;">
+            <div style="font-size:11px; color:#444;">0/15 min</div>
+            <div style="font-size:11px; color:#444;">⏳ 10s wait after writing</div>
+          </div>
+        </div>
+        <div style="background:#333; border-radius:10px; padding:14px; text-align:center; color:#666; font-size:15px;">Disable Anyway</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>J — Streak as Hero</h3>
+      <p>The streak is the centrepiece — big and prominent. Intention quote sits right below it, connecting "what you committed to" with "how long you've kept it." Last disable reason as a quiet aside. More focused hierarchy, less data overload.</p>
+    </div>
+  </div>
+
+  <!-- Option K: Conversation Style -->
+  <div class="card" data-choice="k" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:20px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:320px; margin:0 auto;">
+        <!-- Flowing narrative -->
+        <div style="line-height:1.8; margin-bottom:18px; font-size:14px;">
+          <span style="color:#999;">You set up protection because</span><br>
+          <span style="color:#ccc; font-style:italic;">"I want to be more present with my family"</span>
+        </div>
+        <div style="line-height:1.8; margin-bottom:18px; font-size:14px;">
+          <span style="color:#999;">You've kept it for</span>
+          <span style="color:#fff; font-weight:600;"> 6 days</span><span style="color:#999;">.</span><br>
+          <span style="color:#999;">You've been protected for</span>
+          <span style="color:#fff; font-weight:600;"> 4h 12m </span><span style="color:#999;">today.</span>
+        </div>
+        <div style="line-height:1.8; margin-bottom:20px; font-size:14px;">
+          <span style="color:#999;">Last time you disabled, you said</span><br>
+          <span style="color:#777; font-style:italic;">"needed to check flights"</span>
+          <span style="color:#555;"> — 6 days ago</span>
+        </div>
+        <!-- Divider -->
+        <div style="height:1px; background:#222; margin-bottom:16px;"></div>
+        <!-- Reason -->
+        <div style="margin-bottom:14px;">
+          <div style="font-size:14px; color:#999; margin-bottom:10px;">Why is this time different?</div>
+          <div style="background:#1a1a1a; border-radius:10px; padding:14px;">
+            <div style="color:#555; font-size:14px;">Write your reason...</div>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:6px;">
+            <div style="font-size:11px; color:#444;">0/15 min</div>
+            <div style="font-size:11px; color:#444;">⏳ 10s wait</div>
+          </div>
+        </div>
+        <div style="background:#333; border-radius:10px; padding:14px; text-align:center; color:#666; font-size:15px;">Disable Anyway</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>K — Narrative Flow</h3>
+      <p>Reads like a conversation instead of a dashboard. "You set up protection because... You've kept it for... Last time you said..." Natural, personal tone. Flows into "why is this time different?" seamlessly. No boxes or cards — just text.</p>
+    </div>
+  </div>
+
+</div>

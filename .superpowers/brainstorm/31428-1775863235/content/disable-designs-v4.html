@@ -1,0 +1,102 @@
+<h2>Disable Blocking — Refined</h2>
+<p class="subtitle">Same psychological weight, less visual noise. Click to select.</p>
+
+<div class="cards">
+
+  <!-- Option L: Minimal Narrative -->
+  <div class="card" data-choice="l" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:24px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:300px; margin:0 auto;">
+        <div style="font-size:14px; color:#666; line-height:2; margin-bottom:24px;">
+          <span style="color:#999;">6-day streak</span> · <span style="color:#999;">4h 12m protected today</span>
+        </div>
+        <div style="font-size:16px; color:#ccc; font-style:italic; line-height:1.5; margin-bottom:8px;">"I want to be more present with my family."</div>
+        <div style="font-size:12px; color:#444; margin-bottom:32px;">Your reason for setting up protection</div>
+
+        <div style="font-size:12px; color:#555; margin-bottom:24px;">Last disabled 6 days ago — <span style="font-style:italic;">"needed to check flights"</span></div>
+
+        <div style="height:1px; background:#1f1f1f; margin-bottom:24px;"></div>
+
+        <div style="font-size:14px; color:#999; margin-bottom:10px;">Why is this time different?</div>
+        <div style="border-bottom:1px solid #2a2a2a; padding-bottom:12px; margin-bottom:6px;">
+          <div style="color:#444; font-size:15px;">Write your reason...</div>
+        </div>
+        <div style="font-size:11px; color:#333; margin-bottom:24px;">0/15 min · 10s wait after writing</div>
+
+        <div style="background:#1f1f1f; border-radius:10px; padding:14px; text-align:center; color:#555; font-size:15px;">Disable</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>L — Stripped Back</h3>
+      <p>Stats are a single quiet line at the top. Intention quote breathes on its own. Everything else recedes. Lots of whitespace. The information is all there but nothing competes for attention.</p>
+    </div>
+  </div>
+
+  <!-- Option M: Centred Focus -->
+  <div class="card" data-choice="m" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:24px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:300px; margin:0 auto; text-align:center;">
+        <div style="font-size:36px; font-weight:200; letter-spacing:1px; margin-bottom:4px;">6 days</div>
+        <div style="font-size:12px; color:#555; margin-bottom:28px;">without disabling</div>
+
+        <div style="font-size:15px; color:#bbb; font-style:italic; line-height:1.5; margin-bottom:6px;">"I want to be more present with my family."</div>
+        <div style="font-size:11px; color:#444; margin-bottom:28px;">— your reason for protection</div>
+
+        <div style="font-size:12px; color:#444; margin-bottom:28px;">Last time: <span style="color:#666; font-style:italic;">"needed to check flights"</span></div>
+
+        <div style="height:1px; background:#1f1f1f; margin:0 40px 24px;"></div>
+
+        <div style="text-align:left; max-width:260px; margin:0 auto;">
+          <div style="font-size:13px; color:#777; margin-bottom:10px;">Why is this time different?</div>
+          <div style="background:#1a1a1a; border-radius:10px; padding:14px; margin-bottom:6px;">
+            <div style="color:#444; font-size:14px;">Write your reason...</div>
+          </div>
+          <div style="font-size:11px; color:#333; margin-bottom:20px;">0/15 · then 10s wait</div>
+        </div>
+
+        <div style="background:#1f1f1f; border-radius:10px; padding:14px; text-align:center; color:#555; font-size:15px;">Disable</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>M — Centred Focus</h3>
+      <p>Streak as the hero number, centred. Intention quote directly below. Everything flows down a single centre axis. Clean, calm, almost meditative — but the content still hits hard.</p>
+    </div>
+  </div>
+
+  <!-- Option N: Two Halves -->
+  <div class="card" data-choice="n" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:24px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:300px; margin:0 auto;">
+        <!-- Top half: the mirror (read-only, reflective) -->
+        <div style="padding-bottom:20px; margin-bottom:20px; border-bottom:1px solid #1f1f1f;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:20px;">
+            <div>
+              <div style="font-size:24px; font-weight:600;">6 days</div>
+              <div style="font-size:11px; color:#555;">streak</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:13px; color:#666;">4h 12m protected</div>
+              <div style="font-size:11px; color:#444;">1h 48m remaining</div>
+            </div>
+          </div>
+          <div style="font-size:15px; color:#bbb; font-style:italic; line-height:1.5; margin-bottom:12px;">"I want to be more present with my family."</div>
+          <div style="font-size:12px; color:#444;">Last: <span style="font-style:italic; color:#555;">"needed to check flights"</span> · 6 days ago</div>
+        </div>
+        <!-- Bottom half: the action (input + confirm) -->
+        <div>
+          <div style="font-size:13px; color:#777; margin-bottom:10px;">Why is this time different?</div>
+          <div style="border-bottom:1px solid #2a2a2a; padding-bottom:12px; margin-bottom:6px;">
+            <div style="color:#444; font-size:15px;">Write your reason...</div>
+          </div>
+          <div style="font-size:11px; color:#333; margin-bottom:20px;">0/15 · then 10s wait</div>
+          <div style="background:#1f1f1f; border-radius:10px; padding:14px; text-align:center; color:#555; font-size:15px;">Disable</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>N — Two Halves</h3>
+      <p>Clean split: top half is the "mirror" (streak, stats, intention, last reason), bottom half is the action (write + wait + confirm). A single divider separates reflection from action. Structured but not busy.</p>
+    </div>
+  </div>
+
+</div>

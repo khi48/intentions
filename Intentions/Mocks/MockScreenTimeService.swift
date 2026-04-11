@@ -98,7 +98,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
         print("Mock: All apps blocked")
     }
     
-    func allowApps(_ tokens: sending Set<ApplicationToken>, allowWebsites: Bool = false, duration: TimeInterval, sessionId: UUID) async throws {
+    func allowApps(_ tokens: sending Set<ApplicationToken>, webDomains: Set<WebDomainToken> = [], allowWebsites: Bool = false, duration: TimeInterval, sessionId: UUID) async throws {
         let status = await authorizationStatus()
         guard status == .approved else {
             throw AppError.screenTimeAuthorizationFailed

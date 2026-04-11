@@ -6,15 +6,7 @@
 	<dict>
 		<key>Info.plist</key>
 		<data>
-		n1slXiIQgz1a+Ye21HVn18yiWnE=
-		</data>
-		<key>Metadata.appintents/extract.actionsdata</key>
-		<data>
-		z7sl77ZW8dQVmN0YLx3PTGmkAgQ=
-		</data>
-		<key>Metadata.appintents/version.json</key>
-		<data>
-		Aal8VBywJxgVuGW1TEx1MOOFgyk=
+		Y0bTYa7zWozaWIMpjxuVQgdI2VA=
 		</data>
 		<key>embedded.mobileprovision</key>
 		<data>
@@ -23,20 +15,6 @@
 	</dict>
 	<key>files2</key>
 	<dict>
-		<key>Metadata.appintents/extract.actionsdata</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			y/oYcPJQOErmh1WS+fE0xR5SCEOlqQYB2yWqTQtu5XI=
-			</data>
-		</dict>
-		<key>Metadata.appintents/version.json</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			A0QDVV1SRCF+5P9o3nmoma7n1IbHGr9zxr26V81Z6b0=
-			</data>
-		</dict>
 		<key>embedded.mobileprovision</key>
 		<dict>
 			<key>hash2</key>

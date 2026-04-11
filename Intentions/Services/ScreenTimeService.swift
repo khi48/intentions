@@ -190,6 +190,7 @@ actor ScreenTimeService: ScreenTimeManaging {
         managedSettingsStore.shield.applications = nil
         managedSettingsStore.shield.applicationCategories = nil
         managedSettingsStore.shield.webDomains = nil
+        managedSettingsStore.shield.webDomainCategories = nil
         managedSettingsStore.webContent.blockedByFilter = nil
 
         // Brief delay to ensure clearing takes effect before applying new blocking
@@ -228,7 +229,7 @@ actor ScreenTimeService: ScreenTimeManaging {
         return Set<ApplicationToken>()
     }
     
-    func allowApps(_ tokens: sending Set<ApplicationToken>, allowWebsites: Bool = false, duration: TimeInterval, sessionId: UUID) async throws {
+    func allowApps(_ tokens: sending Set<ApplicationToken>, webDomains: Set<WebDomainToken> = [], allowWebsites: Bool = false, duration: TimeInterval, sessionId: UUID) async throws {
         try ensureInitialized()
 
         let status = await authorizationStatus()
@@ -255,6 +256,7 @@ actor ScreenTimeService: ScreenTimeManaging {
         managedSettingsStore.shield.applications = nil
         managedSettingsStore.shield.applicationCategories = nil
         managedSettingsStore.shield.webDomains = nil
+        managedSettingsStore.shield.webDomainCategories = nil
         managedSettingsStore.webContent.blockedByFilter = nil
 
         // Brief delay to ensure clearing takes effect
@@ -270,9 +272,16 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Conditionally allow web content
         if allowWebsites {
             managedSettingsStore.shield.webDomains = nil
+            managedSettingsStore.shield.webDomainCategories = nil
             managedSettingsStore.webContent.blockedByFilter = nil
+        } else if !webDomains.isEmpty {
+            // Allow only the web domains associated with selected apps/categories
+            managedSettingsStore.shield.webDomains = nil
+            managedSettingsStore.shield.webDomainCategories = .all(except: webDomains)
+            managedSettingsStore.webContent.blockedByFilter = .all()
         } else {
             managedSettingsStore.shield.webDomains = nil
+            managedSettingsStore.shield.webDomainCategories = nil
             managedSettingsStore.webContent.blockedByFilter = .all()
         }
 
@@ -369,6 +378,7 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Explicitly clear specific shield types
         managedSettingsStore.shield.applications = nil
         managedSettingsStore.shield.applicationCategories = nil
+        managedSettingsStore.shield.webDomainCategories = nil
         managedSettingsStore.webContent.blockedByFilter = nil
         managedSettingsStore.application.denyAppInstallation = nil
         managedSettingsStore.application.denyAppRemoval = nil

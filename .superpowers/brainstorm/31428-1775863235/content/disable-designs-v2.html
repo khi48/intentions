@@ -1,0 +1,162 @@
+<h2>Disable Blocking — Round 2</h2>
+<p class="subtitle">Focused on making users not want to start the process. All keep write + wait. Click to select.</p>
+
+<div class="cards">
+
+  <!-- Option E: Confrontation Mirror -->
+  <div class="card" data-choice="e" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:20px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:320px; margin:0 auto;">
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:18px; font-weight:600; margin-bottom:8px;">Are you sure?</div>
+        </div>
+        <!-- Stats that confront -->
+        <div style="background:#1a1a1a; border-radius:12px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+            <div style="text-align:center; flex:1;">
+              <div style="font-size:22px; font-weight:700;">4h 12m</div>
+              <div style="font-size:10px; color:#666; margin-top:2px;">Protected today</div>
+            </div>
+            <div style="width:1px; background:#333;"></div>
+            <div style="text-align:center; flex:1;">
+              <div style="font-size:22px; font-weight:700;">6 days</div>
+              <div style="font-size:10px; color:#666; margin-top:2px;">Current streak</div>
+            </div>
+          </div>
+          <div style="border-top:1px solid #222; padding-top:10px; font-size:12px; color:#555; text-align:center;">
+            Last disabled: 6 days ago — <span style="color:#888;">"needed to check flights"</span>
+          </div>
+        </div>
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:13px; color:#999; line-height:1.5;">
+            1h 48m of protected time remaining today.<br>
+            <span style="color:#666;">Disabling resets your streak.</span>
+          </div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:10px; color:#999; letter-spacing:1px; margin-bottom:6px;">REASON</div>
+          <div style="border-bottom:1px solid #333; padding:10px 0; color:#555; font-size:14px;">Why do you need to disable?</div>
+          <div style="font-size:11px; color:#444; margin-top:4px;">0/15 min</div>
+        </div>
+        <div style="display:flex; gap:12px;">
+          <div style="flex:1; border:1px solid #333; border-radius:10px; padding:14px; text-align:center; color:#fff; font-size:15px; font-weight:600;">Go Back</div>
+          <div style="flex:1; background:#333; border-radius:10px; padding:14px; text-align:center; color:#666; font-size:15px;">Disable</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>E — Confrontation Mirror</h3>
+      <p>Shows your streak, how long you've been protected today, time remaining, and what you said last time you disabled. Forces you to confront the cost before you even touch the keyboard. "Go Back" is prominent.</p>
+    </div>
+  </div>
+
+  <!-- Option F: Guilt Reminder -->
+  <div class="card" data-choice="f" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:20px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:320px; margin:0 auto;">
+        <div style="text-align:center; margin-bottom:20px;">
+          <div style="font-size:18px; font-weight:600; margin-bottom:6px;">You set this up for a reason</div>
+          <div style="font-size:13px; color:#999;">Remember why you wanted protection.</div>
+        </div>
+        <!-- The user's own words -->
+        <div style="background:#1a1a1a; border-radius:12px; padding:20px; margin-bottom:20px; border-left:3px solid #444;">
+          <div style="font-size:10px; color:#666; letter-spacing:1px; margin-bottom:8px;">YOUR ORIGINAL INTENTION</div>
+          <div style="font-size:15px; color:#ccc; font-style:italic; line-height:1.5;">"I want to stop reaching for my phone out of habit and be more present with my family."</div>
+          <div style="font-size:11px; color:#555; margin-top:8px;">— Set on March 12</div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:10px; color:#999; letter-spacing:1px; margin-bottom:6px;">EXPLAIN WHY THIS TIME IS DIFFERENT</div>
+          <div style="border-bottom:1px solid #333; padding:10px 0; color:#555; font-size:14px;">I need to because...</div>
+          <div style="font-size:11px; color:#444; margin-top:4px;">0/15 min</div>
+        </div>
+        <div style="text-align:center; margin-bottom:8px;">
+          <div style="width:60px; height:60px; border-radius:50%; border:3px solid #333; margin:0 auto; display:flex; align-items:center; justify-content:center;">
+            <span style="font-size:16px; font-weight:bold; color:#555;">10s</span>
+          </div>
+        </div>
+        <div style="background:#333; border-radius:10px; padding:14px; text-align:center; color:#666; font-size:15px;">Disable Anyway</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>F — Your Own Words</h3>
+      <p>Surfaces the user's own reason for setting up blocking in the first place. The prompt changes from "why do you want to disable?" to "explain why this time is different." Makes you argue against yourself.</p>
+    </div>
+  </div>
+
+  <!-- Option G: Consequence Preview -->
+  <div class="card" data-choice="g" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:20px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:320px; margin:0 auto;">
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:18px; font-weight:600; margin-bottom:4px;">Disable blocking?</div>
+        </div>
+        <!-- What happens -->
+        <div style="margin-bottom:18px;">
+          <div style="font-size:10px; color:#999; letter-spacing:1px; margin-bottom:10px;">WHAT HAPPENS</div>
+          <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+            <div style="color:#888; font-size:14px; margin-top:1px;">✕</div>
+            <div style="font-size:13px; color:#aaa; line-height:1.4;">All 47 blocked apps become accessible immediately</div>
+          </div>
+          <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+            <div style="color:#888; font-size:14px; margin-top:1px;">✕</div>
+            <div style="font-size:13px; color:#aaa; line-height:1.4;">Protection won't resume until tomorrow at 6:00 AM</div>
+          </div>
+          <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+            <div style="color:#888; font-size:14px; margin-top:1px;">✕</div>
+            <div style="font-size:13px; color:#aaa; line-height:1.4;">This will be logged in your weekly summary</div>
+          </div>
+        </div>
+        <div style="background:#1a1a1a; border-radius:12px; padding:14px; margin-bottom:12px; text-align:center;">
+          <div style="font-size:13px; color:#999;">Instead, you could start a <span style="color:#fff; font-weight:500;">focused session</span> for just the apps you need.</div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:10px; color:#999; letter-spacing:1px; margin-bottom:6px;">REASON</div>
+          <div style="border-bottom:1px solid #333; padding:10px 0; color:#555; font-size:14px;">Why can't a session work instead?</div>
+        </div>
+        <div style="display:flex; gap:12px;">
+          <div style="flex:1; border:1px solid #fff; border-radius:10px; padding:14px; text-align:center; color:#fff; font-size:14px; font-weight:600;">Start Session Instead</div>
+          <div style="flex:1; background:#333; border-radius:10px; padding:14px; text-align:center; color:#666; font-size:14px;">Disable All</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>G — Consequence Preview + Off-Ramp</h3>
+      <p>Spells out exactly what disabling does (all apps, until tomorrow, logged). Then offers an escape hatch: "start a focused session instead." The reason prompt becomes "why can't a session work?" — harder to answer flippantly.</p>
+    </div>
+  </div>
+
+  <!-- Option H: Social Contract -->
+  <div class="card" data-choice="h" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#141414; padding:20px; border-radius:8px;">
+      <div style="font-family:-apple-system,system-ui,sans-serif; color:#fff; max-width:320px; margin:0 auto;">
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:15px; color:#999; margin-bottom:4px;">You've been protected for</div>
+          <div style="font-size:40px; font-weight:200; letter-spacing:2px;">4h 12m</div>
+          <div style="font-size:13px; color:#555; margin-top:4px;">today</div>
+        </div>
+        <div style="height:1px; background:#222; margin:0 -20px 16px;"></div>
+        <div style="text-align:center; margin-bottom:20px;">
+          <div style="font-size:15px; color:#ccc; line-height:1.6;">
+            Disabling means every app opens freely — no intentions, no time limits, no check-ins.
+          </div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:10px; color:#999; letter-spacing:1px; margin-bottom:6px;">I'M DISABLING BECAUSE</div>
+          <div style="background:#1a1a1a; border-radius:10px; padding:14px; min-height:50px;">
+            <div style="color:#555; font-size:14px;">Write your reason here...</div>
+          </div>
+          <div style="font-size:11px; color:#444; margin-top:6px;">Min 15 characters · Reviewed in your weekly log</div>
+        </div>
+        <div style="text-align:center; margin-bottom:10px;">
+          <div style="font-size:12px; color:#555;">⏳ 10 second wait after writing</div>
+        </div>
+        <div style="background:#333; border-radius:10px; padding:14px; text-align:center; color:#666; font-size:15px;">Disable Protection</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>H — Quiet Weight</h3>
+      <p>No alarm bells — just the facts delivered quietly. The big number (how long you've been protected) and the plain description of what changes create psychological weight. The "reviewed in your weekly log" adds soft accountability. Less dramatic, more sobering.</p>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intent — Settings Proposals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#f4efe6;--ink-dim:#9a9389;--ink-faint:#5a5348;--bg:#0a0908;--screen:#0e0d0b;--field:#1b1917;--line:#2a2622;--ls:#1f1c19;--sys:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;--serif:'Fraunces','Georgia',serif;--sans:'Manrope',-apple-system,sans-serif;--mono:'JetBrains Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:300;min-height:100vh;-webkit-font-smoothing:antialiased}
+body{background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(244,239,230,.03),transparent),var(--bg);padding:5rem 2rem 4rem}
+.ph{max-width:1680px;margin:0 auto 5rem;display:grid;grid-template-columns:1fr auto;align-items:end;gap:2rem;padding-bottom:3rem;border-bottom:1px solid var(--line)}
+.ph h1{font-family:var(--serif);font-weight:300;font-size:clamp(2.6rem,5vw,4.4rem);letter-spacing:-.03em;line-height:.95;font-style:italic}
+.ph h1 em{font-style:normal;color:var(--ink-dim)}
+.ph .meta{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);text-align:right;line-height:1.8}
+.ph .meta span{display:block} .ph .meta strong{color:var(--ink-dim);font-weight:500}
+.grid{max-width:1680px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:4rem 3rem}
+.prop{display:flex;flex-direction:column;align-items:center;gap:2rem}
+.plbl{width:100%;display:grid;grid-template-columns:auto 1fr;gap:1.25rem 1.5rem;align-items:baseline;padding-bottom:1.5rem;border-bottom:1px solid var(--line)}
+.plbl .n{font-family:var(--serif);font-weight:300;font-size:3.2rem;line-height:.8;letter-spacing:-.04em;color:var(--ink-dim);grid-row:span 2}
+.plbl .nm{font-family:var(--serif);font-weight:300;font-size:1.5rem;font-style:italic;line-height:1}
+.plbl .tg{font-family:var(--mono);font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+.notes{max-width:340px;font-family:var(--sans);font-size:.78rem;font-weight:300;line-height:1.55;color:var(--ink-dim);text-align:center;padding:0 .5rem}
+.notes strong{font-weight:500;color:var(--ink)}
+
+/* iphone */
+.ip{width:320px;aspect-ratio:390/844;background:#050403;border-radius:48px;padding:10px;position:relative;box-shadow:0 0 0 1px rgba(244,239,230,.06),0 60px 120px -40px rgba(0,0,0,.9),0 30px 60px -30px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.04)}
+.ip::before{content:'';position:absolute;right:-2px;top:140px;width:2px;height:60px;background:#1a1816;border-radius:1px}
+.ip::after{content:'';position:absolute;left:-2px;top:110px;width:2px;height:100px;background:#1a1816;border-radius:1px}
+.sc{position:relative;width:100%;height:100%;background:var(--screen);border-radius:39px;overflow:hidden;display:flex;flex-direction:column}
+.di{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:95px;height:28px;background:#000;border-radius:20px;z-index:10}
+.sb{height:50px;padding:16px 32px 0;display:flex;justify-content:space-between;align-items:center;font-family:var(--sans);font-weight:600;font-size:13px;color:var(--ink);flex-shrink:0}
+.sb .icons{display:flex;gap:4px;align-items:center}
+.sb svg{width:14px;height:14px;fill:var(--ink)}
+.nb{padding:10px 20px 6px;display:flex;justify-content:space-between;align-items:baseline;flex-shrink:0}
+.nb .title{font-size:28px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;padding:0 14px}
+.tabbar{height:74px;padding-top:8px;border-top:1px solid rgba(244,239,230,.05);display:flex;justify-content:space-around;flex-shrink:0;background:rgba(14,13,11,.8)}
+.ti{display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:6px;font-family:var(--sans);font-size:9px;font-weight:500;letter-spacing:.02em}
+.ti.a{color:var(--ink)} .ti:not(.a){color:var(--ink-faint)}
+.ti svg{width:22px;height:22px}
+
+/* shared row */
+.row{display:flex;align-items:center;padding:14px 0;border-bottom:.5px solid var(--ls);font-family:var(--sys);font-size:14px}
+.row:last-child{border-bottom:0}
+.row .k{color:var(--ink);flex:1}
+.row .v{color:var(--ink-dim);font-size:13px;display:flex;align-items:center;gap:6px}
+.chv{color:var(--ink-faint);font-size:12px}
+.tog{width:40px;height:24px;border-radius:13px;background:rgba(244,239,230,.1);padding:2px;display:flex;flex-shrink:0}
+.tog .knob{width:20px;height:20px;border-radius:50%;background:var(--ink-dim)}
+.tog.on{background:var(--ink)} .tog.on .knob{background:var(--screen);margin-left:auto}
+.ilbl{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);padding:16px 0 4px;font-family:var(--sys)}
+.grp{background:var(--field);border-radius:12px;overflow:hidden;margin-bottom:2px}
+.gr{display:flex;align-items:center;padding:14px;border-top:.5px solid var(--line);font-family:var(--sys);font-size:14px}
+.gr:first-child{border-top:0}
+.gr .k{color:var(--ink);flex:1}
+.gr .v{color:var(--ink-dim);font-size:13px;display:flex;align-items:center;gap:6px}
+.gl{padding:14px 4px 6px;font-family:var(--sys);font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:500}
+
+/* stat card */
+.stat-banner{display:flex;gap:10px;margin-bottom:4px;padding:4px 0}
+.stat-box{flex:1;padding:14px;background:var(--field);border-radius:12px;border:1px solid var(--line)}
+.stat-box .sv{font-size:24px;font-weight:700;color:var(--ink);font-family:var(--sys)}
+.stat-box .sl{font-size:10px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em;margin-top:3px;font-family:var(--sys)}
+
+/* ===== A: FLAT ROWS ===== */
+.pA .content{overflow-y:auto}
+
+/* ===== B: GROUPED CARDS ===== */
+.pB .content{overflow-y:auto}
+
+/* ===== C: STATS TOP ===== */
+.pC .content{overflow-y:auto}
+
+/* ===== D: COMPACT SINGLE LIST ===== */
+.pD .content{overflow-y:auto}
+
+@media(max-width:720px){body{padding:2rem 1rem 3rem}.ph{grid-template-columns:1fr;margin-bottom:3rem}.ph .meta{text-align:left}.grid{gap:3rem 2rem}}
+</style>
+</head>
+<body>
+
+<header class="ph">
+  <h1><em>Settings</em> —<br>layout <em>proposals</em></h1>
+  <div class="meta">
+    <span><strong>MATCH</strong> &nbsp; HOME + EDITOR STYLE</span>
+    <span><strong>GOAL</strong> &nbsp; COMPACT, CONSISTENT</span>
+    <span><strong>PROPOSALS</strong> &nbsp; 04</span>
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- ===== A: FLAT ROWS ===== -->
+  <div class="prop">
+    <div class="plbl"><div class="n">A</div><div class="nm">Flat Rows</div><div class="tg">Dividers only · No card groups</div></div>
+    <div class="ip pA"><div class="sc"><div class="di"></div>
+      <div class="sb"><span>9:41</span><div class="icons"><svg viewBox="0 0 16 10"><path d="M0 8h2v2H0zm4-2h2v4H4zm4-2h2v6H8zm4-2h2v8h-2z"/></svg><svg viewBox="0 0 24 12"><rect x="1" y="2" width="20" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1"/><rect x="22" y="4.5" width="1.5" height="3" rx=".3"/><rect x="3" y="4" width="14" height="4" rx="1"/></svg></div></div>
+      <div class="nb"><span class="title">Settings</span></div>
+      <div class="content">
+        <div class="ilbl">Protected Hours</div>
+        <div class="row"><span class="k">Blocking</span><div style="display:flex;align-items:center;gap:8px"><span class="v">Enabled</span><div class="tog on"><div class="knob"></div></div></div></div>
+        <div class="row"><span class="k">Hours</span><span class="v">9:00 AM – 9:00 PM <span class="chv">›</span></span></div>
+        <div class="row"><span class="k">Days</span><span class="v">Weekdays <span class="chv">›</span></span></div>
+
+        <div class="ilbl">Usage</div>
+        <div class="row"><span class="k">Today</span><span class="v">3 sessions</span></div>
+        <div class="row"><span class="k">This week</span><span class="v">12 sessions</span></div>
+
+        <div class="ilbl">General</div>
+        <div class="row"><span class="k">Notifications</span><span class="v"><span class="chv">›</span></span></div>
+        <div class="row"><span class="k">App Setup</span><span class="v"><span class="chv">›</span></span></div>
+        <div class="row"><span class="k">Enable Greyscale</span><span class="v"><span class="chv">›</span></span></div>
+      </div>
+      <div class="tabbar">
+        <div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg><span>Home</span></div>
+        <div class="ti a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg><span>Settings</span></div>
+      </div>
+    </div></div>
+    <p class="notes">Pure flat rows separated by thin dividers. Small uppercase labels group sections without visual weight. Matches the editor's flat-row approach. <strong>Most compact</strong> — everything above the fold.</p>
+  </div>
+
+  <!-- ===== B: GROUPED CARDS ===== -->
+  <div class="prop">
+    <div class="plbl"><div class="n">B</div><div class="nm">Grouped Cards</div><div class="tg">iOS grouped-table · Rounded cards</div></div>
+    <div class="ip pB"><div class="sc"><div class="di"></div>
+      <div class="sb"><span>9:41</span><div class="icons"><svg viewBox="0 0 16 10"><path d="M0 8h2v2H0zm4-2h2v4H4zm4-2h2v6H8zm4-2h2v8h-2z"/></svg><svg viewBox="0 0 24 12"><rect x="1" y="2" width="20" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1"/><rect x="22" y="4.5" width="1.5" height="3" rx=".3"/><rect x="3" y="4" width="14" height="4" rx="1"/></svg></div></div>
+      <div class="nb"><span class="title">Settings</span></div>
+      <div class="content">
+        <div class="gl">Protected Hours</div>
+        <div class="grp">
+          <div class="gr"><span class="k">Blocking</span><div style="display:flex;align-items:center;gap:8px"><span class="v">Enabled</span><div class="tog on"><div class="knob"></div></div></div></div>
+          <div class="gr"><span class="k">Hours</span><span class="v">9 AM – 9 PM <span class="chv">›</span></span></div>
+          <div class="gr"><span class="k">Days</span><span class="v">Weekdays <span class="chv">›</span></span></div>
+        </div>
+        <div class="gl">Usage</div>
+        <div class="grp">
+          <div class="gr"><span class="k">Today</span><span class="v" style="font-weight:600">3</span></div>
+          <div class="gr"><span class="k">This week</span><span class="v" style="font-weight:600">12</span></div>
+        </div>
+        <div class="gl">General</div>
+        <div class="grp">
+          <div class="gr"><span class="k">Notifications</span><span class="v"><span class="chv">›</span></span></div>
+          <div class="gr"><span class="k">App Setup</span><span class="v"><span class="chv">›</span></span></div>
+          <div class="gr"><span class="k">Greyscale</span><span class="v"><span class="chv">›</span></span></div>
+        </div>
+      </div>
+      <div class="tabbar">
+        <div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg><span>Home</span></div>
+        <div class="ti a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg><span>Settings</span></div>
+      </div>
+    </div></div>
+    <p class="notes">Native iOS grouped-table with rounded card backgrounds. Familiar, clean, and compact — just labels and values, no descriptions or icons. <strong>Most native-feeling</strong> to iOS users.</p>
+  </div>
+
+  <!-- ===== C: STATS BANNER TOP ===== -->
+  <div class="prop">
+    <div class="plbl"><div class="n">C</div><div class="nm">Stats Banner</div><div class="tg">Usage cards top · Flat rows below</div></div>
+    <div class="ip pC"><div class="sc"><div class="di"></div>
+      <div class="sb"><span>9:41</span><div class="icons"><svg viewBox="0 0 16 10"><path d="M0 8h2v2H0zm4-2h2v4H4zm4-2h2v6H8zm4-2h2v8h-2z"/></svg><svg viewBox="0 0 24 12"><rect x="1" y="2" width="20" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1"/><rect x="22" y="4.5" width="1.5" height="3" rx=".3"/><rect x="3" y="4" width="14" height="4" rx="1"/></svg></div></div>
+      <div class="nb"><span class="title">Settings</span></div>
+      <div class="content">
+        <div class="stat-banner">
+          <div class="stat-box"><div class="sv">3</div><div class="sl">Today</div></div>
+          <div class="stat-box"><div class="sv">12</div><div class="sl">This week</div></div>
+        </div>
+
+        <div class="ilbl">Protected Hours</div>
+        <div class="row"><span class="k">Blocking</span><div style="display:flex;align-items:center;gap:8px"><span class="v">Enabled</span><div class="tog on"><div class="knob"></div></div></div></div>
+        <div class="row"><span class="k">Hours</span><span class="v">9:00 AM – 9:00 PM <span class="chv">›</span></span></div>
+        <div class="row"><span class="k">Days</span><span class="v">Weekdays <span class="chv">›</span></span></div>
+
+        <div class="ilbl">General</div>
+        <div class="row"><span class="k">Notifications</span><span class="v"><span class="chv">›</span></span></div>
+        <div class="row"><span class="k">App Setup</span><span class="v"><span class="chv">›</span></span></div>
+        <div class="row"><span class="k">Enable Greyscale</span><span class="v"><span class="chv">›</span></span></div>
+      </div>
+      <div class="tabbar">
+        <div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg><span>Home</span></div>
+        <div class="ti a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg><span>Settings</span></div>
+      </div>
+    </div></div>
+    <p class="notes">Usage stats as two small cards at the top — gives the page visual interest and a dashboard feel. Flat rows below for all settings. <strong>Best for</strong> making usage data feel prominent and glanceable.</p>
+  </div>
+
+  <!-- ===== D: HYBRID ===== -->
+  <div class="prop">
+    <div class="plbl"><div class="n">D</div><div class="nm">Hybrid</div><div class="tg">Stats banner · Grouped settings</div></div>
+    <div class="ip pD"><div class="sc"><div class="di"></div>
+      <div class="sb"><span>9:41</span><div class="icons"><svg viewBox="0 0 16 10"><path d="M0 8h2v2H0zm4-2h2v4H4zm4-2h2v6H8zm4-2h2v8h-2z"/></svg><svg viewBox="0 0 24 12"><rect x="1" y="2" width="20" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1"/><rect x="22" y="4.5" width="1.5" height="3" rx=".3"/><rect x="3" y="4" width="14" height="4" rx="1"/></svg></div></div>
+      <div class="nb"><span class="title">Settings</span></div>
+      <div class="content">
+        <div class="stat-banner">
+          <div class="stat-box"><div class="sv">3</div><div class="sl">Sessions today</div></div>
+          <div class="stat-box"><div class="sv">12</div><div class="sl">This week</div></div>
+        </div>
+        <div class="gl">Protected Hours</div>
+        <div class="grp">
+          <div class="gr"><span class="k">Blocking</span><div style="display:flex;align-items:center;gap:8px"><span class="v">Enabled</span><div class="tog on"><div class="knob"></div></div></div></div>
+          <div class="gr"><span class="k">Hours</span><span class="v">9 AM – 9 PM <span class="chv">›</span></span></div>
+          <div class="gr"><span class="k">Days</span><span class="v">Weekdays <span class="chv">›</span></span></div>
+        </div>
+        <div class="gl">General</div>
+        <div class="grp">
+          <div class="gr"><span class="k">Notifications</span><span class="v"><span class="chv">›</span></span></div>
+          <div class="gr"><span class="k">App Setup</span><span class="v"><span class="chv">›</span></span></div>
+          <div class="gr"><span class="k">Greyscale</span><span class="v"><span class="chv">›</span></span></div>
+        </div>
+      </div>
+      <div class="tabbar">
+        <div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg><span>Home</span></div>
+        <div class="ti a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg><span>Settings</span></div>
+      </div>
+    </div></div>
+    <p class="notes">Combines the stats banner from C with the grouped cards from B. Stats as glanceable cards, settings in native iOS grouped rows. <strong>Best of both</strong> — visual dashboard at top, familiar settings below.</p>
+  </div>
+
+</div>
+
+</body>
+</html>

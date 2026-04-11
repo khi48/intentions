@@ -37,6 +37,9 @@ struct QuickAction: Identifiable, Codable, Sendable {
     /// Individual applications selected for this quick action
     var individualApplications: Set<ApplicationToken>
 
+    /// Web domains associated with selected apps/categories
+    var individualWebDomains: Set<WebDomainToken>
+
     /// Whether to allow access to all websites during this session
     var allowAllWebsites: Bool
 
@@ -110,6 +113,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
         color: Color = .blue,
         duration: TimeInterval = AppConstants.Session.defaultDuration,
         individualApplications: Set<ApplicationToken> = [],
+        individualWebDomains: Set<WebDomainToken> = [],
         allowAllWebsites: Bool = false
     ) {
         self.id = UUID()
@@ -119,6 +123,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
         self._colorHex = color.toHex() ?? "#007AFF"
         self.duration = duration
         self.individualApplications = individualApplications
+        self.individualWebDomains = individualWebDomains
         self.allowAllWebsites = allowAllWebsites
         self.isEnabled = true
         self.createdAt = Date()
@@ -133,6 +138,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case id, name, subtitle, iconName, _colorHex, duration
         case individualApplications
+        case individualWebDomains
         case allowAllWebsites
         case isEnabled, createdAt, lastModified, usageCount, lastUsed, sortOrder
         // Legacy keys for backward compatibility (not used)
@@ -152,6 +158,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
 
         // Handle backward compatibility for individual tokens
         individualApplications = try container.decodeIfPresent(Set<ApplicationToken>.self, forKey: .individualApplications) ?? []
+        individualWebDomains = try container.decodeIfPresent(Set<WebDomainToken>.self, forKey: .individualWebDomains) ?? []
 
         // Handle backward compatibility for allowAllWebsites
         allowAllWebsites = try container.decodeIfPresent(Bool.self, forKey: .allowAllWebsites) ?? false
@@ -177,6 +184,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
         try container.encode(_colorHex, forKey: ._colorHex)
         try container.encode(duration, forKey: .duration)
         try container.encode(individualApplications, forKey: .individualApplications)
+        try container.encode(individualWebDomains, forKey: .individualWebDomains)
         try container.encode(allowAllWebsites, forKey: .allowAllWebsites)
 
         try container.encode(isEnabled, forKey: .isEnabled)
@@ -199,6 +207,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
         color: Color? = nil,
         duration: TimeInterval? = nil,
         individualApplications: Set<ApplicationToken>? = nil,
+        individualWebDomains: Set<WebDomainToken>? = nil,
         allowAllWebsites: Bool? = nil
     ) {
         if let name = name { self.name = name }
@@ -207,6 +216,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
         if let color = color { self.setColor(color) }
         if let duration = duration { self.duration = duration }
         if let individualApplications = individualApplications { self.individualApplications = individualApplications }
+        if let individualWebDomains = individualWebDomains { self.individualWebDomains = individualWebDomains }
         if let allowAllWebsites = allowAllWebsites { self.allowAllWebsites = allowAllWebsites }
 
         lastModified = Date()
@@ -239,6 +249,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
         return try IntentionSession(
             appGroups: [], // No app groups - removed feature
             applications: individualApplications,
+            webDomains: individualWebDomains,
             allowAllWebsites: allowAllWebsites,
             duration: duration,
             source: .quickAction(self)  // Pass the full QuickAction object

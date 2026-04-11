@@ -1,0 +1,110 @@
+---
+title: Intent App — User Workflow
+---
+flowchart TD
+    %% ─── APP LAUNCH & INITIALIZATION ───
+    Launch["App Launch"] --> Init["Initialize App\n(Load auth status,\nschedule settings,\nactive session)"]
+    Init --> CheckExpired{"Saved session\nexpired?"}
+    CheckExpired -- "Yes" --> CompleteExpired["Complete expired session"]
+    CheckExpired -- "No session or\nstill active" --> ValidateSetup
+    CompleteExpired --> ValidateSetup
+
+    ValidateSetup["Validate Setup State\n(Load persisted SetupState,\ncheck against system reality)"]
+    ValidateSetup --> CheckSetup{"Setup sufficient\n& current?"}
+
+    %% ─── SETUP FLOW ───
+    CheckSetup -- "No (first launch, auth revoked,\nor version outdated)" --> Setup["Setup Flow"]
+    Setup --> Landing["Landing Page\n(Overview of 3 steps)"]
+    Landing -- "Get Started" --> STAuth["Screen Time\nAuthorization"]
+
+    STAuth --> AuthStatus{"Authorization\nStatus?"}
+    AuthStatus -- "Not Determined" --> RequestAuth["Request Permission\n(System Dialog)"]
+    AuthStatus -- "Denied" --> OpenSettings["Open Settings\nto Grant Permission"]
+    AuthStatus -- "Approved" --> AAInfo
+
+    RequestAuth -- "Granted" --> AAInfo
+    RequestAuth -- "Denied" --> OpenSettings
+    OpenSettings -- "User returns" --> RecheckAuth{"Recheck\nStatus"}
+    RecheckAuth -- "Approved" --> AAInfo
+    RecheckAuth -- "Still Denied" --> OpenSettings
+
+    AAInfo["Always Allowed Info\n(Configure essential apps\nin Screen Time settings)"]
+    AAInfo -- Continue --> WidgetSetup["Widget Setup\n(Add lock screen widget)"]
+    WidgetSetup -- "Start Using Intent" --> CompleteSetup["Complete Setup"]
+
+    %% ─── POST-SETUP INITIALIZATION ───
+    CheckSetup -- Yes --> InitST
+    CompleteSetup --> InitST["Initialize Screen Time Service\n(Register callbacks,\ncleanup old sessions)"]
+
+    InitST --> CheckActive{"Active session\nloaded?"}
+    CheckActive -- Yes --> ApplySessionBlock["Apply Session Blocking\n(Allow session's apps,\nblock everything else)"]
+    ApplySessionBlock --> ActiveSession
+    CheckActive -- No --> ApplyDefault{"Apply Default\nBlocking"}
+
+    ApplyDefault -- "Protected hours active" --> BlockAll["Block All Apps"]
+    ApplyDefault -- "Outside protected hours" --> AllowAll["Allow All Apps"]
+
+    BlockAll --> Home
+    AllowAll --> Home
+
+    %% ─── MAIN APP ───
+    Home["Home Screen"]
+
+    %% ─── QUICK ACTIONS ───
+    Home --> QAGrid["Quick Actions Grid"]
+    QAGrid -- "Tap +" --> CreateQA["Create Quick Action\n(Name, Icon, Duration,\nSelect Apps, Websites)"]
+    CreateQA -- Save --> QAGrid
+    QAGrid -- "Long press" --> QAMenu{"Context Menu"}
+    QAMenu -- Edit --> EditQA["Edit Quick Action"]
+    QAMenu -- Delete --> ConfirmDelete["Confirm Delete"]
+    EditQA -- Update --> QAGrid
+    ConfirmDelete -- Yes --> QAGrid
+    QAGrid -- "Drag & drop" --> Reorder["Reorder Actions"]
+    Reorder --> QAGrid
+
+    %% ─── START SESSION ───
+    QAGrid -- "Tap Quick Action" --> StartSession["Start Session"]
+    StartSession --> HasExisting{"Existing\nSession?"}
+    HasExisting -- Yes --> ReplaceSession["Complete Old Session\nBlock All Apps Briefly"]
+    HasExisting -- No --> ApplySession
+    ReplaceSession --> ApplySession["Apply Session Blocking\n(Allow selected apps,\nblock everything else)"]
+    ApplySession --> ScheduleTimers["Schedule Expiration\n(In-app timer +\nDeviceActivity monitor)"]
+    ScheduleTimers --> Notify["Schedule Notifications\n(Warnings + completion)"]
+    Notify --> ActiveSession
+
+    %% ─── ACTIVE SESSION ───
+    ActiveSession["Active Session\n(Countdown timer,\nprogress bar)"]
+
+    ActiveSession -- "End Session" --> EndSession["End Session"]
+    ActiveSession -- "Timer expires" --> AutoEnd["Auto-End Session\n+ Send Notification"]
+    ActiveSession -- "Extend" --> ExtendSession["Extend Duration\nRe-apply blocking\nwith new time"]
+    ExtendSession --> ActiveSession
+
+    EndSession --> CompleteSession["Complete Session\nCancel Timers\nClear Widget"]
+    AutoEnd --> CompleteSession
+    CompleteSession --> ApplyDefault
+
+    %% ─── SETTINGS ───
+    Home --> Settings["Settings Tab"]
+    Settings --> ProtectedHours["Protected Hours\n(Schedule when\nblocking is active)"]
+    Settings --> Notifications["Notification\nPreferences"]
+    Settings --> RerunSetup["Re-run Setup"]
+    Settings --> DisableBlocking["Disable Blocking"]
+
+    ProtectedHours -- "Save changes" --> ApplyDefault
+    DisableBlocking --> FrictionModal["Friction Modal\n(Type intention statement\n+ 10s countdown)"]
+    FrictionModal -- "Confirmed" --> AllowAll
+    RerunSetup --> Setup
+
+    %% ─── STYLES ───
+    classDef setup fill:#e8d5f5,stroke:#7b2d8e
+    classDef session fill:#d5eaf5,stroke:#2d6b8e
+    classDef blocking fill:#f5ddd5,stroke:#8e3d2d
+    classDef decision fill:#fff3cd,stroke:#856404
+    classDef home fill:#d5f5e3,stroke:#2d8e4e
+
+    class Landing,STAuth,AAInfo,WidgetSetup,CompleteSetup,RequestAuth,OpenSettings setup
+    class StartSession,ActiveSession,ExtendSession,EndSession,AutoEnd,CompleteSession,ReplaceSession,ApplySession,ScheduleTimers,Notify session
+    class BlockAll,AllowAll,ApplyDefault,ApplySessionBlock blocking
+    class CheckSetup,AuthStatus,RecheckAuth,HasExisting,CheckExpired,CheckActive,QAMenu decision
+    class Home,QAGrid,CreateQA,EditQA,Settings,ProtectedHours,Notifications,RerunSetup,DisableBlocking,FrictionModal home

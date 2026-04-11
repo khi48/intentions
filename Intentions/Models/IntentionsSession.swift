@@ -52,6 +52,7 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
     let id: UUID
     var requestedAppGroups: [UUID] // References to AppGroup IDs
     var requestedApplications: Set<ApplicationToken>
+    var requestedWebDomains: Set<WebDomainToken>
     var allowAllWebsites: Bool = false // Whether to allow access to all websites during this session
     var duration: TimeInterval
     var createdAt: Date
@@ -99,7 +100,7 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
         return min(1.0, elapsed / duration)
     }
     
-    init(appGroups: [UUID] = [], applications: Set<ApplicationToken> = [], allowAllWebsites: Bool = false, duration: TimeInterval, source: SessionSource = .manual) throws {
+    init(appGroups: [UUID] = [], applications: Set<ApplicationToken> = [], webDomains: Set<WebDomainToken> = [], allowAllWebsites: Bool = false, duration: TimeInterval, source: SessionSource = .manual) throws {
         // Validate duration
         guard duration >= AppConstants.Session.minimumDuration else {
             throw AppError.validationFailed("duration", reason: "Session duration must be at least \(AppConstants.Session.minimumDuration.formattedDuration)")
@@ -111,15 +112,16 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
         self.id = UUID()
         self.requestedAppGroups = appGroups
         self.requestedApplications = applications
+        self.requestedWebDomains = webDomains
         self.allowAllWebsites = allowAllWebsites
         self.duration = duration
         self.createdAt = Date()
         self.state = .active(startedAt: Date())
         self.source = source
     }
-    
+
     // Private initializer for persistence reconstruction with existing ID
-    private init(id: UUID, appGroups: [UUID], applications: Set<ApplicationToken>, allowAllWebsites: Bool, duration: TimeInterval, createdAt: Date, source: SessionSource = .manual) throws {
+    private init(id: UUID, appGroups: [UUID], applications: Set<ApplicationToken>, webDomains: Set<WebDomainToken> = [], allowAllWebsites: Bool, duration: TimeInterval, createdAt: Date, source: SessionSource = .manual) throws {
         // Validate duration for reconstructed sessions too
         guard duration >= AppConstants.Session.minimumDuration else {
             throw AppError.validationFailed("duration", reason: "Session duration must be at least \(AppConstants.Session.minimumDuration.formattedDuration)")
@@ -131,6 +133,7 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
         self.id = id
         self.requestedAppGroups = appGroups
         self.requestedApplications = applications
+        self.requestedWebDomains = webDomains
         self.allowAllWebsites = allowAllWebsites
         self.duration = duration
         self.createdAt = createdAt
@@ -143,6 +146,7 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
         id: UUID,
         appGroups: [UUID],
         applications: Set<ApplicationToken>,
+        webDomains: Set<WebDomainToken> = [],
         allowAllWebsites: Bool = false,
         duration: TimeInterval,
         createdAt: Date,
@@ -153,6 +157,7 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
             id: id,
             appGroups: appGroups,
             applications: applications,
+            webDomains: webDomains,
             allowAllWebsites: allowAllWebsites,
             duration: duration,
             createdAt: createdAt,
@@ -176,7 +181,7 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
     
     // Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, requestedAppGroups, requestedApplications, duration, createdAt, state, source
+        case id, requestedAppGroups, requestedApplications, requestedWebDomains, duration, createdAt, state, source
         // Legacy keys for backward compatibility
         case startTime, endTime, isActive, wasCompleted
     }
@@ -186,6 +191,7 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
         id = try container.decode(UUID.self, forKey: .id)
         requestedAppGroups = try container.decode([UUID].self, forKey: .requestedAppGroups)
         requestedApplications = try container.decodeIfPresent(Set<ApplicationToken>.self, forKey: .requestedApplications) ?? []
+        requestedWebDomains = try container.decodeIfPresent(Set<WebDomainToken>.self, forKey: .requestedWebDomains) ?? []
         duration = try container.decode(TimeInterval.self, forKey: .duration)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         
@@ -218,6 +224,7 @@ final class IntentionSession: Identifiable, @preconcurrency Codable {
         try container.encode(id, forKey: .id)
         try container.encode(requestedAppGroups, forKey: .requestedAppGroups)
         try container.encode(requestedApplications, forKey: .requestedApplications)
+        try container.encode(requestedWebDomains, forKey: .requestedWebDomains)
         try container.encode(duration, forKey: .duration)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(state, forKey: .state)

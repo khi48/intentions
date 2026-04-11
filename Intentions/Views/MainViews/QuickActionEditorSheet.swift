@@ -24,8 +24,9 @@ struct QuickActionEditorSheet: View {
     @State private var duration: TimeInterval = 300 // 5 minutes default
     @State private var selectedIcon: String = "bolt.fill"
     @State private var selectedApps: Set<ApplicationToken> = []
+    @State private var selectedWebDomains: Set<WebDomainToken> = []
     @State private var allowAllWebsites: Bool = false
-    @State private var familyActivitySelection = FamilyActivitySelection(includeEntireCategory: false)
+    @State private var familyActivitySelection = FamilyActivitySelection(includeEntireCategory: true)
     @State private var showingFamilyActivityPicker = false
 
     // UI state
@@ -384,12 +385,15 @@ struct QuickActionEditorSheet: View {
     private func updateSelectedItems(from selection: FamilyActivitySelection) {
         // Convert new selections to tokens
         let newApps = Set(selection.applications.compactMap { $0.token })
+        let newWebDomains = Set(selection.webDomains.compactMap { $0.token })
 
         // Only add items that aren't already selected (additive behavior)
         let appsToAdd = newApps.subtracting(selectedApps)
+        let webDomainsToAdd = newWebDomains.subtracting(selectedWebDomains)
 
         // Add new items to existing selections
         selectedApps.formUnion(appsToAdd)
+        selectedWebDomains.formUnion(webDomainsToAdd)
     }
 
     private func removeApp(_ token: ApplicationToken) {
@@ -431,6 +435,7 @@ struct QuickActionEditorSheet: View {
                 color: .blue,
                 duration: duration,
                 individualApplications: selectedApps,
+                individualWebDomains: selectedWebDomains,
                 allowAllWebsites: allowAllWebsites
             )
             quickAction = existing
@@ -443,6 +448,7 @@ struct QuickActionEditorSheet: View {
                 color: .blue,
                 duration: duration,
                 individualApplications: selectedApps,
+                individualWebDomains: selectedWebDomains,
                 allowAllWebsites: allowAllWebsites
             )
         }
@@ -468,6 +474,7 @@ struct QuickActionEditorSheet: View {
         }
 
         selectedApps = quickAction.individualApplications
+        selectedWebDomains = quickAction.individualWebDomains
     }
 
     private func formatDuration(_ duration: TimeInterval) -> String {

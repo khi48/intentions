@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intent — Editor v3: Mini & Banner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:#f4efe6; --ink-dim:#9a9389; --ink-faint:#5a5348; --ink-ghost:#2f2b25;
+  --bg:#0a0908; --screen:#0e0d0b; --sheet:#141211; --field:#1b1917;
+  --line:#2a2622; --ls:#1f1c19;
+  --sys:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text',sans-serif;
+  --serif:'Fraunces','Georgia',serif;
+  --sans:'Manrope',-apple-system,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:300;min-height:100vh;-webkit-font-smoothing:antialiased}
+body{background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(244,239,230,.03),transparent),var(--bg);padding:5rem 2rem 4rem}
+
+.page-header{max-width:1680px;margin:0 auto 5rem;display:grid;grid-template-columns:1fr auto;align-items:end;gap:2rem;padding-bottom:3rem;border-bottom:1px solid var(--line)}
+.page-header h1{font-family:var(--serif);font-weight:300;font-size:clamp(2.6rem,5vw,4.4rem);letter-spacing:-.03em;line-height:.95;font-style:italic}
+.page-header h1 em{font-style:normal;color:var(--ink-dim)}
+.page-header .meta{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);text-align:right;line-height:1.8}
+.page-header .meta span{display:block} .page-header .meta strong{color:var(--ink-dim);font-weight:500}
+
+.grid{max-width:1680px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:4rem 3rem}
+.prop{display:flex;flex-direction:column;align-items:center;gap:2rem}
+.plbl{width:100%;display:grid;grid-template-columns:auto 1fr;gap:1.25rem 1.5rem;align-items:baseline;padding-bottom:1.5rem;border-bottom:1px solid var(--line)}
+.plbl .n{font-family:var(--serif);font-weight:300;font-size:3.2rem;line-height:.8;letter-spacing:-.04em;color:var(--ink-dim);grid-row:span 2}
+.plbl .nm{font-family:var(--serif);font-weight:300;font-size:1.5rem;font-style:italic;line-height:1}
+.plbl .tg{font-family:var(--mono);font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+.notes{max-width:340px;font-family:var(--sans);font-size:.78rem;font-weight:300;line-height:1.55;color:var(--ink-dim);text-align:center;padding:0 .5rem}
+.notes strong{font-weight:500;color:var(--ink)}
+
+/* iphone */
+.ip{width:320px;aspect-ratio:390/844;background:#050403;border-radius:48px;padding:10px;position:relative;box-shadow:0 0 0 1px rgba(244,239,230,.06),0 60px 120px -40px rgba(0,0,0,.9),0 30px 60px -30px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.04)}
+.ip::before{content:'';position:absolute;right:-2px;top:140px;width:2px;height:60px;background:#1a1816;border-radius:1px}
+.ip::after{content:'';position:absolute;left:-2px;top:110px;width:2px;height:100px;background:#1a1816;border-radius:1px}
+.sc{position:relative;width:100%;height:100%;background:var(--screen);border-radius:39px;overflow:hidden;display:flex;flex-direction:column}
+.di{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:95px;height:28px;background:#000;border-radius:20px;z-index:10}
+.dm{position:absolute;inset:0;background:linear-gradient(180deg,#0e0d0b,#0a0908 60%);opacity:.5}
+.sh{position:absolute;top:54px;left:0;right:0;bottom:0;background:var(--sheet);border-radius:14px 14px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -20px 40px -20px rgba(0,0,0,.8)}
+.gb{width:36px;height:5px;background:rgba(244,239,230,.15);border-radius:3px;margin:6px auto 0}
+.sn{display:flex;align-items:center;justify-content:space-between;padding:8px 18px 12px;font-family:var(--sys);font-size:15px;border-bottom:.5px solid var(--ls)}
+.sn .c{color:var(--ink);opacity:.85} .sn .t{font-weight:600;font-size:14px;color:var(--ink)} .sn .s{font-weight:500;color:var(--ink)}
+.sb{flex:1;overflow:hidden;display:flex;flex-direction:column;font-family:var(--sys);min-height:0}
+
+/* shared */
+.tog{width:40px;height:24px;border-radius:13px;background:rgba(244,239,230,.1);padding:2px;display:flex;flex-shrink:0}
+.tog .k{width:20px;height:20px;border-radius:50%;background:var(--ink-dim)}
+.chv{color:var(--ink-faint);font-size:12px}
+.ilbl{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint)}
+.pill-r{display:flex;gap:5px}
+.pl{flex:1;padding:8px 0;border-radius:8px;background:var(--field);font-size:12px;text-align:center;color:var(--ink-dim);border:1px solid transparent}
+.pl.a{background:rgba(244,239,230,.1);color:var(--ink);border-color:var(--ink-dim)}
+.ic-box{display:grid;place-items:center;flex-shrink:0}
+.ic-box svg{stroke:var(--ink);stroke-width:1.5;fill:none}
+
+/* =====================================================
+   A — STICKY MINI: TIGHTER FORM
+   Same concept as 1a, but pills removed, duration is
+   a tappable row like apps. Maximally compact.
+   ===================================================== */
+.pA .sb{padding:0}
+.pA .dock{display:flex;justify-content:center;padding:14px 14px 10px;border-bottom:.5px solid var(--ls);background:linear-gradient(180deg,rgba(244,239,230,.015),transparent)}
+.pA .mini{width:100px;aspect-ratio:1;background:var(--field);border-radius:13px;border:1px solid var(--line);padding:10px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 6px 16px -8px rgba(0,0,0,.5)}
+.pA .mini .ic{width:20px;height:20px;border-radius:5px;background:rgba(244,239,230,.08)}
+.pA .mini .ic svg{width:11px;height:11px}
+.pA .mini .mn{font-size:12px;font-weight:600;color:var(--ink);line-height:1.15}
+.pA .mini .ms{font-size:9px;color:var(--ink-dim);margin-top:1px}
+.pA .fm{padding:0 14px;flex:1;overflow:hidden}
+.pA .fr{display:flex;align-items:center;gap:10px;padding:14px 0;border-bottom:.5px solid var(--ls)}
+.pA .fr:last-child{border-bottom:0}
+.pA .fr .ic-s{width:30px;height:30px;border-radius:8px;background:var(--field);border:1px solid var(--line)}
+.pA .fr .ic-s svg{width:14px;height:14px}
+.pA .fr .k{font-size:14px;color:var(--ink);flex:1}
+.pA .fr .v{font-size:13px;color:var(--ink-dim);display:flex;align-items:center;gap:6px}
+
+/* =====================================================
+   B — STICKY MINI: WITH DURATION PILLS
+   Like A but duration gets a pill row for quick presets
+   plus a "custom" option.
+   ===================================================== */
+.pB .sb{padding:0}
+.pB .dock{display:flex;justify-content:center;padding:14px 14px 10px;border-bottom:.5px solid var(--ls);background:linear-gradient(180deg,rgba(244,239,230,.015),transparent)}
+.pB .mini{width:100px;aspect-ratio:1;background:var(--field);border-radius:13px;border:1px solid var(--line);padding:10px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 6px 16px -8px rgba(0,0,0,.5)}
+.pB .mini .ic{width:20px;height:20px;border-radius:5px;background:rgba(244,239,230,.08)}
+.pB .mini .ic svg{width:11px;height:11px}
+.pB .mini .mn{font-size:12px;font-weight:600;color:var(--ink);line-height:1.15}
+.pB .mini .ms{font-size:9px;color:var(--ink-dim);margin-top:1px}
+.pB .fm{padding:0 14px;flex:1;overflow:hidden}
+.pB .fr{display:flex;align-items:center;gap:10px;padding:14px 0;border-bottom:.5px solid var(--ls)}
+.pB .fr:last-child{border-bottom:0}
+.pB .fr .ic-s{width:30px;height:30px;border-radius:8px;background:var(--field);border:1px solid var(--line)}
+.pB .fr .ic-s svg{width:14px;height:14px}
+.pB .fr .k{font-size:14px;color:var(--ink);flex:1}
+.pB .fr .v{font-size:13px;color:var(--ink-dim);display:flex;align-items:center;gap:6px}
+.pB .dur-sec{padding:10px 0 12px;border-bottom:.5px solid var(--ls)}
+.pB .dur-sec .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.pB .dur-sec .hd .custom{font-size:12px;color:var(--ink-dim)}
+
+/* =====================================================
+   C — BANNER: COMPACT ROWS
+   Horizontal preview + all rows as a flat list.
+   Tightest possible layout.
+   ===================================================== */
+.pC .sb{padding:0}
+.pC .ban{margin:10px 14px 0;padding:12px;background:var(--field);border-radius:12px;border:1px solid var(--line);display:flex;gap:12px;align-items:center}
+.pC .ban .ic-l{width:40px;height:40px;border-radius:10px;background:rgba(244,239,230,.06);flex-shrink:0}
+.pC .ban .ic-l svg{width:20px;height:20px}
+.pC .ban .inf{flex:1}
+.pC .ban .bn{font-size:16px;font-weight:600;color:var(--ink)}
+.pC .ban .bs{font-size:11px;color:var(--ink-dim);margin-top:2px}
+.pC .rows{padding:0 14px}
+.pC .r{display:flex;align-items:center;padding:14px 0;border-bottom:.5px solid var(--ls)}
+.pC .r:last-child{border-bottom:0}
+.pC .r .k{font-size:14px;color:var(--ink);flex:1}
+.pC .r .v{font-size:13px;color:var(--ink-dim);display:flex;align-items:center;gap:6px}
+.pC .dur-pills{padding:10px 0 12px;border-bottom:.5px solid var(--ls)}
+.pC .dur-pills .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+
+/* =====================================================
+   D — BANNER: GROUPED
+   Horizontal preview + iOS grouped-table rows with
+   section labels. Slightly more structured than C.
+   ===================================================== */
+.pD .sb{padding:0}
+.pD .ban{margin:10px 14px 0;padding:12px;background:var(--field);border-radius:12px;border:1px solid var(--line);display:flex;gap:12px;align-items:center}
+.pD .ban .ic-l{width:40px;height:40px;border-radius:10px;background:rgba(244,239,230,.06);flex-shrink:0}
+.pD .ban .ic-l svg{width:20px;height:20px}
+.pD .ban .inf{flex:1}
+.pD .ban .bn{font-size:16px;font-weight:600;color:var(--ink)}
+.pD .ban .bs{font-size:11px;color:var(--ink-dim);margin-top:2px}
+.pD .grp{margin:10px 14px 0;background:var(--field);border-radius:12px;overflow:hidden}
+.pD .gr{display:flex;align-items:center;padding:14px;border-top:.5px solid var(--line)}
+.pD .gr:first-child{border-top:0}
+.pD .gr .k{font-size:14px;color:var(--ink);flex:1}
+.pD .gr .v{font-size:13px;color:var(--ink-dim);display:flex;align-items:center;gap:6px}
+.pD .gl{padding:14px 14px 4px;font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:500}
+
+/* =====================================================
+   E — MINI + BANNER HYBRID
+   Small preview card on the LEFT, name field on the
+   RIGHT. Duration pills below. Then flat rows.
+   ===================================================== */
+.pE .sb{padding:0}
+.pE .top-row{display:flex;gap:12px;padding:14px;align-items:center;border-bottom:.5px solid var(--ls)}
+.pE .top-row .mini{width:72px;height:72px;background:var(--field);border-radius:12px;border:1px solid var(--line);padding:8px;display:flex;flex-direction:column;justify-content:space-between;flex-shrink:0}
+.pE .top-row .mini .ic{width:16px;height:16px;border-radius:4px;background:rgba(244,239,230,.08)}
+.pE .top-row .mini .ic svg{width:9px;height:9px}
+.pE .top-row .mini .mn{font-size:10px;font-weight:600;color:var(--ink);line-height:1.15}
+.pE .top-row .mini .ms{font-size:8px;color:var(--ink-dim)}
+.pE .top-row .edit-area{flex:1;display:flex;flex-direction:column;gap:8px}
+.pE .top-row .name-input{font-family:var(--sys);font-size:17px;font-weight:600;color:var(--ink);padding:10px 12px;background:var(--field);border-radius:10px;border:1px solid var(--line)}
+.pE .top-row .icon-row{display:flex;align-items:center;gap:8px}
+.pE .top-row .icon-row .ic-chip{width:26px;height:26px;border-radius:6px;background:var(--field);border:1px solid var(--line)}
+.pE .top-row .icon-row .ic-chip svg{width:12px;height:12px}
+.pE .top-row .icon-row .ic-lbl{font-size:12px;color:var(--ink-dim)}
+.pE .fm{padding:0 14px}
+.pE .dur-sec{padding:10px 0 12px;border-bottom:.5px solid var(--ls)}
+.pE .dur-sec .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.pE .dur-sec .hd .custom{font-size:12px;color:var(--ink-dim)}
+.pE .fr{display:flex;align-items:center;padding:14px 0;border-bottom:.5px solid var(--ls)}
+.pE .fr:last-child{border-bottom:0}
+.pE .fr .k{font-size:14px;color:var(--ink);flex:1}
+.pE .fr .v{font-size:13px;color:var(--ink-dim);display:flex;align-items:center;gap:6px}
+
+/* =====================================================
+   F — BANNER: EVERYTHING INLINE
+   Banner preview + ALL settings as a single continuous
+   form with no section dividers. Maximum density.
+   ===================================================== */
+.pF .sb{padding:0}
+.pF .ban{margin:10px 14px 0;padding:10px 12px;background:var(--field);border-radius:12px;border:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.pF .ban .ic-l{width:36px;height:36px;border-radius:9px;background:rgba(244,239,230,.06);flex-shrink:0}
+.pF .ban .ic-l svg{width:18px;height:18px}
+.pF .ban .inf{flex:1}
+.pF .ban .bn{font-size:15px;font-weight:600;color:var(--ink)}
+.pF .ban .bs{font-size:10px;color:var(--ink-dim);margin-top:1px}
+.pF .ban .dur-chip{padding:5px 10px;background:rgba(244,239,230,.08);border-radius:6px;font-size:13px;font-weight:600;color:var(--ink);border:1px solid var(--line);flex-shrink:0}
+.pF .fm{padding:6px 14px 0;flex:1;overflow:hidden}
+.pF .r{display:flex;align-items:center;padding:12px 0;border-bottom:.5px solid var(--ls)}
+.pF .r:last-child{border-bottom:0}
+.pF .r .k{font-size:14px;color:var(--ink);flex:1}
+.pF .r .v{font-size:13px;color:var(--ink-dim);display:flex;align-items:center;gap:6px}
+.pF .seg-row{display:flex;gap:0;padding:8px 0 10px}
+.pF .seg{flex:1;font-size:11px;text-align:center;padding:7px 0;color:var(--ink-dim);background:rgba(244,239,230,.04);border-right:.5px solid var(--line)}
+.pF .seg:first-child{border-radius:6px 0 0 6px} .pF .seg:last-child{border-radius:0 6px 6px 0;border-right:0}
+.pF .seg.a{background:rgba(244,239,230,.15);color:var(--ink);font-weight:600}
+
+@media(max-width:720px){body{padding:2rem 1rem 3rem}.page-header{grid-template-columns:1fr;margin-bottom:3rem}.page-header .meta{text-align:left}.grid{gap:3rem 2rem}}
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1><em>Editor v3</em> —<br>mini <em>&</em> banner</h1>
+  <div class="meta">
+    <span><strong>BASE</strong> &nbsp; 1A STICKY MINI + 1B BANNER</span>
+    <span><strong>VARIANTS</strong> &nbsp; 06</span>
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- ===== A — MINI: ALL ROWS ===== -->
+  <div class="prop">
+    <div class="plbl"><div class="n">A</div><div class="nm">Mini: All Rows</div><div class="tg">Mini card · Every field is a tap row</div></div>
+    <div class="ip pA"><div class="sc"><div class="di"></div><div class="dm"></div>
+      <div class="sh"><div class="gb"></div>
+        <div class="sn"><span class="c">Cancel</span><span class="t">New Quick Action</span><span class="s">Create</span></div>
+        <div class="sb">
+          <div class="dock"><div class="mini"><div class="ic ic-box"><svg viewBox="0 0 20 20"><path d="M4 10l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="mn">Deep work</div><div class="ms">1h 30m · 3 apps</div></div></div></div>
+          <div class="fm">
+            <div class="fr"><div class="ic-s ic-box" style="width:30px;height:30px;border-radius:8px;background:var(--field);border:1px solid var(--line)"><svg viewBox="0 0 20 20" style="width:14px;height:14px"><path d="M4 10l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="k">Deep work</span><span class="chv">›</span></div>
+            <div class="fr"><span class="k">Duration</span><span class="v">1h 30m <span class="chv">›</span></span></div>
+            <div class="fr"><span class="k">Apps</span><span class="v">3 selected <span class="chv">›</span></span></div>
+            <div class="fr"><span class="k">Allow websites</span><div class="tog"><div class="k"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <p class="notes">Maximally compact — every field is one row. No pills, no extra controls. Tapping "Duration" opens a dedicated picker. <strong>Smallest possible footprint.</strong></p>
+  </div>
+
+  <!-- ===== B — MINI: DURATION PILLS ===== -->
+  <div class="prop">
+    <div class="plbl"><div class="n">B</div><div class="nm">Mini: Duration Pills</div><div class="tg">Mini card · Quick-select duration</div></div>
+    <div class="ip pB"><div class="sc"><div class="di"></div><div class="dm"></div>
+      <div class="sh"><div class="gb"></div>
+        <div class="sn"><span class="c">Cancel</span><span class="t">New Quick Action</span><span class="s">Create</span></div>
+        <div class="sb">
+          <div class="dock"><div class="mini"><div class="ic ic-box"><svg viewBox="0 0 20 20"><path d="M4 10l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="mn">Deep work</div><div class="ms">1h 30m · 3 apps</div></div></div></div>
+          <div class="fm">
+            <div class="fr"><div class="ic-s ic-box" style="width:30px;height:30px;border-radius:8px;background:var(--field);border:1px solid var(--line)"><svg viewBox="0 0 20 20" style="width:14px;height:14px"><path d="M4 10l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="k">Deep work</span><span class="chv">›</span></div>
+            <div class="dur-sec">
+              <div class="hd"><span class="ilbl">Duration</span><span class="custom">Custom ›</span></div>
+              <div class="pill-r"><div class="pl">5m</div><div class="pl">15m</div><div class="pl">30m</div><div class="pl">1h</div><div class="pl a">1.5h</div><div class="pl">2h</div></div>
+            </div>
+            <div class="fr"><span class="k">Apps</span><span class="v">3 selected <span class="chv">›</span></span></div>
+            <div class="fr"><span class="k">Allow websites</span><div class="tog"><div class="k"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <p class="notes">Same mini preview, but duration gets its own pill row for one-tap preset selection. "Custom" link opens a precise picker for non-standard values. <strong>Good balance</strong> of speed and control.</p>
+  </div>
+
+  <!-- ===== C — BANNER: FLAT ROWS + PILLS ===== -->
+  <div class="prop">
+    <div class="plbl"><div class="n">C</div><div class="nm">Banner: Flat + Pills</div><div class="tg">Banner preview · Pills for duration</div></div>
+    <div class="ip pC"><div class="sc"><div class="di"></div><div class="dm"></div>
+      <div class="sh"><div class="gb"></div>
+        <div class="sn"><span class="c">Cancel</span><span class="t">New Quick Action</span><span class="s">Create</span></div>
+        <div class="sb">
+          <div class="ban"><div class="ic-l ic-box" style="width:40px;height:40px;border-radius:10px;background:rgba(244,239,230,.06)"><svg viewBox="0 0 20 20" style="width:20px;height:20px"><path d="M4 10l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="inf"><div class="bn">Deep work</div><div class="bs">1h 30m · 3 apps · No web</div></div></div>
+          <div class="rows">
+            <div class="r"><span class="k">Name</span><span class="v">Deep work <span class="chv">›</span></span></div>
+            <div class="r"><span class="k">Icon</span><span class="v">checkmark <span class="chv">›</span></span></div>
+            <div class="dur-pills">
+              <div class="hd"><span class="ilbl">Duration</span><span style="font-size:12px;color:var(--ink-dim)">Custom ›</span></div>
+              <div class="pill-r"><div class="pl">5m</div><div class="pl">15m</div><div class="pl">30m</div><div class="pl">1h</div><div class="pl a">1.5h</div><div class="pl">2h</div></div>
+            </div>
+            <div class="r"><span class="k">Apps</span><span class="v">3 selected <span class="chv">›</span></span></div>
+            <div class="r"><span class="k">Allow websites</span><div class="tog"><div class="k"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <p class="notes">Banner preview summarises everything in one line. Flat rows for all fields, with duration pills inline for quick selection. <strong>Shows the most info</strong> while staying compact.</p>
+  </div>
+
+  <!-- ===== D — BANNER: GROUPED SECTIONS ===== -->
+  <div class="prop">
+    <div class="plbl"><div class="n">D</div><div class="nm">Banner: Grouped</div><div class="tg">Banner preview · iOS table groups</div></div>
+    <div class="ip pD"><div class="sc"><div class="di"></div><div class="dm"></div>
+      <div class="sh"><div class="gb"></div>
+        <div class="sn"><span class="c">Cancel</span><span class="t">New Quick Action</span><span class="s">Create</span></div>
+        <div class="sb">
+          <div class="ban"><div class="ic-l ic-box" style="width:40px;height:40px;border-radius:10px;background:rgba(244,239,230,.06)"><svg viewBox="0 0 20 20" style="width:20px;height:20px"><path d="M4 10l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="inf"><div class="bn">Deep work</div><div class="bs">1h 30m · 3 apps · No web</div></div></div>
+          <div class="gl">Identity</div>
+          <div class="grp">
+            <div class="gr"><span class="k">Name</span><span class="v">Deep work <span class="chv">›</span></span></div>
+            <div class="gr"><span class="k">Icon</span><span class="v">checkmark <span class="chv">›</span></span></div>
+            <div class="gr"><span class="k">Duration</span><span class="v">1h 30m <span class="chv">›</span></span></div>
+          </div>
+          <div class="gl">Access</div>
+          <div class="grp">
+            <div class="gr"><span class="k">Apps</span><span class="v">3 selected <span class="chv">›</span></span></div>
+            <div class="gr"><span class="k">Allow websites</span><div class="tog"><div class="k"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <p class="notes">Banner preview + native iOS grouped-table rows with two section labels: <strong>Identity</strong> (name, icon, duration) and <strong>Access</strong> (apps, websites). Most familiar to iOS users.</p>
+  </div>
+
+  <!-- ===== E — SIDE-BY-SIDE ===== -->
+  <div class="prop">
+    <div class="plbl"><div class="n">E</div><div class="nm">Side-by-Side</div><div class="tg">Mini card left · Name input right</div></div>
+    <div class="ip pE"><div class="sc"><div class="di"></div><div class="dm"></div>
+      <div class="sh"><div class="gb"></div>
+        <div class="sn"><span class="c">Cancel</span><span class="t">New Quick Action</span><span class="s">Create</span></div>
+        <div class="sb">
+          <div class="top-row">
+            <div class="mini"><div class="ic ic-box"><svg viewBox="0 0 20 20" style="width:9px;height:9px"><path d="M4 10l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="mn">Deep work</div><div class="ms">1h 30m</div></div></div>
+            <div class="edit-area">
+              <div class="name-input">Deep work</div>
+              <div class="icon-row"><div class="ic-chip ic-box" style="width:26px;height:26px;border-radius:6px;background:var(--field);border:1px solid var(--line)"><svg viewBox="0 0 20 20" style="width:12px;height:12px"><path d="M4 10l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="ic-lbl">Change icon ›</span></div>
+            </div>
+          </div>
+          <div class="fm">
+            <div class="dur-sec">
+              <div class="hd"><span class="ilbl">Duration</span><span class="custom" style="font-size:12px;color:var(--ink-dim)">Custom ›</span></div>
+              <div class="pill-r"><div class="pl">5m</div><div class="pl">15m</div><div class="pl">30m</div><div class="pl">1h</div><div class="pl a">1.5h</div><div class="pl">2h</div></div>
+            </div>
+            <div class="fr"><span class="k">Apps</span><span class="v">3 selected <span class="chv">›</span></span></div>
+            <div class="fr"><span class="k">Allow websites</span><div class="tog"><div class="k"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <p class="notes">Mini preview card sits LEFT of the name input — preview and editing happen in the same row. Icon change is a small inline link. Duration pills + flat rows below. <strong>Name is immediately editable</strong> without a separate tap.</p>
+  </div>
+
+  <!-- ===== F — BANNER: INLINE SEGMENTS ===== -->
+  <div class="prop">
+    <div class="plbl"><div class="n">F</div><div class="nm">Banner: Segments</div><div class="tg">Banner + duration badge + segments</div></div>
+    <div class="ip pF"><div class="sc"><div class="di"></div><div class="dm"></div>
+      <div class="sh"><div class="gb"></div>
+        <div class="sn"><span class="c">Cancel</span><span class="t">New Quick Action</span><span class="s">Create</span></div>
+        <div class="sb">
+          <div class="ban"><div class="ic-l ic-box" style="width:36px;height:36px;border-radius:9px;background:rgba(244,239,230,.06)"><svg viewBox="0 0 20 20" style="width:18px;height:18px"><path d="M4 10l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="inf"><div class="bn">Deep work</div><div class="bs">3 apps · No websites</div></div><div class="dur-chip">1h 30m</div></div>
+          <div class="fm">
+            <div class="r"><span class="k">Name</span><span class="v">Deep work <span class="chv">›</span></span></div>
+            <div class="r"><span class="k">Icon</span><span class="v">checkmark <span class="chv">›</span></span></div>
+            <div style="padding:10px 0 4px"><span class="ilbl">Duration</span></div>
+            <div class="seg-row"><div class="seg">5m</div><div class="seg">15m</div><div class="seg">30m</div><div class="seg">1h</div><div class="seg a">1.5h</div><div class="seg">2h</div></div>
+            <div class="r"><span class="k">Apps</span><span class="v">3 selected <span class="chv">›</span></span></div>
+            <div class="r"><span class="k">Allow websites</span><div class="tog"><div class="k"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <p class="notes">Banner with a duration badge chip on the right. Duration uses an iOS segmented control style. Everything else is flat rows. <strong>Duration is visible</strong> both in the banner and in the selector simultaneously.</p>
+  </div>
+
+</div>
+
+</body>
+</html>

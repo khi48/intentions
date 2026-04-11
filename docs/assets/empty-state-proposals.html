@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intent — Empty State Proposals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #f4efe6;
+  --ink-dim: #9a9389;
+  --ink-faint: #5a5348;
+  --ink-ghost: #2f2b25;
+  --bg: #0a0908;
+  --screen: #0e0d0b;
+  --surface: #151311;
+  --line: #272420;
+  --serif: 'Fraunces', 'Georgia', serif;
+  --sans: 'Manrope', -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 300;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(244, 239, 230, 0.03), transparent),
+    var(--bg);
+  padding: 5rem 2rem 4rem;
+}
+
+/* ---------- PAGE HEADER ---------- */
+.page-header {
+  max-width: 1680px;
+  margin: 0 auto 5rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 2rem;
+  padding-bottom: 3rem;
+  border-bottom: 1px solid var(--line);
+}
+.page-header h1 {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: clamp(2.8rem, 5vw, 4.6rem);
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+  font-style: italic;
+}
+.page-header h1 em {
+  font-style: normal;
+  color: var(--ink-dim);
+}
+.page-header .meta {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  text-align: right;
+  line-height: 1.8;
+}
+.page-header .meta span {
+  display: block;
+}
+.page-header .meta span strong {
+  color: var(--ink-dim);
+  font-weight: 500;
+}
+
+/* ---------- GRID ---------- */
+.proposals-grid {
+  max-width: 1680px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 4rem 3rem;
+}
+
+.proposal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+/* ---------- PROPOSAL LABEL ---------- */
+.proposal-label {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.25rem 1.5rem;
+  align-items: baseline;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+.proposal-label .num {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: 3.6rem;
+  line-height: 0.8;
+  letter-spacing: -0.04em;
+  color: var(--ink-dim);
+  grid-row: span 2;
+}
+.proposal-label .name {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: 1.6rem;
+  font-style: italic;
+  line-height: 1;
+}
+.proposal-label .tag {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---------- IPHONE FRAME ---------- */
+.iphone {
+  width: 320px;
+  aspect-ratio: 390/844;
+  background: #050403;
+  border-radius: 48px;
+  padding: 10px;
+  position: relative;
+  box-shadow:
+    0 0 0 1px rgba(244, 239, 230, 0.06),
+    0 60px 120px -40px rgba(0, 0, 0, 0.9),
+    0 30px 60px -30px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.iphone::before {
+  /* Side button subtle ridge */
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: 140px;
+  width: 2px;
+  height: 60px;
+  background: #1a1816;
+  border-radius: 1px;
+}
+.iphone::after {
+  /* Volume buttons */
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 110px;
+  width: 2px;
+  height: 100px;
+  background: #1a1816;
+  border-radius: 1px;
+}
+
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--screen);
+  border-radius: 39px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- IPHONE CHROME ---------- */
+.dynamic-island {
+  position: absolute;
+  top: 11px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 95px;
+  height: 28px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 10;
+}
+
+.status-bar {
+  height: 50px;
+  padding: 16px 32px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+.status-bar .icons {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.status-bar svg {
+  width: 14px;
+  height: 14px;
+  fill: var(--ink);
+}
+
+.nav-bar {
+  padding: 10px 20px 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-shrink: 0;
+}
+.nav-bar .title {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.nav-bar .title em {
+  font-style: italic;
+}
+.nav-bar .settings-icon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.5;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.tab-bar {
+  height: 74px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(244, 239, 230, 0.05);
+  display: flex;
+  justify-content: space-around;
+  flex-shrink: 0;
+  background: rgba(14, 13, 11, 0.8);
+  backdrop-filter: blur(10px);
+}
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding-top: 6px;
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.tab-item.active { color: var(--ink); }
+.tab-item:not(.active) { color: var(--ink-faint); }
+.tab-item svg { width: 22px; height: 22px; }
+
+/* =====================================================
+   PROPOSAL A — BEGIN (Editorial Minimalism)
+   ===================================================== */
+.p-begin .content {
+  padding: 2rem 1.75rem 0;
+  justify-content: space-between;
+}
+.p-begin .kicker {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 2rem;
+}
+.p-begin .display {
+  font-family: var(--serif);
+  font-size: 88px;
+  font-weight: 300;
+  font-style: italic;
+  line-height: 0.85;
+  letter-spacing: -0.05em;
+  color: var(--ink);
+  margin-left: -4px;
+}
+.p-begin .display .dot {
+  font-style: normal;
+  color: var(--ink-dim);
+  display: inline-block;
+  margin-left: -0.08em;
+}
+.p-begin .rule {
+  width: 100%;
+  height: 1px;
+  background: var(--line);
+  margin: 1.5rem 0;
+}
+.p-begin .desc {
+  font-family: var(--serif);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-dim);
+  max-width: 240px;
+  font-weight: 300;
+}
+.p-begin .cta {
+  margin-top: auto;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.p-begin .cta .arrow {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--ink-dim);
+}
+
+/* =====================================================
+   PROPOSAL B — PHANTOM GRID (Scaffolding)
+   ===================================================== */
+.p-grid .content {
+  padding: 1rem 1.25rem 0;
+}
+.p-grid .section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.5rem 1rem;
+}
+.p-grid .section-head .label {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+.p-grid .section-head .count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.08em;
+}
+.p-grid .ghost-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.p-grid .ghost {
+  aspect-ratio: 1;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: rgba(244, 239, 230, 0.012);
+  transition: border-color 0.2s;
+}
+.p-grid .ghost.highlight {
+  border-color: var(--ink-dim);
+  border-style: solid;
+  background: rgba(244, 239, 230, 0.02);
+}
+.p-grid .ghost .glyph {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--ink-faint);
+  border-radius: 5px;
+  opacity: 0.7;
+}
+.p-grid .ghost.highlight .glyph {
+  background: var(--ink-dim);
+  border-color: var(--ink-dim);
+  opacity: 1;
+}
+.p-grid .ghost .name {
+  font-family: var(--serif);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.p-grid .ghost .dur {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+.p-grid .ghost .plus {
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 300;
+  color: var(--ink-faint);
+  line-height: 0.8;
+  align-self: flex-start;
+}
+.p-grid .hint {
+  margin-top: 1.25rem;
+  padding: 0 0.5rem;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-dim);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* =====================================================
+   PROPOSAL C — MONUMENT (Ceremonial Center)
+   ===================================================== */
+.p-monument .content {
+  padding: 0 1.75rem;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+}
+.p-monument .emblem {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin-bottom: 3rem;
+}
+.p-monument .emblem svg {
+  width: 100%;
+  height: 100%;
+}
+.p-monument .emblem .pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  animation: monument-pulse 4s ease-in-out infinite;
+}
+@keyframes monument-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.12); opacity: 0; }
+}
+.p-monument h2 {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  max-width: 220px;
+  margin-bottom: 1rem;
+}
+.p-monument h2 em {
+  font-style: italic;
+  color: var(--ink-dim);
+}
+.p-monument .body {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 1.6;
+  color: var(--ink-dim);
+  max-width: 220px;
+  margin-bottom: 2.5rem;
+}
+.p-monument .tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 1.5rem;
+  position: relative;
+  padding: 0 14px;
+}
+.p-monument .tag::before,
+.p-monument .tag::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 24px;
+  height: 1px;
+  background: var(--line);
+}
+.p-monument .tag::before { right: 100%; }
+.p-monument .tag::after { left: 100%; }
+.p-monument .cta {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  padding: 14px 40px;
+  border: 1px solid var(--ink-dim);
+  border-radius: 100px;
+  letter-spacing: 0.02em;
+}
+
+/* =====================================================
+   PROPOSAL D — MANIFESTO (Typographic Statement)
+   ===================================================== */
+.p-manifesto .content {
+  padding: 1rem 1.5rem 0;
+  justify-content: space-between;
+}
+.p-manifesto .main {
+  padding-top: 1rem;
+}
+.p-manifesto h2 {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: 38px;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  margin-bottom: 1.25rem;
+}
+.p-manifesto h2 .line2 {
+  display: block;
+  font-style: italic;
+  color: var(--ink-dim);
+}
+.p-manifesto .rule-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 1.5rem 0;
+}
+.p-manifesto .rule-group .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+.p-manifesto .rule-group .rule {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.p-manifesto .rule-group .label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.p-manifesto .principles {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 2rem;
+}
+.p-manifesto .principles li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+.p-manifesto .principles .n {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.05em;
+}
+.p-manifesto .principles .t {
+  font-family: var(--serif);
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--ink-dim);
+}
+.p-manifesto .principles .t strong {
+  color: var(--ink);
+  font-weight: 400;
+}
+.p-manifesto .action-row {
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+.p-manifesto .action-row .label {
+  flex: 1;
+  font-family: var(--serif);
+  font-size: 15px;
+  font-style: italic;
+}
+.p-manifesto .action-row .plus {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--ink-dim);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: 22px;
+  color: var(--ink);
+  line-height: 0;
+  padding-bottom: 3px;
+}
+
+/* ---------- NOTES UNDER EACH MOCKUP ---------- */
+.notes {
+  max-width: 320px;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 300;
+  line-height: 1.55;
+  color: var(--ink-dim);
+  text-align: center;
+  padding: 0 0.5rem;
+}
+.notes strong {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 720px) {
+  body { padding: 2rem 1rem 3rem; }
+  .page-header {
+    grid-template-columns: 1fr;
+    margin-bottom: 3rem;
+  }
+  .page-header .meta { text-align: left; }
+  .proposals-grid { gap: 3rem 2rem; }
+}
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1><em>Home</em> — empty state<br><em>proposals</em></h1>
+  <div class="meta">
+    <span><strong>APP</strong> &nbsp; INTENT</span>
+    <span><strong>SCREEN</strong> &nbsp; HOME / NO QUICK ACTIONS</span>
+    <span><strong>PALETTE</strong> &nbsp; WARM GREYSCALE</span>
+    <span><strong>PROPOSALS</strong> &nbsp; 04</span>
+  </div>
+</header>
+
+<div class="proposals-grid">
+
+  <!-- =========================================================
+       PROPOSAL A — BEGIN
+       ========================================================= -->
+  <div class="proposal">
+    <div class="proposal-label">
+      <div class="num">01</div>
+      <div class="name">Begin</div>
+      <div class="tag">Editorial minimalism</div>
+    </div>
+    <div class="iphone p-begin">
+      <div class="screen">
+        <div class="dynamic-island"></div>
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="icons">
+            <svg viewBox="0 0 16 10"><path d="M0 8h2v2H0zm4-2h2v4H4zm4-2h2v6H8zm4-2h2v8h-2z"/></svg>
+            <svg viewBox="0 0 16 12"><path d="M8 2c-2.5 0-4.8 1-6.5 2.5l1 1.2C3.8 4.4 5.8 3.5 8 3.5s4.2.9 5.5 2.2l1-1.2C12.8 3 10.5 2 8 2z"/></svg>
+            <svg viewBox="0 0 24 12"><rect x="1" y="2" width="20" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1"/><rect x="22" y="4.5" width="1.5" height="3" rx="0.3"/><rect x="3" y="4" width="14" height="4" rx="1"/></svg>
+          </div>
+        </div>
+        <div class="nav-bar">
+          <div class="title"><em>Intent</em></div>
+          <div class="settings-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3">
+              <circle cx="10" cy="10" r="3"/>
+              <path d="M10 1v3M10 16v3M19 10h-3M4 10H1"/>
+            </svg>
+          </div>
+        </div>
+        <div class="content">
+          <div>
+            <div class="kicker">— &nbsp; You have no quick actions</div>
+            <div class="display">Begin<span class="dot">.</span></div>
+            <div class="rule"></div>
+            <div class="desc">
+              A quick action unlocks specific apps for a finite time. Everything else stays silent.
+            </div>
+          </div>
+          <div class="cta">
+            <span>Create your first</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
+            <span>Home</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+            <span>Settings</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="notes">One confident word, considered whitespace, and a single unambiguous action. Reads like the opening page of a journal. <strong>Best for</strong> signaling intent and gravitas.</p>
+  </div>
+
+  <!-- =========================================================
+       PROPOSAL B — PHANTOM GRID
+       ========================================================= -->
+  <div class="proposal">
+    <div class="proposal-label">
+      <div class="num">02</div>
+      <div class="name">Phantom Grid</div>
+      <div class="tag">Scaffolding · Preset starters</div>
+    </div>
+    <div class="iphone p-grid">
+      <div class="screen">
+        <div class="dynamic-island"></div>
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="icons">
+            <svg viewBox="0 0 16 10"><path d="M0 8h2v2H0zm4-2h2v4H4zm4-2h2v6H8zm4-2h2v8h-2z"/></svg>
+            <svg viewBox="0 0 16 12"><path d="M8 2c-2.5 0-4.8 1-6.5 2.5l1 1.2C3.8 4.4 5.8 3.5 8 3.5s4.2.9 5.5 2.2l1-1.2C12.8 3 10.5 2 8 2z"/></svg>
+            <svg viewBox="0 0 24 12"><rect x="1" y="2" width="20" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1"/><rect x="22" y="4.5" width="1.5" height="3" rx="0.3"/><rect x="3" y="4" width="14" height="4" rx="1"/></svg>
+          </div>
+        </div>
+        <div class="nav-bar">
+          <div class="title"><em>Intent</em></div>
+          <div class="settings-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3">
+              <circle cx="10" cy="10" r="3"/>
+              <path d="M10 1v3M10 16v3M19 10h-3M4 10H1"/>
+            </svg>
+          </div>
+        </div>
+        <div class="content">
+          <div style="padding: 1.25rem 1.25rem 0;">
+            <div class="section-head">
+              <span class="label">Quick Actions</span>
+              <span class="count">0 / ∞</span>
+            </div>
+            <div class="ghost-grid">
+              <div class="ghost">
+                <div class="glyph"></div>
+                <div>
+                  <div class="name">Deep work</div>
+                  <div class="dur">1h 30m</div>
+                </div>
+              </div>
+              <div class="ghost">
+                <div class="glyph"></div>
+                <div>
+                  <div class="name">Exercise</div>
+                  <div class="dur">30m</div>
+                </div>
+              </div>
+              <div class="ghost">
+                <div class="glyph"></div>
+                <div>
+                  <div class="name">Quick reply</div>
+                  <div class="dur">5m</div>
+                </div>
+              </div>
+              <div class="ghost highlight">
+                <div class="plus">+</div>
+                <div>
+                  <div class="name">Custom</div>
+                  <div class="dur">Your own</div>
+                </div>
+              </div>
+            </div>
+            <div class="hint">
+              Tap a template to customise and save —<br>or build one from scratch.
+            </div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
+            <span>Home</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+            <span>Settings</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="notes">Shows the eventual shape of the grid with dashed placeholder cards as starter templates. Teaches structure implicitly and gives users something to tap immediately. <strong>Best for</strong> reducing blank-page friction.</p>
+  </div>
+
+  <!-- =========================================================
+       PROPOSAL C — MONUMENT
+       ========================================================= -->
+  <div class="proposal">
+    <div class="proposal-label">
+      <div class="num">03</div>
+      <div class="name">Monument</div>
+      <div class="tag">Ceremonial · Centred mark</div>
+    </div>
+    <div class="iphone p-monument">
+      <div class="screen">
+        <div class="dynamic-island"></div>
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="icons">
+            <svg viewBox="0 0 16 10"><path d="M0 8h2v2H0zm4-2h2v4H4zm4-2h2v6H8zm4-2h2v8h-2z"/></svg>
+            <svg viewBox="0 0 16 12"><path d="M8 2c-2.5 0-4.8 1-6.5 2.5l1 1.2C3.8 4.4 5.8 3.5 8 3.5s4.2.9 5.5 2.2l1-1.2C12.8 3 10.5 2 8 2z"/></svg>
+            <svg viewBox="0 0 24 12"><rect x="1" y="2" width="20" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1"/><rect x="22" y="4.5" width="1.5" height="3" rx="0.3"/><rect x="3" y="4" width="14" height="4" rx="1"/></svg>
+          </div>
+        </div>
+        <div class="nav-bar">
+          <div class="title"><em>Intent</em></div>
+          <div class="settings-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3">
+              <circle cx="10" cy="10" r="3"/>
+              <path d="M10 1v3M10 16v3M19 10h-3M4 10H1"/>
+            </svg>
+          </div>
+        </div>
+        <div class="content">
+          <div class="emblem">
+            <div class="pulse"></div>
+            <svg viewBox="0 0 160 160" fill="none" stroke="#9a9389" stroke-width="1">
+              <circle cx="80" cy="80" r="78"/>
+              <circle cx="80" cy="80" r="54" stroke-dasharray="2 4"/>
+              <circle cx="80" cy="80" r="30"/>
+              <circle cx="80" cy="80" r="3" fill="#f4efe6" stroke="none"/>
+              <line x1="80" y1="2" x2="80" y2="14"/>
+              <line x1="80" y1="146" x2="80" y2="158"/>
+              <line x1="2" y1="80" x2="14" y2="80"/>
+              <line x1="146" y1="80" x2="158" y2="80"/>
+              <line x1="80" y1="26" x2="80" y2="34" stroke="#5a5348"/>
+              <line x1="80" y1="126" x2="80" y2="134" stroke="#5a5348"/>
+              <line x1="26" y1="80" x2="34" y2="80" stroke="#5a5348"/>
+              <line x1="126" y1="80" x2="134" y2="80" stroke="#5a5348"/>
+            </svg>
+          </div>
+          <h2>Set your first <em>intention</em></h2>
+          <p class="body">Choose the apps you need. Set the time. Everything else stays silent until you return.</p>
+          <div class="tag">Quick Actions</div>
+          <div class="cta">Begin</div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
+            <span>Home</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+            <span>Settings</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="notes">A centred emblem with a slow pulse anchors the screen. Reads as a ritual — open the app, see the mark, set an intention. <strong>Best for</strong> making the empty state feel considered rather than missing content.</p>
+  </div>
+
+  <!-- =========================================================
+       PROPOSAL D — MANIFESTO
+       ========================================================= -->
+  <div class="proposal">
+    <div class="proposal-label">
+      <div class="num">04</div>
+      <div class="name">Manifesto</div>
+      <div class="tag">Typographic statement · Principles</div>
+    </div>
+    <div class="iphone p-manifesto">
+      <div class="screen">
+        <div class="dynamic-island"></div>
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="icons">
+            <svg viewBox="0 0 16 10"><path d="M0 8h2v2H0zm4-2h2v4H4zm4-2h2v6H8zm4-2h2v8h-2z"/></svg>
+            <svg viewBox="0 0 16 12"><path d="M8 2c-2.5 0-4.8 1-6.5 2.5l1 1.2C3.8 4.4 5.8 3.5 8 3.5s4.2.9 5.5 2.2l1-1.2C12.8 3 10.5 2 8 2z"/></svg>
+            <svg viewBox="0 0 24 12"><rect x="1" y="2" width="20" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1"/><rect x="22" y="4.5" width="1.5" height="3" rx="0.3"/><rect x="3" y="4" width="14" height="4" rx="1"/></svg>
+          </div>
+        </div>
+        <div class="nav-bar">
+          <div class="title"><em>Intent</em></div>
+          <div class="settings-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3">
+              <circle cx="10" cy="10" r="3"/>
+              <path d="M10 1v3M10 16v3M19 10h-3M4 10H1"/>
+            </svg>
+          </div>
+        </div>
+        <div class="content">
+          <div class="main">
+            <h2>
+              Your phone<br>
+              <span class="line2">is quiet.</span>
+            </h2>
+            <div class="rule-group">
+              <div class="dot"></div>
+              <div class="rule"></div>
+              <div class="label">Three things</div>
+              <div class="rule"></div>
+              <div class="dot"></div>
+            </div>
+            <ol class="principles">
+              <li><span class="n">I.</span><span class="t">Everything is blocked <strong>by default.</strong></span></li>
+              <li><span class="n">II.</span><span class="t">You decide what to <strong>unlock,</strong> and for how long.</span></li>
+              <li><span class="n">III.</span><span class="t">When the timer ends, the <strong>quiet returns.</strong></span></li>
+            </ol>
+          </div>
+          <div class="action-row">
+            <div class="label">Create a quick action</div>
+            <div class="plus">+</div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
+            <span>Home</span>
+          </div>
+          <div class="tab-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+            <span>Settings</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="notes">Explains the concept in three numbered principles — doubles as onboarding for first-time users who haven't internalised how the app works yet. <strong>Best for</strong> teaching without a separate tutorial screen.</p>
+  </div>
+
+</div>
+
+</body>
+</html>

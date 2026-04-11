@@ -26,7 +26,7 @@ protocol ScreenTimeManaging: Sendable {
     ///   - duration: How long to allow access (in seconds)
     ///   - sessionId: UUID of the session for tracking and validation
     /// - Throws: AppError if allowing apps fails
-    func allowApps(_ tokens: sending Set<ApplicationToken>, allowWebsites: Bool, duration: TimeInterval, sessionId: UUID) async throws
+    func allowApps(_ tokens: sending Set<ApplicationToken>, webDomains: Set<WebDomainToken>, allowWebsites: Bool, duration: TimeInterval, sessionId: UUID) async throws
     
     /// Get currently allowed apps
     /// - Returns: Set of ApplicationTokens that are currently allowed
