@@ -261,7 +261,7 @@ struct QuickActionEditorSheet: View {
                 Spacer()
                 Text("\(selectedApps.count)/50 selected")
                     .font(.subheadline)
-                    .foregroundColor(selectedApps.count > 50 ? .red : selectedApps.count == 50 ? .orange : AppConstants.Colors.textSecondary)
+                    .foregroundColor(selectedApps.count >= 50 ? .orange : AppConstants.Colors.textSecondary)
                 Image(systemName: "chevron.right")
                     .font(.caption2)
                     .foregroundColor(AppConstants.Colors.textSecondary)
