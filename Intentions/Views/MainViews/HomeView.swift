@@ -106,10 +106,10 @@ private struct QuickActionsSection: View {
             }
             .padding(.horizontal)
 
-            if quickActionsViewModel.quickActions.isEmpty {
-                // Show getting started card
+            if quickActionsViewModel.quickActions.isEmpty && !quickActionsViewModel.isLoading {
+                // Show getting started card only after loading completes
                 gettingStartedCard
-            } else {
+            } else if !quickActionsViewModel.quickActions.isEmpty {
                 // Show available quick actions with drag-to-reorder
                 VStack(spacing: 16) {
                     LazyVGrid(columns: [
