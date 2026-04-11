@@ -70,7 +70,7 @@ struct QuickActionEditorSheet: View {
                         if selectedApps.count > 50 {
                             Text("Too many apps selected. Apple limits selection to 50 apps per session.")
                                 .font(.caption)
-                                .foregroundColor(.red)
+                                .foregroundColor(.orange)
                                 .padding(.top, 4)
                         } else if selectedApps.count == 50 {
                             Text("Apple limits app selection to 50 apps per session.")
