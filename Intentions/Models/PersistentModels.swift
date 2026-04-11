@@ -151,48 +151,58 @@ final class PersistentScheduleSettings {
     var activeHoursEnd: Int
     var activeDaysData: Data // Stores encoded Set<Weekday>
     var timeZoneIdentifier: String
-    
+    var lastDisabledAt: Date?
+    var intentionQuote: String?
+
     init(
         isEnabled: Bool,
         activeHoursStart: Int,
         activeHoursEnd: Int,
         activeDaysData: Data,
-        timeZoneIdentifier: String
+        timeZoneIdentifier: String,
+        lastDisabledAt: Date? = nil,
+        intentionQuote: String? = nil
     ) {
         self.isEnabled = isEnabled
         self.activeHoursStart = activeHoursStart
         self.activeHoursEnd = activeHoursEnd
         self.activeDaysData = activeDaysData
         self.timeZoneIdentifier = timeZoneIdentifier
+        self.lastDisabledAt = lastDisabledAt
+        self.intentionQuote = intentionQuote
     }
-    
+
     @MainActor
     convenience init(from settings: ScheduleSettings) {
         let activeDaysData = (try? JSONEncoder().encode(settings.activeDays)) ?? Data()
-        
+
         self.init(
             isEnabled: settings.isEnabled,
             activeHoursStart: settings.activeHours.lowerBound,
             activeHoursEnd: settings.activeHours.upperBound,
             activeDaysData: activeDaysData,
-            timeZoneIdentifier: settings.timeZone.identifier
+            timeZoneIdentifier: settings.timeZone.identifier,
+            lastDisabledAt: settings.lastDisabledAt,
+            intentionQuote: settings.intentionQuote
         )
     }
-    
+
     @MainActor
     func toScheduleSettings() -> ScheduleSettings? {
         guard let timeZone = TimeZone(identifier: timeZoneIdentifier) else {
             return nil
         }
-        
+
         let activeDays = (try? JSONDecoder().decode(Set<Weekday>.self, from: activeDaysData)) ?? Set()
-        
+
         let settings = ScheduleSettings()
         settings.isEnabled = isEnabled
         settings.activeHours = activeHoursStart...activeHoursEnd
         settings.activeDays = activeDays
         settings.timeZone = timeZone
-        
+        settings.lastDisabledAt = lastDisabledAt
+        settings.intentionQuote = intentionQuote
+
         return settings
     }
 }
