@@ -24,7 +24,7 @@ actor DataModelActor {
 }
 
 // MARK: - Data Persistence Service Implementation
-final class DataPersistenceService: DataPersisting, @unchecked Sendable {
+@MainActor final class DataPersistenceService: DataPersisting, Sendable {
     private let modelContainer: ModelContainer
     private let dataActor: DataModelActor
     private let modelContext: ModelContext // For non-app-group operations (will be replaced with more actors)
@@ -92,84 +92,40 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
     
     // MARK: - Generic Storage Methods (UserDefaults-based)
     func save<T: Codable & Sendable>(_ object: T, forKey key: String) async throws {
-        // Validate key
         guard !key.isEmpty else {
             throw AppError.validationFailed("key", reason: "Storage key cannot be empty")
         }
-        
-        // Use prefixed key for namespace safety
         let prefixedKey = key.prefixedKey
-        
-        // Perform encoding and storage on a background queue for consistency
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            DispatchQueue.global(qos: .utility).async {
-                do {
-                    let encoder = JSONEncoder()
-                    encoder.dateEncodingStrategy = .iso8601
-                    let data = try encoder.encode(object)
-                    
-                    // Validate data size
-                    guard data.count <= AppConstants.Storage.maxExportFileSize else {
-                        continuation.resume(throwing: AppError.persistenceError("Data size exceeds maximum allowed"))
-                        return
-                    }
-                    
-                    // Store on main queue (UserDefaults is thread-safe but for consistency)
-                    DispatchQueue.main.async {
-                        self.userDefaults.set(data, forKey: prefixedKey)
-                        continuation.resume()
-                    }
-                } catch {
-                    continuation.resume(throwing: AppError.persistenceError("Failed to save \(key): \(error.localizedDescription)"))
-                }
-            }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(object)
+        guard data.count <= AppConstants.Storage.maxExportFileSize else {
+            throw AppError.persistenceError("Data size exceeds maximum allowed")
         }
+        userDefaults.set(data, forKey: prefixedKey)
     }
     
     func load<T: Codable & Sendable>(_ type: T.Type, forKey key: String) async throws -> T? {
-        // Validate key
         guard !key.isEmpty else {
             throw AppError.validationFailed("key", reason: "Storage key cannot be empty")
         }
-        
         let prefixedKey = key.prefixedKey
-        
-        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T?, Error>) in
-            DispatchQueue.global(qos: .utility).async {
-                guard let data = self.userDefaults.data(forKey: prefixedKey) else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                
-                do {
-                    let decoder = JSONDecoder()
-                    decoder.dateDecodingStrategy = .iso8601
-                    let object = try decoder.decode(type, from: data)
-                    continuation.resume(returning: object)
-                } catch {
-                    continuation.resume(throwing: AppError.persistenceError("Failed to load \(key): \(error.localizedDescription)"))
-                }
-            }
+        guard let data = userDefaults.data(forKey: prefixedKey) else {
+            return nil
         }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(type, from: data)
     }
     
     func delete(forKey key: String) async throws {
         guard !key.isEmpty else {
             throw AppError.validationFailed("key", reason: "Storage key cannot be empty")
         }
-        
-        let prefixedKey = key.prefixedKey
-        
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            DispatchQueue.main.async {
-                self.userDefaults.removeObject(forKey: prefixedKey)
-                continuation.resume()
-            }
-        }
+        userDefaults.removeObject(forKey: key.prefixedKey)
     }
     
     // MARK: - Schedule Settings Methods
-    @MainActor
     func saveScheduleSettings(_ settings: ScheduleSettings) async throws {
         do {
             let persistentSettings = PersistentScheduleSettings(from: settings)
@@ -189,7 +145,6 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         }
     }
     
-    @MainActor
     func loadScheduleSettings() async throws -> ScheduleSettings? {
         do {
             let descriptor = FetchDescriptor<PersistentScheduleSettings>()
@@ -202,7 +157,6 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
     }
     
     // MARK: - Intention Session Methods
-    @MainActor
     func saveIntentionSession(_ session: IntentionSession) async throws {
         do {
             let persistentSession = PersistentIntentionSession(from: session)
@@ -224,7 +178,6 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         }
     }
     
-    @MainActor
     func loadIntentionSessions() async throws -> [IntentionSession] {
         do {
             let descriptor = FetchDescriptor<PersistentIntentionSession>(
@@ -238,7 +191,6 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         }
     }
     
-    @MainActor
     func deleteIntentionSession(_ id: UUID) async throws {
         do {
             // Load all sessions and filter in memory to avoid predicate issues
@@ -259,7 +211,6 @@ final class DataPersistenceService: DataPersisting, @unchecked Sendable {
         }
     }
     
-    @MainActor
     func clearExpiredSessions() async throws {
         do {
             // Load all sessions and filter in memory to avoid SwiftData predicate issues
