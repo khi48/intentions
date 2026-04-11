@@ -116,12 +116,6 @@ final class SessionStatusViewModel: Sendable {
 
     private var timer: Timer?
 
-    nonisolated deinit {
-        MainActor.assumeIsolated {
-            timer?.invalidate()
-        }
-    }
-
     // MARK: - Initialization
     
     init(
@@ -187,13 +181,21 @@ final class SessionStatusViewModel: Sendable {
             return
         }
 
+        guard minutes > 0 else { return }
+
         let extensionTime = TimeInterval(minutes * 60)
+        let newDuration = currentSession.duration + extensionTime
 
-        // Delegate to ContentViewModel which handles persistence,
-        // ScreenTimeService timer update, and widget data
-        await contentViewModel.extendCurrentSession(by: extensionTime)
+        // Cap at maximum session duration
+        let cappedExtension: TimeInterval
+        if newDuration > AppConstants.Session.maximumDuration {
+            cappedExtension = AppConstants.Session.maximumDuration - currentSession.duration
+            guard cappedExtension > 0 else { return }
+        } else {
+            cappedExtension = extensionTime
+        }
 
-        // Update local UI state
+        await contentViewModel.extendCurrentSession(by: cappedExtension)
         updateRemainingTime()
         showingExtendDialog = false
     }
