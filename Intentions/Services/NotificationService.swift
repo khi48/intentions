@@ -32,7 +32,8 @@ final class NotificationService: NSObject, Sendable {
 
     // MARK: - Initialization
 
-    private var settingsLoaded = false
+    private(set) var settingsLoaded = false
+    private(set) var settingsLoadFailed = false
 
     private override init() {
         // Try to create DataPersistenceService; fall back to mock if it fails
@@ -65,9 +66,11 @@ final class NotificationService: NSObject, Sendable {
                 settings = loadedSettings
             }
             settingsLoaded = true
+            settingsLoadFailed = false
         } catch {
             Self.log.warning("Failed to load notification settings, using defaults: \(error.localizedDescription)")
             settingsLoaded = true
+            settingsLoadFailed = true
         }
     }
 
