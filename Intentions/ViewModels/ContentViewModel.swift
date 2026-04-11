@@ -280,7 +280,6 @@ final class ContentViewModel: Sendable {
                     activeSession = nil
                     currentlyAppliedSessionId = nil
                     try await screenTimeService.blockAllApps()
-                    try? await Task.sleep(nanoseconds: 100_000_000)
                 }
 
                 try await dataService.saveIntentionSession(session)

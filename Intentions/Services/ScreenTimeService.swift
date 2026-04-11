@@ -193,9 +193,6 @@ actor ScreenTimeService: ScreenTimeManaging {
         managedSettingsStore.shield.webDomainCategories = nil
         managedSettingsStore.webContent.blockedByFilter = nil
 
-        // Brief delay to ensure clearing takes effect before applying new blocking
-        try? await Task.sleep(nanoseconds: 50_000_000) // 0.05 seconds
-
         // COMPREHENSIVE BLOCKING STRATEGY:
         // We use a multi-layered approach to ensure ALL apps are blocked:
         // 1. Category-based blocking (.all()) - blocks most apps by category
@@ -206,9 +203,6 @@ actor ScreenTimeService: ScreenTimeManaging {
 
         logger.info("🚫 BLOCK ALL: Step 3 - Applying web content blocking (.all())")
         managedSettingsStore.webContent.blockedByFilter = .all()
-
-        // Brief delay to ensure all settings propagate to iOS
-        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
 
         // DIAGNOSTIC: Verify settings after applying
         logger.info("🔍 BLOCK ALL: Verification - shield.applicationCategories is set: \(self.managedSettingsStore.shield.applicationCategories != nil)")
@@ -258,9 +252,6 @@ actor ScreenTimeService: ScreenTimeManaging {
         managedSettingsStore.shield.webDomains = nil
         managedSettingsStore.shield.webDomainCategories = nil
         managedSettingsStore.webContent.blockedByFilter = nil
-
-        // Brief delay to ensure clearing takes effect
-        try? await Task.sleep(nanoseconds: 50_000_000)
 
         // Block everything except the apps the user selected for this session
         if !tokens.isEmpty {
@@ -326,10 +317,8 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Clear the session replacement flag
         isSessionBeingReplaced = false
 
-        // Brief delay to ensure changes propagate
-        try? await Task.sleep(nanoseconds: 50_000_000)
     }
-    
+
     func getCurrentlyAllowedApps() async -> Set<ApplicationToken> {
         return currentlyAllowedApps
     }
@@ -472,7 +461,6 @@ actor ScreenTimeService: ScreenTimeManaging {
         if let oldActivityName = activeDeviceActivityName {
             deviceActivityCenter.stopMonitoring([oldActivityName])
             activeDeviceActivityName = nil
-            try? await Task.sleep(nanoseconds: 50_000_000)
         }
 
         // Create a unique activity name for this session
