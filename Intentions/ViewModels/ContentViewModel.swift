@@ -474,7 +474,12 @@ final class ContentViewModel: Sendable {
     func setIntentionQuote(_ quote: String) {
         scheduleSettings.intentionQuote = quote
         Task {
-            try? await dataService.saveScheduleSettings(scheduleSettings)
+            do {
+                try await dataService.saveScheduleSettings(scheduleSettings)
+            } catch {
+                logger.error("Failed to save intention quote: \(error.localizedDescription)")
+                await handleError(error)
+            }
         }
     }
 
