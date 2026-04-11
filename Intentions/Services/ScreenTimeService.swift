@@ -531,8 +531,6 @@ actor ScreenTimeService: ScreenTimeManaging {
     private func updateWidgetBlockingStatus(isBlocking: Bool) {
         let appGroupId = AppConstants.appGroupId
 
-        CFPreferencesSynchronize(appGroupId as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
-
         guard let sharedDefaults = UserDefaults(suiteName: appGroupId) else {
             // Fallback to standard UserDefaults only
             UserDefaults.standard.set(isBlocking, forKey: AppConstants.Keys.widgetBlockingStatus)

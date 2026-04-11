@@ -167,6 +167,7 @@ final class ContentViewModel: Sendable {
                 }
 
                 sharedDefaults.set(false, forKey: AppConstants.Keys.sessionExpired)
+                sharedDefaults.synchronize()
 
                 if shouldExpireSessions {
                     for session in activeSessions {
@@ -230,6 +231,7 @@ final class ContentViewModel: Sendable {
         sharedDefaults.set(settings.activeHours.lowerBound, forKey: AppConstants.Keys.scheduleStartHour)
         sharedDefaults.set(settings.activeHours.upperBound, forKey: AppConstants.Keys.scheduleEndHour)
         sharedDefaults.set(settings.activeDays.map { $0.calendarWeekday }, forKey: AppConstants.Keys.scheduleActiveDays)
+        sharedDefaults.synchronize()
     }
     
     // MARK: - Authorization Management
@@ -306,6 +308,7 @@ final class ContentViewModel: Sendable {
 
                 if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
                     sharedDefaults.removeObject(forKey: AppConstants.Keys.currentSessionId)
+                    sharedDefaults.synchronize()
                 }
 
                 await NotificationService.shared.cancelSessionNotifications()
@@ -329,6 +332,7 @@ final class ContentViewModel: Sendable {
 
             if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
                 sharedDefaults.removeObject(forKey: AppConstants.Keys.currentSessionId)
+                sharedDefaults.synchronize()
             }
 
             await NotificationService.shared.cancelSessionNotifications()
@@ -573,6 +577,7 @@ final class ContentViewModel: Sendable {
         sharedDefaults.set(session.endTime, forKey: AppConstants.Keys.widgetSessionEndTime)
         sharedDefaults.set(false, forKey: AppConstants.Keys.widgetBlockingStatus)
         sharedDefaults.set(Date(), forKey: AppConstants.Keys.widgetLastUpdate)
+        sharedDefaults.synchronize()
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -584,6 +589,7 @@ final class ContentViewModel: Sendable {
         sharedDefaults.removeObject(forKey: AppConstants.Keys.widgetSessionEndTime)
         sharedDefaults.set(scheduleSettings.isEnabled && scheduleSettings.isCurrentlyActive, forKey: AppConstants.Keys.widgetBlockingStatus)
         sharedDefaults.set(Date(), forKey: AppConstants.Keys.widgetLastUpdate)
+        sharedDefaults.synchronize()
         WidgetCenter.shared.reloadAllTimelines()
     }
 }
