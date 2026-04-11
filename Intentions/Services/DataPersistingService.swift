@@ -12,6 +12,7 @@ protocol DataPersisting: Sendable {
     func loadScheduleSettings() async throws -> ScheduleSettings?
     func saveIntentionSession(_ session: IntentionSession) async throws
     func loadIntentionSessions() async throws -> [IntentionSession]
+    func loadIntentionSessionsSince(_ date: Date) async throws -> [IntentionSession]
     func deleteIntentionSession(_ id: UUID) async throws
     func clearExpiredSessions() async throws
 }
@@ -191,6 +192,20 @@ actor DataModelActor {
         }
     }
     
+    func loadIntentionSessionsSince(_ date: Date) async throws -> [IntentionSession] {
+        do {
+            let descriptor = FetchDescriptor<PersistentIntentionSession>(
+                sortBy: [SortDescriptor(\.startTime, order: .reverse)]
+            )
+            let persistentSessions = try modelContext.fetch(descriptor)
+            return persistentSessions
+                .filter { $0.startTime >= date }
+                .compactMap { $0.toIntentionSession() }
+        } catch {
+            throw AppError.persistenceError("Failed to load IntentionSessions: \(error.localizedDescription)")
+        }
+    }
+
     func deleteIntentionSession(_ id: UUID) async throws {
         do {
             // Load all sessions and filter in memory to avoid predicate issues

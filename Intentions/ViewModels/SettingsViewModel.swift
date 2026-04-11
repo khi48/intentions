@@ -89,15 +89,15 @@ final class SettingsViewModel: Sendable {
     
     private func updateStatistics() async {
         do {
-            let sessions = try await dataService.loadIntentionSessions()
             let calendar = Calendar.current
             let now = Date()
+            let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now)) ?? now
+
+            let sessions = try await dataService.loadIntentionSessionsSince(startOfWeek)
 
             let startOfToday = calendar.startOfDay(for: now)
             todaySessionCount = sessions.filter { $0.createdAt >= startOfToday }.count
-
-            let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now)) ?? now
-            weeklySessionCount = sessions.filter { $0.createdAt >= startOfWeek }.count
+            weeklySessionCount = sessions.count
         } catch {
             todaySessionCount = 0
             weeklySessionCount = 0
@@ -202,17 +202,6 @@ final class SettingsViewModel: Sendable {
 
     var streakDays: Int? {
         scheduleSettings.streakDays
-    }
-
-    var formattedProtectedTimeToday: String {
-        let totalMinutes = scheduleSettings.protectedMinutesToday
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-        if hours > 0 {
-            return "\(hours)h \(minutes)m protected"
-        } else {
-            return "\(minutes)m protected"
-        }
     }
 
     var formattedRemainingTime: String {

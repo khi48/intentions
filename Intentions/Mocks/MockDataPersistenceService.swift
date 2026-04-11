@@ -192,6 +192,21 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
         }
     }
     
+    func loadIntentionSessionsSince(_ date: Date) async throws -> [IntentionSession] {
+        if shouldThrowLoadError {
+            throw AppError.persistenceError("Mock load error for IntentionSessions")
+        }
+
+        return try await withCheckedContinuation { continuation in
+            queue.async {
+                let sessions = Array(self.intentionSessions.values)
+                    .filter { $0.createdAt >= date }
+                    .sorted { $0.startTime > $1.startTime }
+                continuation.resume(returning: sessions)
+            }
+        }
+    }
+
     func deleteIntentionSession(_ id: UUID) async throws {
         if shouldThrowDeleteError {
             throw AppError.persistenceError("Mock delete error for IntentionSession: \(id)")
