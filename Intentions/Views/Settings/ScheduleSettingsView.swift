@@ -15,6 +15,7 @@ struct ScheduleSettingsView: View {
     @State private var startHour: Int
     @State private var endHour: Int
     @State private var selectedDays: Set<Weekday>
+    @State private var intentionQuote: String
 
     init(settings: ScheduleSettings, onSave: @escaping (ScheduleSettings) -> Void, onCancel: @escaping () -> Void) {
         self.settings = settings
@@ -24,6 +25,7 @@ struct ScheduleSettingsView: View {
         self._startHour = State(initialValue: settings.activeHours.lowerBound)
         self._endHour = State(initialValue: settings.activeHours.upperBound)
         self._selectedDays = State(initialValue: settings.activeDays)
+        self._intentionQuote = State(initialValue: settings.intentionQuote ?? "")
     }
 
     var body: some View {
@@ -124,6 +126,17 @@ struct ScheduleSettingsView: View {
                         Text("Select the days when apps should be blocked by default. At least one day must be selected.")
                             .foregroundColor(AppConstants.Colors.textSecondary)
                     }
+
+                    Section {
+                        TextField("Why did you set up protection?", text: $intentionQuote, axis: .vertical)
+                            .lineLimit(2...4)
+                            .foregroundColor(AppConstants.Colors.text)
+                    } header: {
+                        Text("Your Intention")
+                    } footer: {
+                        Text("Shown when you try to disable blocking, to remind you why you started.")
+                            .foregroundColor(AppConstants.Colors.textSecondary)
+                    }
                 }
             }
             .background(AppConstants.Colors.background)
@@ -161,6 +174,8 @@ struct ScheduleSettingsView: View {
         updatedSettings.activeHours = startHour...endHour
         updatedSettings.activeDays = selectedDays
         updatedSettings.timeZone = settings.timeZone
+        updatedSettings.intentionQuote = intentionQuote.isEmpty ? nil : intentionQuote
+        updatedSettings.lastDisabledAt = settings.lastDisabledAt
         onSave(updatedSettings)
     }
 
