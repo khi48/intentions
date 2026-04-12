@@ -32,7 +32,9 @@ enum AppConstants {
         // Schedule
         static let scheduleIsEnabled = "intentions.schedule.isEnabled"
         static let scheduleStartHour = "intentions.schedule.startHour"
+        static let scheduleStartMinute = "intentions.schedule.startMinute"
         static let scheduleEndHour = "intentions.schedule.endHour"
+        static let scheduleEndMinute = "intentions.schedule.endMinute"
         static let scheduleActiveDays = "intentions.schedule.activeDays"
 
         // DeviceActivity
@@ -75,12 +77,21 @@ enum AppConstants {
         /// Default start hour (6 AM)
         static let defaultStartHour: Int = 6
 
+        /// Default start minute
+        static let defaultStartMinute: Int = 0
+
         /// Default end hour (10 PM)
         static let defaultEndHour: Int = 22
-        
+
+        /// Default end minute
+        static let defaultEndMinute: Int = 0
+
         /// Valid hour range for scheduling
         static let validHourRange: ClosedRange<Int> = 0...23
-        
+
+        /// Valid minute range for scheduling
+        static let validMinuteRange: ClosedRange<Int> = 0...59
+
         /// Default timezone (current system timezone)
         static var defaultTimeZone: TimeZone { TimeZone.current }
     }

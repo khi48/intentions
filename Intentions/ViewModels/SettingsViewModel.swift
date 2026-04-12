@@ -174,8 +174,8 @@ final class SettingsViewModel: Sendable {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
 
-        let startTime = Calendar.current.date(bySettingHour: scheduleSettings.startHour, minute: 0, second: 0, of: Date()) ?? Date()
-        let endTime = Calendar.current.date(bySettingHour: scheduleSettings.endHour, minute: 0, second: 0, of: Date()) ?? Date()
+        let startTime = Calendar.current.date(bySettingHour: scheduleSettings.startHour, minute: scheduleSettings.startMinute, second: 0, of: Date()) ?? Date()
+        let endTime = Calendar.current.date(bySettingHour: scheduleSettings.endHour, minute: scheduleSettings.endMinute, second: 0, of: Date()) ?? Date()
 
         return "\(formatter.string(from: startTime)) - \(formatter.string(from: endTime))"
     }

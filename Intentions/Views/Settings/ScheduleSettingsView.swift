@@ -11,16 +11,16 @@ struct ScheduleSettingsView: View {
     let onSave: (ScheduleSettings) -> Void
     let onCancel: () -> Void
 
-    @State private var startHour: Int
-    @State private var endHour: Int
+    @State private var startTime: Date
+    @State private var endTime: Date
     @State private var selectedDays: Set<Weekday>
 
     init(settings: ScheduleSettings, onSave: @escaping (ScheduleSettings) -> Void, onCancel: @escaping () -> Void) {
         self.settings = settings
         self.onSave = onSave
         self.onCancel = onCancel
-        self._startHour = State(initialValue: settings.startHour)
-        self._endHour = State(initialValue: settings.endHour)
+        self._startTime = State(initialValue: Self.dateFromComponents(hour: settings.startHour, minute: settings.startMinute))
+        self._endTime = State(initialValue: Self.dateFromComponents(hour: settings.endHour, minute: settings.endMinute))
         self._selectedDays = State(initialValue: settings.activeDays)
     }
 
@@ -28,31 +28,19 @@ struct ScheduleSettingsView: View {
         NavigationStack {
             List {
                 Section {
-                    HStack {
-                        Text("Free from")
-                            .foregroundColor(AppConstants.Colors.text)
-                        Spacer()
-                        Picker("Start Hour", selection: $startHour) {
-                            ForEach(0..<24) { hour in
-                                Text(Self.hourFormatter.string(from: dateFromHour(hour)))
-                                    .tag(hour)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                    }
+                    DatePicker(
+                        "Free from",
+                        selection: $startTime,
+                        displayedComponents: .hourAndMinute
+                    )
+                    .foregroundColor(AppConstants.Colors.text)
 
-                    HStack {
-                        Text("Free until")
-                            .foregroundColor(AppConstants.Colors.text)
-                        Spacer()
-                        Picker("End Hour", selection: $endHour) {
-                            ForEach(0..<24) { hour in
-                                Text(Self.hourFormatter.string(from: dateFromHour(hour)))
-                                    .tag(hour)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                    }
+                    DatePicker(
+                        "Free until",
+                        selection: $endTime,
+                        displayedComponents: .hourAndMinute
+                    )
+                    .foregroundColor(AppConstants.Colors.text)
                 } header: {
                     Text("Free Time Window")
                 } footer: {
@@ -107,12 +95,14 @@ struct ScheduleSettingsView: View {
     }
 
     private var isValidConfiguration: Bool {
-        startHour != endHour
+        let start = startComponents
+        let end = endComponents
+        return !(start.hour == end.hour && start.minute == end.minute)
     }
 
     private var scheduleFooterText: String {
-        let start = Self.hourFormatter.string(from: dateFromHour(startHour))
-        let end = Self.hourFormatter.string(from: dateFromHour(endHour))
+        let start = Self.hourFormatter.string(from: startTime)
+        let end = Self.hourFormatter.string(from: endTime)
         return "Apps will be unblocked from \(start) to \(end)"
     }
 
@@ -124,11 +114,25 @@ struct ScheduleSettingsView: View {
         }
     }
 
+    private var startComponents: (hour: Int, minute: Int) {
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: startTime)
+        return (comps.hour ?? 0, comps.minute ?? 0)
+    }
+
+    private var endComponents: (hour: Int, minute: Int) {
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: endTime)
+        return (comps.hour ?? 0, comps.minute ?? 0)
+    }
+
     private func saveSettings() {
+        let start = startComponents
+        let end = endComponents
         let updatedSettings = ScheduleSettings()
         updatedSettings.isEnabled = true
-        updatedSettings.startHour = startHour
-        updatedSettings.endHour = endHour
+        updatedSettings.startHour = start.hour
+        updatedSettings.startMinute = start.minute
+        updatedSettings.endHour = end.hour
+        updatedSettings.endMinute = end.minute
         updatedSettings.activeDays = selectedDays
         updatedSettings.timeZone = settings.timeZone
         updatedSettings.intentionQuote = settings.intentionQuote
@@ -142,7 +146,7 @@ struct ScheduleSettingsView: View {
         return formatter
     }()
 
-    private func dateFromHour(_ hour: Int) -> Date {
-        Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: Date()) ?? Date()
+    private static func dateFromComponents(hour: Int, minute: Int) -> Date {
+        Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: Date()) ?? Date()
     }
 }

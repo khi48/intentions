@@ -157,6 +157,8 @@ final class PersistentScheduleSettings {
     var isEnabled: Bool
     var activeHoursStart: Int
     var activeHoursEnd: Int
+    var activeMinutesStart: Int?
+    var activeMinutesEnd: Int?
     var activeDaysData: Data // Stores encoded Set<Weekday>
     var timeZoneIdentifier: String
     var lastDisabledAt: Date?
@@ -166,6 +168,8 @@ final class PersistentScheduleSettings {
         isEnabled: Bool,
         activeHoursStart: Int,
         activeHoursEnd: Int,
+        activeMinutesStart: Int = 0,
+        activeMinutesEnd: Int = 0,
         activeDaysData: Data,
         timeZoneIdentifier: String,
         lastDisabledAt: Date? = nil,
@@ -174,6 +178,8 @@ final class PersistentScheduleSettings {
         self.isEnabled = isEnabled
         self.activeHoursStart = activeHoursStart
         self.activeHoursEnd = activeHoursEnd
+        self.activeMinutesStart = activeMinutesStart
+        self.activeMinutesEnd = activeMinutesEnd
         self.activeDaysData = activeDaysData
         self.timeZoneIdentifier = timeZoneIdentifier
         self.lastDisabledAt = lastDisabledAt
@@ -188,6 +194,8 @@ final class PersistentScheduleSettings {
             isEnabled: settings.isEnabled,
             activeHoursStart: settings.startHour,
             activeHoursEnd: settings.endHour,
+            activeMinutesStart: settings.startMinute,
+            activeMinutesEnd: settings.endMinute,
             activeDaysData: activeDaysData,
             timeZoneIdentifier: settings.timeZone.identifier,
             lastDisabledAt: settings.lastDisabledAt,
@@ -206,7 +214,9 @@ final class PersistentScheduleSettings {
         let settings = ScheduleSettings()
         settings.isEnabled = isEnabled
         settings.startHour = activeHoursStart
+        settings.startMinute = activeMinutesStart ?? 0
         settings.endHour = activeHoursEnd
+        settings.endMinute = activeMinutesEnd ?? 0
         settings.activeDays = activeDays
         settings.timeZone = timeZone
         settings.lastDisabledAt = lastDisabledAt

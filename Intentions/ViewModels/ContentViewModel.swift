@@ -272,7 +272,9 @@ final class ContentViewModel: Sendable {
 
         sharedDefaults.set(settings.isEnabled, forKey: AppConstants.Keys.scheduleIsEnabled)
         sharedDefaults.set(settings.startHour, forKey: AppConstants.Keys.scheduleStartHour)
+        sharedDefaults.set(settings.startMinute, forKey: AppConstants.Keys.scheduleStartMinute)
         sharedDefaults.set(settings.endHour, forKey: AppConstants.Keys.scheduleEndHour)
+        sharedDefaults.set(settings.endMinute, forKey: AppConstants.Keys.scheduleEndMinute)
         sharedDefaults.set(settings.activeDays.map { $0.calendarWeekday }, forKey: AppConstants.Keys.scheduleActiveDays)
         sharedDefaults.synchronize()
     }

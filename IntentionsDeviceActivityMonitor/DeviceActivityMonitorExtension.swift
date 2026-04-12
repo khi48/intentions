@@ -303,7 +303,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     /// Check if blocking should be active based on schedule settings.
     /// Blocking is the default state. It is only lifted during the free time window
-    /// (startHour/endHour) on days listed in activeDays.
+    /// (startHour:startMinute – endHour:endMinute) on days listed in activeDays.
     private func isCurrentlyInProtectedHours(sharedDefaults: UserDefaults) -> Bool {
         let isEnabled = sharedDefaults.bool(forKey: "intentions.schedule.isEnabled")
         guard isEnabled else {
@@ -312,13 +312,17 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         }
 
         let startHour = sharedDefaults.integer(forKey: "intentions.schedule.startHour")
+        let startMinute = sharedDefaults.integer(forKey: "intentions.schedule.startMinute")
         let endHour = sharedDefaults.integer(forKey: "intentions.schedule.endHour")
+        let endMinute = sharedDefaults.integer(forKey: "intentions.schedule.endMinute")
         let freeTimeDays = sharedDefaults.array(forKey: "intentions.schedule.activeDays") as? [Int] ?? []
 
         let now = Date()
         let calendar = Calendar.current
         let weekdayComponent = calendar.component(.weekday, from: now)
         let hour = calendar.component(.hour, from: now)
+        let minute = calendar.component(.minute, from: now)
+        let minuteOfDay = hour * 60 + minute
 
         // If today isn't a free-time day, blocking is active
         guard freeTimeDays.contains(weekdayComponent) else {
@@ -326,15 +330,18 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             return true
         }
 
-        // Check if current hour is in the free time window
+        let startTotal = startHour * 60 + startMinute
+        let endTotal = endHour * 60 + endMinute
+
+        // Check if current minute-of-day is in the free time window
         let inFreeTime: Bool
-        if startHour <= endHour {
-            inFreeTime = hour >= startHour && hour < endHour
+        if startTotal <= endTotal {
+            inFreeTime = minuteOfDay >= startTotal && minuteOfDay < endTotal
         } else {
-            inFreeTime = hour >= startHour || hour < endHour
+            inFreeTime = minuteOfDay >= startTotal || minuteOfDay < endTotal
         }
 
-        logger.info("📅 SCHEDULE CHECK: day=\(weekdayComponent), hour=\(hour), freeWindow=\(startHour)-\(endHour), inFreeTime=\(inFreeTime), blocking=\(!inFreeTime)")
+        logger.info("📅 SCHEDULE CHECK: day=\(weekdayComponent), time=\(hour):\(String(format: "%02d", minute)), freeWindow=\(startHour):\(String(format: "%02d", startMinute))-\(endHour):\(String(format: "%02d", endMinute)), inFreeTime=\(inFreeTime), blocking=\(!inFreeTime)")
 
         return !inFreeTime
     }
