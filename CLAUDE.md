@@ -24,8 +24,11 @@ When working on this project, remember:
 - Follow the task-based development structure to maintain architectural consistency
 - Reference the master context document for complete technical specifications
 - Maintain `Sendable` compliance for all new types in Swift 6
-- **New files need to be added to the project manually. Once a new file and code is created, prompt me to add it to the project before trying to build or run unit tests**
+- This project uses **folder-based structure** (Xcode 16+) — new files created on disk are automatically discovered by Xcode. No manual adding required.
 - Always try build after code changes to confirm code is still viable
+- See [[cross-project/ios-development|iOS Development]] in the vault for full iOS dev guidelines
+- **Simulator management**: Only the main conversation thread should run simulator builds/tests. Subagents must NEVER launch simulators (`xcodebuild test`, `xcodebuildmcp simulator build-and-run`, etc.) — multiple concurrent simulators overwhelm the machine. Subagents should use `xcodebuild build` (compile-only) or `xcodebuild build-for-testing` instead.
+- Avoid running multiple sequential simulator builds in quick succession — give the system time to release resources between runs
 
 [Rest of the file remains unchanged...]
 # Project Notes
