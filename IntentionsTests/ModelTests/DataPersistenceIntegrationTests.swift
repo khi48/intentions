@@ -5,6 +5,7 @@ import SwiftData
 @testable import Intentions
 
 // MARK: - Integration Tests for Data Persistence Service
+@MainActor
 final class DataPersistenceIntegrationTests: XCTestCase {
     
     var service: (any DataPersisting)!

@@ -8,6 +8,7 @@ import XCTest
 
 extension ApplicationToken: @unchecked Sendable {}
 
+@MainActor
 final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
     
     private var mockService: MockScreenTimeService!

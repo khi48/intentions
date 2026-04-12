@@ -10,6 +10,7 @@ import ManagedSettings
 //extension Application: @unchecked @retroactive Sendable {}
 //extension Set where Element == Application: @unchecked Sendable {}
 
+@MainActor
 final class MockScreenTimeServiceTests: XCTestCase {
     
     private var mockService: MockScreenTimeService!

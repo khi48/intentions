@@ -14,6 +14,7 @@ import XCTest
 @preconcurrency import ManagedSettings
 @testable import Intentions
 
+@MainActor
 final class ScreenTimeStatusInfoTests: XCTestCase {
     
     // MARK: - Initialization Tests

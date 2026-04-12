@@ -12,6 +12,7 @@ import XCTest
 @preconcurrency import ManagedSettings
 @testable import Intentions
 
+@MainActor
 final class IntentionSessionTests: XCTestCase {
     
     // Helper method to create test session without throwing

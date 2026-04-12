@@ -10,7 +10,6 @@
 		206592142DFF50FD00B93819 /* ScreenTimeStatusInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 206592132DFF50FD00B93819 /* ScreenTimeStatusInfoTests.swift */; };
 		2071C4982DE43AC800DF737F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2071C4972DE43AC800DF737F /* Assets.xcassets */; };
 		2071C49B2DE43AC800DF737F /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2071C49A2DE43AC800DF737F /* Preview Assets.xcassets */; };
-		2071C4A52DE43AC800DF737F /* IntentionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4A42DE43AC800DF737F /* IntentionsTests.swift */; };
 		2071C4AF2DE43AC800DF737F /* IntentionsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4AE2DE43AC800DF737F /* IntentionsUITests.swift */; };
 		2071C4B12DE43AC800DF737F /* IntentionsUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4B02DE43AC800DF737F /* IntentionsUITestsLaunchTests.swift */; };
 		207E14562E90881E00730900 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E14552E90881E00730900 /* ManagedSettings.framework */; };
@@ -19,7 +18,6 @@
 		207E146A2E90883400730900 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E14552E90881E00730900 /* ManagedSettings.framework */; };
 		207E14722E90883400730900 /* IntentionsShieldAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 207E14692E90883300730900 /* IntentionsShieldAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		207E14802E9B6A4E00730900 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207E147F2E9B6A4E00730900 /* NotificationService.swift */; };
-		207E14822E9B6A6200730900 /* WidgetSetupStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207E14812E9B6A6200730900 /* WidgetSetupStepView.swift */; };
 		207E14842E9B6AC000730900 /* NotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207E14832E9B6AC000730900 /* NotificationSettings.swift */; };
 		207E148B2E9F5D8500730900 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E148A2E9F5D8500730900 /* DeviceActivity.framework */; };
 		207E14932E9F5D8600730900 /* IntentionsDeviceActivityMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 207E14892E9F5D8500730900 /* IntentionsDeviceActivityMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -44,6 +42,9 @@
 		20A357182F89B58B00535175 /* SharedConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A357162F89B58B00535175 /* SharedConstants.swift */; };
 		20A3598D2F8B771800535175 /* IntentionQuoteEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A3598C2F8B771800535175 /* IntentionQuoteEditorView.swift */; };
 		20A3598F2F8B798B00535175 /* GreyscaleGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A3598E2F8B798B00535175 /* GreyscaleGuideView.swift */; };
+		20A359AB2F8B9B2700535175 /* QuickActionsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A359A92F8B9B2700535175 /* QuickActionsViewModelTests.swift */; };
+		20A359AC2F8B9B2700535175 /* SetupCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A359AA2F8B9B2700535175 /* SetupCoordinatorTests.swift */; };
+		20A359AE2F8B9B3300535175 /* NotificationSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A359AD2F8B9B3300535175 /* NotificationSettingsTests.swift */; };
 		20D0E5002E7BF74700C8BB70 /* DisableBlockingConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D0E4FF2E7BF74700C8BB70 /* DisableBlockingConfirmationView.swift */; };
 		20EB26512E13228E00FC4BE4 /* PersistentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26502E13228E00FC4BE4 /* PersistentModels.swift */; };
 		20EB26532E13229900FC4BE4 /* DataPersistingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EB26522E13229900FC4BE4 /* DataPersistingService.swift */; };
@@ -149,7 +150,6 @@
 		2071C4972DE43AC800DF737F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2071C49A2DE43AC800DF737F /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		2071C4A02DE43AC800DF737F /* IntentionsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = IntentionsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		2071C4A42DE43AC800DF737F /* IntentionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsTests.swift; sourceTree = "<group>"; };
 		2071C4AA2DE43AC800DF737F /* IntentionsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = IntentionsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2071C4AE2DE43AC800DF737F /* IntentionsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsUITests.swift; sourceTree = "<group>"; };
 		2071C4B02DE43AC800DF737F /* IntentionsUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionsUITestsLaunchTests.swift; sourceTree = "<group>"; };
@@ -158,7 +158,6 @@
 		207E14572E90881E00730900 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
 		207E14692E90883300730900 /* IntentionsShieldAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = IntentionsShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		207E147F2E9B6A4E00730900 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
-		207E14812E9B6A6200730900 /* WidgetSetupStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSetupStepView.swift; sourceTree = "<group>"; };
 		207E14832E9B6AC000730900 /* NotificationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettings.swift; sourceTree = "<group>"; };
 		207E14892E9F5D8500730900 /* IntentionsDeviceActivityMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = IntentionsDeviceActivityMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		207E148A2E9F5D8500730900 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
@@ -183,6 +182,9 @@
 		20A357162F89B58B00535175 /* SharedConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedConstants.swift; sourceTree = "<group>"; };
 		20A3598C2F8B771800535175 /* IntentionQuoteEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionQuoteEditorView.swift; sourceTree = "<group>"; };
 		20A3598E2F8B798B00535175 /* GreyscaleGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreyscaleGuideView.swift; sourceTree = "<group>"; };
+		20A359A92F8B9B2700535175 /* QuickActionsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsViewModelTests.swift; sourceTree = "<group>"; };
+		20A359AA2F8B9B2700535175 /* SetupCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupCoordinatorTests.swift; sourceTree = "<group>"; };
+		20A359AD2F8B9B3300535175 /* NotificationSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettingsTests.swift; sourceTree = "<group>"; };
 		20D0E4FF2E7BF74700C8BB70 /* DisableBlockingConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisableBlockingConfirmationView.swift; sourceTree = "<group>"; };
 		20EB26502E13228E00FC4BE4 /* PersistentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentModels.swift; sourceTree = "<group>"; };
 		20EB26522E13229900FC4BE4 /* DataPersistingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataPersistingService.swift; sourceTree = "<group>"; };
@@ -403,7 +405,6 @@
 				2085A90A2DFACD310011EB9A /* Mocks */,
 				2085A9052DF6D5C10011EB9A /* Services */,
 				2085A9042DF6D5B30011EB9A /* ModelTests */,
-				2071C4A42DE43AC800DF737F /* IntentionsTests.swift */,
 			);
 			path = IntentionsTests;
 			sourceTree = "<group>";
@@ -436,7 +437,6 @@
 			isa = PBXGroup;
 			children = (
 				20EB27342E6D06DC00FC4BE4 /* Setup */,
-				20EB26F92E488A6500FC4BE4 /* TestViews */,
 				20EB26B12E389F4900FC4BE4 /* Components */,
 				2085A8DA2DF54FC50011EB9A /* Statistics */,
 				2085A8D92DF54FBD0011EB9A /* Onboarding */,
@@ -569,6 +569,7 @@
 		2085A9042DF6D5B30011EB9A /* ModelTests */ = {
 			isa = PBXGroup;
 			children = (
+				20A359AD2F8B9B3300535175 /* NotificationSettingsTests.swift */,
 				20EB26582E1322C900FC4BE4 /* DataPersistenceIntegrationTests.swift */,
 				206592132DFF50FD00B93819 /* ScreenTimeStatusInfoTests.swift */,
 				2085A8F22DF55FAF0011EB9A /* AppErrorTests.swift */,
@@ -613,6 +614,8 @@
 		20EB26692E22F25A00FC4BE4 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				20A359A92F8B9B2700535175 /* QuickActionsViewModelTests.swift */,
+				20A359AA2F8B9B2700535175 /* SetupCoordinatorTests.swift */,
 				20EB26AC2E32BF9D00FC4BE4 /* SessionStatusViewModelTests.swift */,
 				20EB26862E258CDB00FC4BE4 /* SettingsViewModelTests.swift */,
 				20EB26682E22F25A00FC4BE4 /* ContentViewModelTests.swift */,
@@ -645,18 +648,10 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
-		20EB26F92E488A6500FC4BE4 /* TestViews */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = TestViews;
-			sourceTree = "<group>";
-		};
 		20EB27342E6D06DC00FC4BE4 /* Setup */ = {
 			isa = PBXGroup;
 			children = (
 				20FAEEED2EE502B900E75AE0 /* AlwaysAllowedInfoStepView.swift */,
-				207E14812E9B6A6200730900 /* WidgetSetupStepView.swift */,
 				20EB273E2E6EE46500FC4BE4 /* SetupLandingView.swift */,
 				20EB27322E6D06DC00FC4BE4 /* ScreenTimeAuthorizationStepView.swift */,
 				20EB27332E6D06DC00FC4BE4 /* SetupFlowView.swift */,
@@ -909,7 +904,6 @@
 				20EB27392E6D070A00FC4BE4 /* SetupStateManager.swift in Sources */,
 				20EB27062E695DA000FC4BE4 /* QuickAction.swift in Sources */,
 				20EB265D2E1EF9A800FC4BE4 /* Constants.swift in Sources */,
-				207E14822E9B6A6200730900 /* WidgetSetupStepView.swift in Sources */,
 				2085A8FF2DF6D2D40011EB9A /* ScreenTimeStatusInfo.swift in Sources */,
 				20A3598D2F8B771800535175 /* IntentionQuoteEditorView.swift in Sources */,
 				20EB27092E695DB000FC4BE4 /* QuickActionEditorSheet.swift in Sources */,
@@ -949,11 +943,12 @@
 			isa = PBXSourcesBuildPhase;
 			files = (
 				2085A8F12DF55F980011EB9A /* WeekdayTests.swift in Sources */,
-				2071C4A52DE43AC800DF737F /* IntentionsTests.swift in Sources */,
 				20EB268B2E258CE600FC4BE4 /* SettingsIntegrationTests.swift in Sources */,
 				20EB26882E258CDB00FC4BE4 /* SettingsViewModelTests.swift in Sources */,
 				20EB26A22E31743F00FC4BE4 /* ContentViewTests.swift in Sources */,
 				20EB26A32E31743F00FC4BE4 /* HomeViewTests.swift in Sources */,
+				20A359AB2F8B9B2700535175 /* QuickActionsViewModelTests.swift in Sources */,
+				20A359AC2F8B9B2700535175 /* SetupCoordinatorTests.swift in Sources */,
 				2085A90C2DFACD350011EB9A /* MockScreenTimeServiceTests.swift in Sources */,
 				20EB265B2E146E4400FC4BE4 /* MockDataPersistenceServiceTests.swift in Sources */,
 				2085A9072DF6D5D20011EB9A /* ScreenTimeServiceTests.swift in Sources */,
@@ -963,6 +958,7 @@
 				206592142DFF50FD00B93819 /* ScreenTimeStatusInfoTests.swift in Sources */,
 				20EB26572E1322B200FC4BE4 /* DataPersistenceServiceTests.swift in Sources */,
 				2085A8F32DF55FAF0011EB9A /* AppErrorTests.swift in Sources */,
+				20A359AE2F8B9B3300535175 /* NotificationSettingsTests.swift in Sources */,
 				2085A8EF2DF55F820011EB9A /* ScheduleSettingsTests.swift in Sources */,
 				20EB26592E1322C900FC4BE4 /* DataPersistenceIntegrationTests.swift in Sources */,
 			);

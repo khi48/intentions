@@ -38,7 +38,8 @@ final class SettingsViewModelTests: XCTestCase {
     func testDefaultScheduleSettings() {
         // Should initialize with default schedule settings
         XCTAssertTrue(viewModel.scheduleSettings.isEnabled)
-        XCTAssertEqual(viewModel.scheduleSettings.activeHours, AppConstants.Schedule.defaultActiveHours)
+        XCTAssertEqual(viewModel.scheduleSettings.startHour, AppConstants.Schedule.defaultStartHour)
+        XCTAssertEqual(viewModel.scheduleSettings.endHour, AppConstants.Schedule.defaultEndHour)
         XCTAssertEqual(viewModel.scheduleSettings.activeDays.count, 7) // All days by default
     }
 

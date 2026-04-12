@@ -4,6 +4,7 @@ import SwiftData
 @preconcurrency import ManagedSettings
 @testable import Intentions
 
+@MainActor
 final class DataPersistenceServiceTests: XCTestCase {
     
     var service: DataPersistenceService!

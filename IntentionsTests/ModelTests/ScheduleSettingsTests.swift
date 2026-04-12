@@ -12,6 +12,7 @@
 import XCTest
 @testable import Intentions
 
+@MainActor
 final class ScheduleSettingsTests: XCTestCase {
     
     func testScheduleSettingsInitialization() {

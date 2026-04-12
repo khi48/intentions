@@ -11,6 +11,7 @@ import ManagedSettings
 @testable import Intentions
 
 // MARK: - Mock Service Tests
+@MainActor
 final class MockDataPersistenceServiceTests: XCTestCase {
     
     var mockService: MockDataPersistenceService!
