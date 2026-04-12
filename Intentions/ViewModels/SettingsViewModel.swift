@@ -20,6 +20,7 @@ final class SettingsViewModel: Sendable {
     
     // MARK: - Published State
     var isLoading: Bool = false
+    var hasLoadedOnce: Bool = false
     var errorMessage: String?
     
     // Schedule Settings
@@ -42,7 +43,10 @@ final class SettingsViewModel: Sendable {
     
     func loadData() async {
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            hasLoadedOnce = true
+        }
         errorMessage = nil
 
         do {

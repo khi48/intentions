@@ -29,14 +29,14 @@ struct ScheduleSettingsView: View {
             List {
                 Section {
                     DatePicker(
-                        "Free from",
+                        "Start",
                         selection: $startTime,
                         displayedComponents: .hourAndMinute
                     )
                     .foregroundColor(AppConstants.Colors.text)
 
                     DatePicker(
-                        "Free until",
+                        "Finish",
                         selection: $endTime,
                         displayedComponents: .hourAndMinute
                     )

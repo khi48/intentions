@@ -150,7 +150,7 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var navigationManager = navigationManager
         NavigationStack(path: $navigationManager.settingsPath) {
-            if viewModel.isLoading {
+            if !viewModel.hasLoadedOnce {
                 ProgressView("Loading Settings...")
                     .foregroundColor(AppConstants.Colors.text)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
