@@ -164,12 +164,7 @@ struct SettingsView: View {
                         // Blocking
                         sectionLabel("Blocking")
                         blockingToggleRow
-                        settingsRow("Free Hours", value: viewModel.formattedActiveHours, disabled: isScheduleEditingDisabled) {
-                            viewModel.showScheduleEditor()
-                        }
-                        settingsRow("Free Days", value: viewModel.activeDaysText, disabled: isScheduleEditingDisabled) {
-                            viewModel.showScheduleEditor()
-                        }
+                        freeTimeRow
 
                         if isScheduleEditingDisabled {
                             HStack(spacing: 6) {
@@ -392,6 +387,46 @@ struct SettingsView: View {
         } else {
             return "Blocking is off — no apps are blocked"
         }
+    }
+
+    private var freeTimeRow: some View {
+        let disabled = isScheduleEditingDisabled
+        let titleColor = disabled ? AppConstants.Colors.disabled : AppConstants.Colors.text
+        let valueColor = disabled ? AppConstants.Colors.disabled : AppConstants.Colors.textSecondary
+        let secondaryColor = disabled ? AppConstants.Colors.disabled : AppConstants.Colors.textSecondary.opacity(0.75)
+
+        return Button(action: disabled ? {} : { viewModel.showScheduleEditor() }) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Free Time")
+                        .font(.body)
+                        .foregroundColor(titleColor)
+                    Text("Every other hour is blocked")
+                        .font(.caption)
+                        .foregroundColor(secondaryColor)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(viewModel.formattedActiveHours)
+                        .font(.subheadline)
+                        .foregroundColor(valueColor)
+                    Text(viewModel.activeDaysText)
+                        .font(.caption)
+                        .foregroundColor(secondaryColor)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                if !disabled {
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
+                }
+            }
+            .padding(.vertical, 14)
+            .overlay(alignment: .bottom) { rowDivider }
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
     }
 
     private func settingsRow(_ title: String, value: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
