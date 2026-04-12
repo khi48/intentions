@@ -117,9 +117,34 @@ final class ContentViewModel: Sendable {
     }
     
     // MARK: - App Lifecycle
-    
+
+    /// Set up observers for notification tap actions
+    func setupNotificationObservers() {
+        NotificationCenter.default.addObserver(
+            forName: .showSessionStatus,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.selectedTab = .home
+            }
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: .sessionCompleted,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.selectedTab = .home
+            }
+        }
+    }
+
     /// Initialize the app when it launches
     func initializeApp() async {
+        setupNotificationObservers()
+
         await withLoading {
             authorizationStatus = await screenTimeService.authorizationStatus()
 
@@ -229,7 +254,7 @@ final class ContentViewModel: Sendable {
             try await dataService.saveScheduleSettings(newSettings)
         } catch {
             logger.error("Failed to save schedule settings: \(error.localizedDescription)")
-            await handleError(error)
+            handleError(error)
         }
 
         // Also save to UserDefaults for DeviceActivityMonitor extension
@@ -246,8 +271,8 @@ final class ContentViewModel: Sendable {
         guard let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) else { return }
 
         sharedDefaults.set(settings.isEnabled, forKey: AppConstants.Keys.scheduleIsEnabled)
-        sharedDefaults.set(settings.activeHours.lowerBound, forKey: AppConstants.Keys.scheduleStartHour)
-        sharedDefaults.set(settings.activeHours.upperBound, forKey: AppConstants.Keys.scheduleEndHour)
+        sharedDefaults.set(settings.startHour, forKey: AppConstants.Keys.scheduleStartHour)
+        sharedDefaults.set(settings.endHour, forKey: AppConstants.Keys.scheduleEndHour)
         sharedDefaults.set(settings.activeDays.map { $0.calendarWeekday }, forKey: AppConstants.Keys.scheduleActiveDays)
         sharedDefaults.synchronize()
     }
@@ -261,7 +286,7 @@ final class ContentViewModel: Sendable {
             if success {
                 authorizationStatus = await screenTimeService.authorizationStatus()
             } else {
-                await handleError(AppError.screenTimeAuthorizationFailed)
+                handleError(AppError.screenTimeAuthorizationFailed)
             }
         }
     }
@@ -308,7 +333,7 @@ final class ContentViewModel: Sendable {
                 updateWidgetSessionData(session)
                 await NotificationService.shared.scheduleSessionNotifications(for: session)
             } catch {
-                await handleError(error)
+                handleError(error)
             }
         }
     }
@@ -333,7 +358,7 @@ final class ContentViewModel: Sendable {
                 clearWidgetSessionData()
                 await applyDefaultBlocking()
             } catch {
-                await handleError(error)
+                handleError(error)
             }
         }
     }
@@ -378,9 +403,13 @@ final class ContentViewModel: Sendable {
                 currentlyAppliedSessionId = nil // Force re-application
                 await applySessionBlocking(for: session)
 
+                // Reschedule notifications for the new remaining time
+                await NotificationService.shared.cancelSessionNotifications()
+                await NotificationService.shared.scheduleSessionNotifications(for: session)
+
                 updateWidgetSessionData(session)
             } catch {
-                await handleError(error)
+                handleError(error)
             }
         }
     }
@@ -417,7 +446,7 @@ final class ContentViewModel: Sendable {
     /// Apply session-based blocking - allows only the session's apps/categories
     private func applySessionBlocking(for session: IntentionSession) async {
         guard screenTimeService.isReady else {
-            await handleError(AppError.serviceUnavailable("Screen Time service is not ready. Please complete setup first."))
+            handleError(AppError.serviceUnavailable("Screen Time service is not ready. Please complete setup first."))
             return
         }
 
@@ -499,7 +528,7 @@ final class ContentViewModel: Sendable {
                 try await dataService.saveScheduleSettings(scheduleSettings)
             } catch {
                 logger.error("Failed to save intention quote: \(error.localizedDescription)")
-                await handleError(error)
+                handleError(error)
             }
         }
     }
@@ -511,7 +540,7 @@ final class ContentViewModel: Sendable {
         if screenTimeState.isReady {
             showingSetupFlow = false
         } else {
-            await handleError(AppError.serviceUnavailable(
+            handleError(AppError.serviceUnavailable(
                 "Screen Time initialization failed. Please try again."
             ))
         }
@@ -547,22 +576,20 @@ final class ContentViewModel: Sendable {
             } catch {
                 screenTimeState = .failed(error.localizedDescription)
                 logger.error("ScreenTimeService initialization error: \(error.localizedDescription)")
-                await handleError(error)
+                handleError(error)
             }
         }
     }
     
     // MARK: - Error Handling
     
-    func handleError(_ error: Error) async {
-        await MainActor.run {
-            if let appError = error as? AppError {
-                errorMessage = appError.errorDescription
-            } else {
-                errorMessage = error.localizedDescription
-            }
-            isLoading = false
+    func handleError(_ error: Error) {
+        if let appError = error as? AppError {
+            errorMessage = appError.errorDescription
+        } else {
+            errorMessage = error.localizedDescription
         }
+        isLoading = false
     }
     
     func clearError() {

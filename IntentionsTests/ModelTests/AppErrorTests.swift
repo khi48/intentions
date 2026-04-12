@@ -18,8 +18,8 @@ final class AppErrorTests: XCTestCase {
         let error = AppError.screenTimeAuthorizationFailed
         
         // Then
-        XCTAssertEqual(error.errorDescription, "Screen Time authorization was denied. Please enable it in Settings to use Intentions.")
-        XCTAssertEqual(error.recoverySuggestion, "Go to Settings > Screen Time > Content & Privacy Restrictions and enable access for Intentions.")
+        XCTAssertEqual(error.errorDescription, "Screen Time authorization was denied. Please enable it in Settings to use Intent.")
+        XCTAssertEqual(error.recoverySuggestion, "Go to Settings > Screen Time > Content & Privacy Restrictions and enable access for Intent.")
     }
     
     func testScreenTimeNotAvailableError() {

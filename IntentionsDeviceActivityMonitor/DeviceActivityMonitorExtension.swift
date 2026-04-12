@@ -10,6 +10,7 @@ import Foundation
 import DeviceActivity
 import ManagedSettings
 import FamilyControls
+import UserNotifications
 import WidgetKit
 import OSLog
 
@@ -195,21 +196,17 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     /// Called when a monitored application is blocked or unblocked
     override func intervalWillStartWarning(for activity: DeviceActivityName) {
         super.intervalWillStartWarning(for: activity)
-        print("📱 DeviceActivityMonitor: Warning before interval starts for \(activity)")
+        logger.info("Warning before interval starts for \(activity.rawValue, privacy: .public)")
     }
 
-    /// Called when a monitored application is blocked or unblocked
     override func intervalWillEndWarning(for activity: DeviceActivityName) {
         super.intervalWillEndWarning(for: activity)
-        print("📱 DeviceActivityMonitor: Warning before interval ends for \(activity)")
-
-        // Could be used to show user notification that session is about to end
+        logger.info("Warning before interval ends for \(activity.rawValue, privacy: .public)")
     }
 
-    /// Called when an event is about to reach its threshold
     override func eventWillReachThresholdWarning(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
         super.eventWillReachThresholdWarning(event, activity: activity)
-        print("📱 DeviceActivityMonitor: Warning before event reaches threshold for \(event)")
+        logger.info("Warning before event reaches threshold for \(event.rawValue, privacy: .public)")
     }
 
     // MARK: - Helper Methods
@@ -275,11 +272,39 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         }
 
         logger.notice("🎉 RESTORE BLOCKING: Complete!")
+
+        // Notify the user that their session has expired
+        sendSessionExpiredNotification()
     }
 
-    /// Check if current time is within protected hours based on schedule settings
+    /// Send a local notification informing the user their session has ended
+    private func sendSessionExpiredNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Session Expired"
+        content.body = "Your session has ended. Apps are now blocked again."
+        content.sound = .default
+        content.interruptionLevel = .timeSensitive
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "session_expired_\(UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                self.logger.error("Failed to send session expired notification from extension: \(error.localizedDescription)")
+            } else {
+                self.logger.info("✅ Session expired notification scheduled from extension")
+            }
+        }
+    }
+
+    /// Check if blocking should be active based on schedule settings.
+    /// Blocking is the default state. It is only lifted during the free time window
+    /// (startHour/endHour) on days listed in activeDays.
     private func isCurrentlyInProtectedHours(sharedDefaults: UserDefaults) -> Bool {
-        // Read schedule settings from UserDefaults
         let isEnabled = sharedDefaults.bool(forKey: "intentions.schedule.isEnabled")
         guard isEnabled else {
             logger.info("📅 SCHEDULE CHECK: Schedule is disabled - not blocking")
@@ -288,23 +313,29 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
         let startHour = sharedDefaults.integer(forKey: "intentions.schedule.startHour")
         let endHour = sharedDefaults.integer(forKey: "intentions.schedule.endHour")
-        let activeDaysIntegers = sharedDefaults.array(forKey: "intentions.schedule.activeDays") as? [Int] ?? []
+        let freeTimeDays = sharedDefaults.array(forKey: "intentions.schedule.activeDays") as? [Int] ?? []
 
         let now = Date()
         let calendar = Calendar.current
-
-        // Check day of week
         let weekdayComponent = calendar.component(.weekday, from: now)
-        let dayMatches = activeDaysIntegers.contains(weekdayComponent)
-
-        // Check hour
         let hour = calendar.component(.hour, from: now)
-        let hourMatches = (startHour...endHour).contains(hour)
 
-        let isActive = dayMatches && hourMatches
+        // If today isn't a free-time day, blocking is active
+        guard freeTimeDays.contains(weekdayComponent) else {
+            logger.info("📅 SCHEDULE CHECK: day=\(weekdayComponent) not a free day - blocking active")
+            return true
+        }
 
-        logger.info("📅 SCHEDULE CHECK: enabled=\(isEnabled), day=\(weekdayComponent), dayMatches=\(dayMatches), hour=\(hour), hourMatches=\(hourMatches), isActive=\(isActive)")
+        // Check if current hour is in the free time window
+        let inFreeTime: Bool
+        if startHour <= endHour {
+            inFreeTime = hour >= startHour && hour < endHour
+        } else {
+            inFreeTime = hour >= startHour || hour < endHour
+        }
 
-        return isActive
+        logger.info("📅 SCHEDULE CHECK: day=\(weekdayComponent), hour=\(hour), freeWindow=\(startHour)-\(endHour), inFreeTime=\(inFreeTime), blocking=\(!inFreeTime)")
+
+        return !inFreeTime
     }
 }

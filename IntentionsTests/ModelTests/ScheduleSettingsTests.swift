@@ -20,7 +20,7 @@ final class ScheduleSettingsTests: XCTestCase {
         
         // Then
         XCTAssertTrue(settings.isEnabled)
-        XCTAssertEqual(settings.activeHours, 8...22)
+        XCTAssertEqual(settings.activeHours, 6...22)
         XCTAssertEqual(settings.activeDays.count, 7) // All days
         XCTAssertEqual(settings.timeZone, TimeZone.current)
         
@@ -36,62 +36,74 @@ final class ScheduleSettingsTests: XCTestCase {
         settings.isEnabled = false
         
         // When & Then
-        XCTAssertTrue(settings.isCurrentlyActive) // Should always be active when disabled
+        XCTAssertFalse(settings.isCurrentlyActive) // Disabled schedule is not active
     }
     
-    func testIsCurrentlyActiveWithFullSchedule() {
-        // Given
+    func testIsCurrentlyActiveWithFullFreeTime() {
+        // Given - free all day, every day
         let settings = ScheduleSettings()
         settings.isEnabled = true
-        settings.activeHours = 0...23 // All hours
+        settings.activeHours = 0...23 // Free all hours
         settings.activeDays = Set(Weekday.allCases) // All days
-        
-        // When & Then
-        XCTAssertTrue(settings.isCurrentlyActive)
+
+        // When & Then - should NOT be blocking (in free time)
+        XCTAssertFalse(settings.isCurrentlyActive)
     }
-    
-    func testIsCurrentlyActiveWithRestrictiveSchedule() {
-        // Given
-        let settings = ScheduleSettings()
-        settings.isEnabled = true
-        settings.activeHours = 9...17 // 9 AM to 5 PM
-        settings.activeDays = [.monday, .tuesday, .wednesday, .thursday, .friday] // Weekdays only
-        
-        // When & Then - Result depends on current time, so we test the logic
-        let isActive = settings.isCurrentlyActive
-        XCTAssertTrue(isActive == true || isActive == false) // Just verify it returns a boolean
-    }
-    
+
     func testIsActiveAtSpecificDate() {
-        // Given
+        // Given - free from 9 AM to 5 PM on weekdays
         let settings = ScheduleSettings()
         settings.isEnabled = true
-        settings.activeHours = 9...17 // 9 AM to 5 PM
+        settings.activeHours = 9...17
         settings.activeDays = [.monday, .tuesday, .wednesday, .thursday, .friday]
-        
-        // Create a specific date: Monday at 10 AM
+
+        // Monday at 10 AM → in free window → blocking NOT active
         var components = DateComponents()
         components.year = 2024
         components.month = 1
-        components.day = 1 // This is a Monday
+        components.day = 1 // Monday
         components.hour = 10
         components.minute = 0
         let calendar = Calendar.current
         let mondayAt10AM = calendar.date(from: components)!
-        
-        // When & Then
-        XCTAssertTrue(settings.isActive(at: mondayAt10AM))
-        
-        // Test outside hours - Monday at 6 AM
+        XCTAssertFalse(settings.isActive(at: mondayAt10AM))
+
+        // Monday at 6 AM → outside free window → blocking active
         components.hour = 6
         let mondayAt6AM = calendar.date(from: components)!
-        XCTAssertFalse(settings.isActive(at: mondayAt6AM))
-        
-        // Test wrong day - Sunday at 10 AM
+        XCTAssertTrue(settings.isActive(at: mondayAt6AM))
+
+        // Sunday at 10 AM → no free window on Sunday → blocking active
         components.day = 7 // Sunday
         components.hour = 10
         let sundayAt10AM = calendar.date(from: components)!
-        XCTAssertFalse(settings.isActive(at: sundayAt10AM))
+        XCTAssertTrue(settings.isActive(at: sundayAt10AM))
+    }
+
+    func testBlockingActiveOutsideFreeWindow() {
+        // Given - free from 12 PM to 1 PM on weekdays
+        let settings = ScheduleSettings()
+        settings.isEnabled = true
+        settings.activeHours = 12...13
+        settings.activeDays = [.monday, .tuesday, .wednesday, .thursday, .friday]
+
+        var components = DateComponents()
+        components.year = 2024
+        components.month = 1
+        components.day = 1 // Monday
+        let calendar = Calendar.current
+
+        // Monday at noon → in free window → not blocking
+        components.hour = 12
+        XCTAssertFalse(settings.isActive(at: calendar.date(from: components)!))
+
+        // Monday at 1 PM → outside free window (endHour is exclusive) → blocking
+        components.hour = 13
+        XCTAssertTrue(settings.isActive(at: calendar.date(from: components)!))
+
+        // Monday at 8 AM → outside free window → blocking
+        components.hour = 8
+        XCTAssertTrue(settings.isActive(at: calendar.date(from: components)!))
     }
     
     func testScheduleSettingsCodable() throws {
@@ -127,34 +139,36 @@ final class ScheduleSettingsTests: XCTestCase {
         let calendar = Calendar.current
         let dateAt1AM = calendar.date(from: components)!
         
-        // When & Then
-        XCTAssertTrue(settings.isActive(at: dateAt1AM))
-        
-        // Test hour 23 (11 PM)
-        settings.activeHours = 23...23
-        components.hour = 23
-        let dateAt11PM = calendar.date(from: components)!
-        XCTAssertTrue(settings.isActive(at: dateAt11PM))
+        // When & Then — free from midnight to 2 AM, so 1 AM is in free time → NOT blocking
+        XCTAssertFalse(settings.isActive(at: dateAt1AM))
+
+        // Test hour 23 (11 PM) — free from 23 to 23 is invalid (startHour == endHour)
+        // Use 22...23 instead
+        settings.activeHours = 22...23
+        components.hour = 22
+        let dateAt10PM = calendar.date(from: components)!
+        XCTAssertFalse(settings.isActive(at: dateAt10PM))
     }
     
     func testEmptyActiveDays() {
-        // Given
+        // Given — no free time days = always blocking
         let settings = ScheduleSettings()
-        settings.activeDays = [] // No active days
+        settings.activeDays = []
+
+        // When & Then — blocking should be active (no free days)
+        XCTAssertTrue(settings.isCurrentlyActive)
         
-        // When & Then
-        XCTAssertFalse(settings.isCurrentlyActive)
-        
+        // No free days → always blocking
         let now = Date()
-        XCTAssertFalse(settings.isActive(at: now))
+        XCTAssertTrue(settings.isActive(at: now))
     }
     
-    func testSingleActiveDay() {
-        // Given
+    func testSingleFreeDay() {
+        // Given — only Friday has free time
         let settings = ScheduleSettings()
-        settings.activeDays = [.friday] // Only Friday
-        
-        // Create a Friday date
+        settings.activeDays = [.friday]
+
+        // Create a Friday date at noon (within default free window 6-22)
         var components = DateComponents()
         components.year = 2024
         components.month = 1
@@ -162,14 +176,14 @@ final class ScheduleSettingsTests: XCTestCase {
         components.hour = 12
         let calendar = Calendar.current
         let friday = calendar.date(from: components)!
-        
-        // When & Then
-        XCTAssertTrue(settings.isActive(at: friday))
-        
-        // Test a different day
+
+        // Friday at noon → in free window → blocking NOT active
+        XCTAssertFalse(settings.isActive(at: friday))
+
+        // Saturday → no free time → blocking active
         components.day = 6 // Saturday
         let saturday = calendar.date(from: components)!
-        XCTAssertFalse(settings.isActive(at: saturday))
+        XCTAssertTrue(settings.isActive(at: saturday))
     }
     
     func testTimeZoneHandling() throws {

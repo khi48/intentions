@@ -17,18 +17,10 @@ protocol DataPersisting: Sendable {
     func clearExpiredSessions() async throws
 }
 
-// MARK: - Model Actor for Thread-Safe SwiftData Access
-// Note: Currently unused but kept for future expansion
-@ModelActor
-actor DataModelActor {
-    // Reserved for future use with additional models
-}
-
 // MARK: - Data Persistence Service Implementation
 @MainActor final class DataPersistenceService: DataPersisting, Sendable {
     private let modelContainer: ModelContainer
-    private let dataActor: DataModelActor
-    private let modelContext: ModelContext // For non-app-group operations (will be replaced with more actors)
+    private let modelContext: ModelContext
     
     // UserDefaults for simple key-value storage
     private let userDefaults = UserDefaults.standard
@@ -74,7 +66,6 @@ actor DataModelActor {
         if let container = container {
             // Use provided test container
             self.modelContainer = container
-            self.dataActor = DataModelActor(modelContainer: container)
             self.modelContext = ModelContext(container)
         } else {
             // Production initialization
@@ -83,7 +74,6 @@ actor DataModelActor {
                     for: schema,
                     configurations: [modelConfiguration]
                 )
-                self.dataActor = DataModelActor(modelContainer: modelContainer)
                 self.modelContext = ModelContext(modelContainer)
             } catch {
                 throw AppError.dataInitializationFailed(error.localizedDescription)

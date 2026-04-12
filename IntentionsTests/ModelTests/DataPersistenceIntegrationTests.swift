@@ -77,12 +77,7 @@ final class DataPersistenceIntegrationTests: XCTestCase {
         // Session is being used, but still active
         try await service.saveIntentionSession(session)
         
-        // 3. Pause session (if this functionality exists)
-        let pausedTime = Date()
-        session.state = .paused(totalElapsed: 300, pausedAt: pausedTime) // 5 minutes elapsed
-        try await service.saveIntentionSession(session)
-        
-        // 4. Resume and complete session
+        // 3. Complete session
         session.complete() // This should set isActive = false, wasCompleted = true
         try await service.saveIntentionSession(session)
         

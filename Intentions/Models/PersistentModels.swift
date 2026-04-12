@@ -17,6 +17,7 @@ final class PersistentIntentionSession {
     @Attribute(.unique) var id: UUID
     var requestedAppGroupsData: Data // Stores encoded [UUID]
     var requestedApplicationsData: Data // Stores encoded Set<ApplicationToken>
+    var requestedWebDomainsData: Data = Data() // Stores encoded Set<WebDomainToken>
     var allowAllWebsites: Bool = false // Default to false for existing data
     var duration: TimeInterval
     var startTime: Date
@@ -30,6 +31,7 @@ final class PersistentIntentionSession {
         id: UUID,
         requestedAppGroupsData: Data,
         requestedApplicationsData: Data,
+        requestedWebDomainsData: Data = Data(),
         allowAllWebsites: Bool,
         duration: TimeInterval,
         startTime: Date,
@@ -42,6 +44,7 @@ final class PersistentIntentionSession {
         self.id = id
         self.requestedAppGroupsData = requestedAppGroupsData
         self.requestedApplicationsData = requestedApplicationsData
+        self.requestedWebDomainsData = requestedWebDomainsData
         self.allowAllWebsites = allowAllWebsites
         self.duration = duration
         self.startTime = startTime
@@ -63,6 +66,7 @@ final class PersistentIntentionSession {
             assertionFailure("Failed to encode requestedApplications for session \(session.id)")
             return Data()
         }()
+        let webDomainsData = (try? encoder.encode(session.requestedWebDomains)) ?? Data()
         let sourceData = (try? encoder.encode(session.source)) ?? {
             assertionFailure("Failed to encode source for session \(session.id)")
             return Data()
@@ -72,6 +76,7 @@ final class PersistentIntentionSession {
             id: session.id,
             requestedAppGroupsData: appGroupsData,
             requestedApplicationsData: applicationsData,
+            requestedWebDomainsData: webDomainsData,
             allowAllWebsites: session.allowAllWebsites,
             duration: session.duration,
             startTime: session.startTime,
@@ -88,6 +93,7 @@ final class PersistentIntentionSession {
         let encoder = JSONEncoder()
         self.requestedAppGroupsData = (try? encoder.encode(session.requestedAppGroups)) ?? Data()
         self.requestedApplicationsData = (try? encoder.encode(session.requestedApplications)) ?? Data()
+        self.requestedWebDomainsData = (try? encoder.encode(session.requestedWebDomains)) ?? Data()
         self.sourceData = (try? encoder.encode(session.source)) ?? Data()
         self.allowAllWebsites = session.allowAllWebsites
         self.duration = session.duration
@@ -102,6 +108,7 @@ final class PersistentIntentionSession {
     func toIntentionSession() -> IntentionSession? {
         let requestedAppGroups = (try? JSONDecoder().decode([UUID].self, from: requestedAppGroupsData)) ?? []
         let requestedApplications = (try? JSONDecoder().decode(Set<ApplicationToken>.self, from: requestedApplicationsData)) ?? Set()
+        let requestedWebDomains = requestedWebDomainsData.isEmpty ? Set<WebDomainToken>() : ((try? JSONDecoder().decode(Set<WebDomainToken>.self, from: requestedWebDomainsData)) ?? Set())
 
         // Decode source if available, otherwise default to .manual for backward compatibility
         let source: SessionSource
@@ -129,6 +136,7 @@ final class PersistentIntentionSession {
                 id: id,
                 appGroups: requestedAppGroups,
                 applications: requestedApplications,
+                webDomains: requestedWebDomains,
                 allowAllWebsites: allowAllWebsites,
                 duration: duration,
                 createdAt: createdAt,
@@ -178,8 +186,8 @@ final class PersistentScheduleSettings {
 
         self.init(
             isEnabled: settings.isEnabled,
-            activeHoursStart: settings.activeHours.lowerBound,
-            activeHoursEnd: settings.activeHours.upperBound,
+            activeHoursStart: settings.startHour,
+            activeHoursEnd: settings.endHour,
             activeDaysData: activeDaysData,
             timeZoneIdentifier: settings.timeZone.identifier,
             lastDisabledAt: settings.lastDisabledAt,
@@ -197,7 +205,8 @@ final class PersistentScheduleSettings {
 
         let settings = ScheduleSettings()
         settings.isEnabled = isEnabled
-        settings.activeHours = activeHoursStart...activeHoursEnd
+        settings.startHour = activeHoursStart
+        settings.endHour = activeHoursEnd
         settings.activeDays = activeDays
         settings.timeZone = timeZone
         settings.lastDisabledAt = lastDisabledAt

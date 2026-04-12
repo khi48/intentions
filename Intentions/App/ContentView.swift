@@ -84,7 +84,7 @@ struct ContentView: View {
 /// Main tab-based navigation when app is authorized
 private struct MainTabView: View {
     let viewModel: ContentViewModel
-    @StateObject private var navigationManager = NavigationStateManager()
+    @State private var navigationManager = NavigationStateManager()
     @State private var settingsViewModel: SettingsViewModel?
     
     var body: some View {
@@ -133,7 +133,7 @@ private struct MainTabView: View {
                     settingsViewModel = vm
                 }
             )
-            .environmentObject(navigationManager)
+            .environment(navigationManager)
                 .tabItem {
                     Label(AppTab.settings.rawValue, systemImage: AppTab.settings.systemImage)
                 }

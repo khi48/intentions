@@ -13,7 +13,6 @@ import Combine
 /// action (reason input + progress-bar-in-button timer).
 struct DisableBlockingConfirmationView: View {
     let streakDays: Int?
-    let protectedTimeText: String
     let remainingTimeText: String
     let intentionQuote: String?
     let onConfirm: () -> Void
@@ -29,7 +28,7 @@ struct DisableBlockingConfirmationView: View {
     private let countdownDuration: Double = 10.0
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 0) {
@@ -83,14 +82,9 @@ struct DisableBlockingConfirmationView: View {
                         .foregroundColor(AppConstants.Colors.textSecondary)
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(protectedTimeText)
-                        .font(.subheadline)
-                        .foregroundColor(AppConstants.Colors.textSecondary)
-                    Text(remainingTimeText)
-                        .font(.caption)
-                        .foregroundColor(AppConstants.Colors.textSecondary.opacity(0.7))
-                }
+                Text(remainingTimeText)
+                    .font(.subheadline)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
             }
             .padding(.top, 24)
             .padding(.bottom, 20)
@@ -113,10 +107,11 @@ struct DisableBlockingConfirmationView: View {
     private var actionSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Why unlock?")
-                .font(.subheadline)
-                .foregroundColor(AppConstants.Colors.textSecondary)
-                .padding(.top, 20)
-                .padding(.bottom, 10)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundColor(AppConstants.Colors.text)
+                .padding(.top, 28)
+                .padding(.bottom, 14)
 
             TextField("Write your reason...", text: $reasonText)
                 .font(.body)
@@ -204,27 +199,9 @@ struct DisableBlockingConfirmationView: View {
         return "Disable"
     }
 
-    private var isReasonValid: Bool {
-        let trimmed = reasonText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= minimumCharacters else { return false }
-
-        let lowercased = trimmed.lowercased()
-        let invalidResponses = ["asdf", "test", "because", "idk", "whatever", "abc", "123"]
-
-        for invalid in invalidResponses {
-            if lowercased.contains(invalid) && trimmed.count < 25 {
-                return false
-            }
-        }
-
-        return true
-    }
-
     // MARK: - Timer
 
     private func startCountdown() {
-        guard isReasonValid else { return }
-
         isCountdownActive = true
         countdownSecondsRemaining = countdownDuration
 
@@ -246,7 +223,6 @@ struct DisableBlockingConfirmationView: View {
 #Preview {
     DisableBlockingConfirmationView(
         streakDays: 6,
-        protectedTimeText: "4h 12m protected",
         remainingTimeText: "1h 48m remaining",
         intentionQuote: "I want to be more present with my family.",
         onConfirm: { print("Confirmed") },

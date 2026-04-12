@@ -72,8 +72,11 @@ enum AppConstants {
     
     // MARK: - Schedule Settings
     enum Schedule {
-        /// Default active hours (6 AM to 10 PM)
-        static let defaultActiveHours: ClosedRange<Int> = 6...22
+        /// Default start hour (6 AM)
+        static let defaultStartHour: Int = 6
+
+        /// Default end hour (10 PM)
+        static let defaultEndHour: Int = 22
         
         /// Valid hour range for scheduling
         static let validHourRange: ClosedRange<Int> = 0...23

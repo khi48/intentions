@@ -156,9 +156,9 @@ final class SettingsViewModel: Sendable {
         }
 
         if scheduleSettings.isCurrentlyActive {
-            return "Enabled"
+            return "Blocked"
         } else {
-            return "Open Access"
+            return "Free Time"
         }
     }
 
@@ -171,15 +171,12 @@ final class SettingsViewModel: Sendable {
     }
     
     var formattedActiveHours: String {
-        let start = scheduleSettings.activeHours.lowerBound
-        let end = scheduleSettings.activeHours.upperBound
-        
         let formatter = DateFormatter()
         formatter.timeStyle = .short
-        
-        let startTime = Calendar.current.date(bySettingHour: start, minute: 0, second: 0, of: Date()) ?? Date()
-        let endTime = Calendar.current.date(bySettingHour: end, minute: 0, second: 0, of: Date()) ?? Date()
-        
+
+        let startTime = Calendar.current.date(bySettingHour: scheduleSettings.startHour, minute: 0, second: 0, of: Date()) ?? Date()
+        let endTime = Calendar.current.date(bySettingHour: scheduleSettings.endHour, minute: 0, second: 0, of: Date()) ?? Date()
+
         return "\(formatter.string(from: startTime)) - \(formatter.string(from: endTime))"
     }
     

@@ -2,6 +2,7 @@
 // Mock Implementation for Testing and Development
 
 import Foundation
+import Synchronization
 @preconcurrency import FamilyControls
 @preconcurrency import ManagedSettings
 
@@ -14,7 +15,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
     private var mockCurrentlyAllowedApps: Set<ApplicationToken> = []
     private var mockSystemApps: Set<ApplicationToken> = []
     private var mockSessionTask: Task<Void, Never>?
-    nonisolated(unsafe) private var mockIsInitialized = false
+    private let _mockIsInitialized = Atomic<Bool>(false)
     
     // MARK: - Test Configuration Properties
     
@@ -70,19 +71,19 @@ actor MockScreenTimeService: ScreenTimeManaging {
     }
     
     func initialize() async throws {
-        guard !mockIsInitialized else { return }
+        guard !isReady else { return }
 
         let authorized = await requestAuthorization()
         guard authorized else {
             throw AppError.screenTimeAuthorizationFailed
         }
 
-        mockIsInitialized = true
+        _mockIsInitialized.store(true, ordering: .releasing)
         print("🧪 MockScreenTimeService: Initialized (blocking will be applied separately)")
     }
 
     nonisolated var isReady: Bool {
-        mockIsInitialized
+        _mockIsInitialized.load(ordering: .acquiring)
     }
     
     func blockAllApps() async throws {
@@ -104,8 +105,16 @@ actor MockScreenTimeService: ScreenTimeManaging {
             throw AppError.screenTimeAuthorizationFailed
         }
 
-        guard duration > 0 else {
-            throw AppError.invalidConfiguration("Duration must be greater than 0")
+        guard !tokens.isEmpty else {
+            throw AppError.validationFailed("applications", reason: "At least one application must be specified")
+        }
+
+        guard duration >= AppConstants.Session.minimumDuration else {
+            throw AppError.invalidConfiguration("Duration must be at least \(AppConstants.Session.minimumDuration) seconds")
+        }
+
+        guard duration <= AppConstants.Session.maximumDuration else {
+            throw AppError.invalidConfiguration("Duration cannot exceed \(AppConstants.Session.maximumDuration) seconds")
         }
 
         mockCurrentlyAllowedApps = tokens
@@ -136,7 +145,13 @@ actor MockScreenTimeService: ScreenTimeManaging {
     }
     
     func allowAllAccess() async throws {
-        // Mock implementation: clear all restrictions (all apps are now accessible)
+        let status = await authorizationStatus()
+        guard status == .approved else {
+            throw AppError.screenTimeAuthorizationFailed
+        }
+
+        mockSessionTask?.cancel()
+        mockSessionTask = nil
         mockCurrentlyAllowedApps.removeAll()
         print("🧪 MockScreenTimeService: All access allowed - no restrictions")
     }
@@ -156,7 +171,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
             currentlyAllowedAppsCount: mockCurrentlyAllowedApps.count,
             essentialSystemAppsCount: mockSystemApps.count,
             hasActiveSession: mockSessionTask != nil,
-            isInitialized: mockIsInitialized
+            isInitialized: isReady
         )
     }
     

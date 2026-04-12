@@ -5,8 +5,12 @@
 //  Created by Kieran Hitchcock on 08/06/2025.
 //
 // =============================================================================
-// Models/ScheduleSettings.swift - When App Is Active
+// Models/ScheduleSettings.swift - Free Time Window Configuration
 // =============================================================================
+//
+// Blocking model: apps are blocked by default 24/7.
+// startHour/endHour/activeDays define a "free time" window when blocking is lifted.
+// isCurrentlyActive returns true when blocking IS active (i.e., NOT in free time).
 
 import Foundation
 
@@ -14,55 +18,69 @@ import Foundation
 @Observable
 final class ScheduleSettings: @preconcurrency Codable {
     var isEnabled: Bool
-    var activeHours: ClosedRange<Int> // 24-hour format: 9...17 means 9 AM to 5 PM
-    var activeDays: Set<Weekday>
+    var startHour: Int   // Free time start (24-hour format, 0-23)
+    var endHour: Int     // Free time end (24-hour format, 0-23)
+    var activeDays: Set<Weekday>  // Days that have a free time window
     var timeZone: TimeZone
     var lastDisabledAt: Date?
     var intentionQuote: String?
 
     init() {
         self.isEnabled = true
-        self.activeHours = AppConstants.Schedule.defaultActiveHours
-        self.activeDays = Set(Weekday.allCases) // All days by default
+        self.startHour = AppConstants.Schedule.defaultStartHour
+        self.endHour = AppConstants.Schedule.defaultEndHour
+        self.activeDays = Set(Weekday.allCases)
         self.timeZone = AppConstants.Schedule.defaultTimeZone
         self.lastDisabledAt = nil
         self.intentionQuote = nil
     }
-    
-    // Check if current time falls within active schedule
-    var isCurrentlyActive: Bool {
-        guard isEnabled else { 
-            return false 
-        }
-        
-        let now = Date()
-        let calendar = Calendar.current
-        
-        // Check day of week
-        let weekdayComponent = calendar.component(.weekday, from: now)
-        let currentWeekday = Weekday.from(calendarWeekday: weekdayComponent)
-        let dayMatches = activeDays.contains(currentWeekday)
-        
-        // Check hour
-        let hour = calendar.component(.hour, from: now)
-        let hourMatches = activeHours.contains(hour)
 
-        return dayMatches && hourMatches
+    /// Whether blocking is currently active (true = apps are blocked, false = in free time)
+    var isCurrentlyActive: Bool {
+        isActive(at: Date())
     }
-    
+
+    /// Returns true when blocking should be active at the given date.
+    /// Blocking is the default state. It is only lifted during the free time window
+    /// on days that are in `activeDays`.
     func isActive(at date: Date) -> Bool {
         guard isEnabled else { return false }
 
-        let calendar = Calendar.current
+        var calendar = Calendar.current
+        calendar.timeZone = timeZone
 
-        // Check day of week
+        // Check if today has a free time window
         let weekdayComponent = calendar.component(.weekday, from: date)
         let weekday = Weekday.from(calendarWeekday: weekdayComponent)
-        guard activeDays.contains(weekday) else { return false }
 
-        // Check hour
+        // If today isn't a free-time day, blocking is active
+        guard activeDays.contains(weekday) else { return true }
+
+        // Check if current hour is within the free time window
         let hour = calendar.component(.hour, from: date)
-        return activeHours.contains(hour)
+        if isInFreeTimeRange(hour) {
+            return false // In free time → blocking NOT active
+        }
+        return true // Outside free time → blocking active
+    }
+
+    /// Check if a given hour falls within the free time range
+    func isInFreeTimeRange(_ hour: Int) -> Bool {
+        if startHour <= endHour {
+            return hour >= startHour && hour < endHour
+        } else {
+            // Overnight free time (rare, but supported)
+            return hour >= startHour || hour < endHour
+        }
+    }
+
+    /// Total hours in the free time window
+    var totalFreeTimeHours: Int {
+        if startHour <= endHour {
+            return endHour - startHour
+        } else {
+            return (24 - startHour) + endHour
+        }
     }
 
     /// Days since the user last disabled blocking. Nil if never disabled.
@@ -74,40 +92,58 @@ final class ScheduleSettings: @preconcurrency Codable {
         return calendar.dateComponents([.day], from: startOfLastDisable, to: startOfToday).day
     }
 
-    /// Minutes the user has been within protected hours today.
+    /// Minutes of blocking elapsed today (time spent outside free window).
     var protectedMinutesToday: Int {
+        guard isEnabled else { return 0 }
+
         let calendar = Calendar.current
         let now = Date()
         let currentHour = calendar.component(.hour, from: now)
         let currentMinute = calendar.component(.minute, from: now)
 
-        let startHour = activeHours.lowerBound
-        let endHour = activeHours.upperBound
+        // Total minutes elapsed today
+        let totalMinutesElapsed = currentHour * 60 + currentMinute
 
-        guard currentHour >= startHour else { return 0 }
-
-        let effectiveEndHour = min(currentHour, endHour)
-        let fullHoursMinutes = max(0, effectiveEndHour - startHour) * 60
-
-        if currentHour < endHour {
-            return fullHoursMinutes + currentMinute
+        // Calculate free time minutes elapsed today
+        let freeMinutesElapsed: Int
+        if startHour <= endHour {
+            if currentHour < startHour {
+                freeMinutesElapsed = 0
+            } else if currentHour < endHour {
+                freeMinutesElapsed = (currentHour - startHour) * 60 + currentMinute
+            } else {
+                freeMinutesElapsed = (endHour - startHour) * 60
+            }
         } else {
-            return max(0, endHour - startHour) * 60
+            // Overnight free time — unusual but handle it
+            freeMinutesElapsed = 0 // Simplified for v1
         }
+
+        return totalMinutesElapsed - freeMinutesElapsed
     }
 
-    /// Minutes remaining in today's protected hours.
+    /// Minutes of blocking remaining today.
     var remainingProtectedMinutesToday: Int {
-        let calendar = Calendar.current
-        let now = Date()
-        let currentHour = calendar.component(.hour, from: now)
-        let currentMinute = calendar.component(.minute, from: now)
+        guard isEnabled else { return 0 }
 
-        let endHour = activeHours.upperBound
+        let totalBlockingMinutes = (24 * 60) - (totalFreeTimeHours * 60)
+        return max(0, totalBlockingMinutes - protectedMinutesToday)
+    }
 
-        guard currentHour < endHour else { return 0 }
+    // MARK: - Backward Compatibility
 
-        return (endHour - currentHour) * 60 - currentMinute
+    /// Provides ClosedRange access for test code that still uses it
+    var activeHours: ClosedRange<Int> {
+        get {
+            if startHour <= endHour {
+                return startHour...endHour
+            }
+            return startHour...23
+        }
+        set {
+            startHour = newValue.lowerBound
+            endHour = newValue.upperBound
+        }
     }
 
     // Codable implementation
@@ -115,26 +151,25 @@ final class ScheduleSettings: @preconcurrency Codable {
         case isEnabled, activeHoursStart, activeHoursEnd, activeDays, timeZone
         case lastDisabledAt, intentionQuote
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
-        let start = try container.decode(Int.self, forKey: .activeHoursStart)
-        let end = try container.decode(Int.self, forKey: .activeHoursEnd)
-        activeHours = start...end
+        startHour = try container.decode(Int.self, forKey: .activeHoursStart)
+        endHour = try container.decode(Int.self, forKey: .activeHoursEnd)
         activeDays = try container.decode(Set<Weekday>.self, forKey: .activeDays)
-        
+
         let timeZoneIdentifier = try container.decode(String.self, forKey: .timeZone)
         timeZone = TimeZone(identifier: timeZoneIdentifier) ?? TimeZone.current
         lastDisabledAt = try container.decodeIfPresent(Date.self, forKey: .lastDisabledAt)
         intentionQuote = try container.decodeIfPresent(String.self, forKey: .intentionQuote)
     }
-    
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(isEnabled, forKey: .isEnabled)
-        try container.encode(activeHours.lowerBound, forKey: .activeHoursStart)
-        try container.encode(activeHours.upperBound, forKey: .activeHoursEnd)
+        try container.encode(startHour, forKey: .activeHoursStart)
+        try container.encode(endHour, forKey: .activeHoursEnd)
         try container.encode(activeDays, forKey: .activeDays)
         try container.encode(timeZone.identifier, forKey: .timeZone)
         try container.encodeIfPresent(lastDisabledAt, forKey: .lastDisabledAt)

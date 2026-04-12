@@ -146,8 +146,6 @@ final class NotificationService: NSObject, Sendable {
             await scheduleCompletionNotification(sessionId: sessionId, remainingTime: remainingTime)
         }
 
-        // Debug: Check what was actually scheduled
-        await debugPendingNotifications()
     }
 
     private func scheduleWarningNotifications(sessionId: String, remainingTime: TimeInterval) async {
@@ -166,18 +164,18 @@ final class NotificationService: NSObject, Sendable {
                 continue
             }
 
-            let isCritical = warningMinutes <= 1
+            let isUrgent = warningMinutes <= 1
 
             let identifier = "session_warning_\(sessionId)_\(warningMinutes)min"
 
             let content = UNMutableNotificationContent()
             content.title = "Session Ending Soon"
             content.body = formatWarningMessage(minutes: warningMinutes)
-            content.sound = isCritical ? .defaultCritical : .default
+            content.sound = .default
             content.categoryIdentifier = NotificationType.sessionWarning.rawValue
 
-            if isCritical {
-                content.interruptionLevel = .critical
+            if isUrgent {
+                content.interruptionLevel = .timeSensitive
             }
 
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: triggerTime, repeats: false)
@@ -245,8 +243,7 @@ final class NotificationService: NSObject, Sendable {
         content.sound = .default
         content.categoryIdentifier = NotificationType.sessionCompletion.rawValue
 
-        // Use a very small trigger time to send immediately
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
         let request = UNNotificationRequest(
             identifier: "session_expired_\(UUID().uuidString)",
             content: content,
@@ -266,23 +263,19 @@ final class NotificationService: NSObject, Sendable {
         let pendingRequests = await notificationCenter.pendingNotificationRequests()
         let sessionIdentifiers = pendingRequests
             .map { $0.identifier }
-            .filter { $0.contains("session_warning_") || $0.contains("session_completion_") }
+            .filter { $0.contains("session_warning_") || $0.contains("session_completion_") || $0.contains("session_expired_") }
 
         notificationCenter.removePendingNotificationRequests(withIdentifiers: sessionIdentifiers)
     }
 
     func cancelAllNotifications() async {
-        notificationCenter.removeAllPendingNotificationRequests()
-    }
-
-    // MARK: - Debugging
-
-    func debugPendingNotifications() async {
         let pendingRequests = await notificationCenter.pendingNotificationRequests()
-        for request in pendingRequests {
-            _ = request.trigger as? UNTimeIntervalNotificationTrigger
-        }
+        let sessionIdentifiers = pendingRequests
+            .map { $0.identifier }
+            .filter { $0.hasPrefix("session_") }
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: sessionIdentifiers)
     }
+
 }
 
 // MARK: - UNUserNotificationCenterDelegate

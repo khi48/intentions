@@ -11,11 +11,13 @@ import SwiftUI
 enum SettingsDestination: Hashable {
     case notifications
     case setupFlow
+    case greyscale
 
     var title: String {
         switch self {
         case .notifications: return "Notifications"
         case .setupFlow: return "App Setup"
+        case .greyscale: return "Enable Greyscale"
         }
     }
 
@@ -23,6 +25,7 @@ enum SettingsDestination: Hashable {
         switch self {
         case .notifications: return "bell.fill"
         case .setupFlow: return "gear.badge.checkmark"
+        case .greyscale: return "circle.lefthalf.filled"
         }
     }
 }
@@ -109,11 +112,12 @@ struct SettingsRow: View {
 struct SettingsView: View {
     @State private var viewModel: SettingsViewModel
     @State private var showingDisableConfirmation = false
+    @State private var showingIntentionQuoteEditor = false
     private let onScheduleSettingsChanged: ((ScheduleSettings) async -> Void)?
     private let onViewModelReady: ((SettingsViewModel) -> Void)?
     private let setupCoordinator: SetupCoordinator?
     private let hasActiveSession: Bool
-    @EnvironmentObject private var navigationManager: NavigationStateManager
+    @Environment(NavigationStateManager.self) private var navigationManager
 
     private var isScheduleEditingDisabled: Bool {
         hasActiveSession || viewModel.scheduleSettings.isCurrentlyActive
@@ -144,6 +148,7 @@ struct SettingsView: View {
     }
 
     var body: some View {
+        @Bindable var navigationManager = navigationManager
         NavigationStack(path: $navigationManager.settingsPath) {
             if viewModel.isLoading {
                 ProgressView("Loading Settings...")
@@ -156,13 +161,13 @@ struct SettingsView: View {
                         // Stats banner
                         statsBanner
 
-                        // Protected Hours
-                        sectionLabel("Protected Hours")
+                        // Free Time
+                        sectionLabel("Free Time")
                         blockingToggleRow
-                        settingsRow("Hours", value: viewModel.formattedActiveHours, disabled: isScheduleEditingDisabled) {
+                        settingsRow("Free Hours", value: viewModel.formattedActiveHours, disabled: isScheduleEditingDisabled) {
                             viewModel.showScheduleEditor()
                         }
-                        settingsRow("Days", value: viewModel.activeDaysText, disabled: isScheduleEditingDisabled) {
+                        settingsRow("Free Days", value: viewModel.activeDaysText, disabled: isScheduleEditingDisabled) {
                             viewModel.showScheduleEditor()
                         }
 
@@ -180,6 +185,24 @@ struct SettingsView: View {
 
                         // General
                         sectionLabel("General")
+                        Button(action: { showingIntentionQuoteEditor = true }) {
+                            HStack {
+                                Text("Your Intention")
+                                    .font(.body)
+                                    .foregroundColor(AppConstants.Colors.text)
+                                Spacer()
+                                Text(viewModel.scheduleSettings.intentionQuote ?? "Not set")
+                                    .font(.subheadline)
+                                    .foregroundColor(AppConstants.Colors.textSecondary)
+                                    .lineLimit(1)
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2)
+                                    .foregroundColor(AppConstants.Colors.textSecondary)
+                            }
+                            .padding(.vertical, 14)
+                            .overlay(alignment: .bottom) { rowDivider }
+                        }
+                        .buttonStyle(.plain)
                         NavigationLink(value: SettingsDestination.notifications) {
                             settingsRowContent("Notifications")
                         }
@@ -188,7 +211,7 @@ struct SettingsView: View {
                             settingsRowContent("App Setup")
                         }
                         .overlay(alignment: .bottom) { rowDivider }
-                        Button(action: { openAccessibilitySettings() }) {
+                        NavigationLink(value: SettingsDestination.greyscale) {
                             settingsRowContent("Enable Greyscale")
                         }
                     }
@@ -222,6 +245,8 @@ struct SettingsView: View {
                             Text("Setup not available")
                                 .foregroundColor(AppConstants.Colors.textSecondary)
                         }
+                    case .greyscale:
+                        GreyscaleGuideView()
                     }
                 }
             }
@@ -254,6 +279,20 @@ struct SettingsView: View {
                     }
                 },
                 onCancel: { showingDisableConfirmation = false }
+            )
+        }
+        .sheet(isPresented: $showingIntentionQuoteEditor) {
+            IntentionQuoteEditorView(
+                quote: viewModel.scheduleSettings.intentionQuote ?? "",
+                onSave: { newQuote in
+                    viewModel.scheduleSettings.intentionQuote = newQuote.isEmpty ? nil : newQuote
+                    Task {
+                        await viewModel.updateScheduleSettings(viewModel.scheduleSettings)
+                        await onScheduleSettingsChanged?(viewModel.scheduleSettings)
+                    }
+                    showingIntentionQuoteEditor = false
+                },
+                onCancel: { showingIntentionQuoteEditor = false }
             )
         }
         .task { await viewModel.loadData() }
@@ -388,11 +427,4 @@ struct SettingsView: View {
             .frame(height: 0.5)
     }
 
-    // MARK: - Helpers
-
-    private func openAccessibilitySettings() {
-        if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-            UIApplication.shared.open(settingsURL)
-        }
-    }
 }

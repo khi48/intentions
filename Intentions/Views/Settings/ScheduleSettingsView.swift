@@ -11,137 +11,88 @@ struct ScheduleSettingsView: View {
     let onSave: (ScheduleSettings) -> Void
     let onCancel: () -> Void
 
-    @State private var isEnabled: Bool
     @State private var startHour: Int
     @State private var endHour: Int
     @State private var selectedDays: Set<Weekday>
-    @State private var intentionQuote: String
 
     init(settings: ScheduleSettings, onSave: @escaping (ScheduleSettings) -> Void, onCancel: @escaping () -> Void) {
         self.settings = settings
         self.onSave = onSave
         self.onCancel = onCancel
-        self._isEnabled = State(initialValue: settings.isEnabled)
-        self._startHour = State(initialValue: settings.activeHours.lowerBound)
-        self._endHour = State(initialValue: settings.activeHours.upperBound)
+        self._startHour = State(initialValue: settings.startHour)
+        self._endHour = State(initialValue: settings.endHour)
         self._selectedDays = State(initialValue: settings.activeDays)
-        self._intentionQuote = State(initialValue: settings.intentionQuote ?? "")
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 Section {
-                    Toggle("Enable Scheduled Blocking", isOn: $isEnabled)
-                        .tint(AppConstants.Colors.accent)
+                    HStack {
+                        Text("Free from")
+                            .foregroundColor(AppConstants.Colors.text)
+                        Spacer()
+                        Picker("Start Hour", selection: $startHour) {
+                            ForEach(0..<24) { hour in
+                                Text(Self.hourFormatter.string(from: dateFromHour(hour)))
+                                    .tag(hour)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
+
+                    HStack {
+                        Text("Free until")
+                            .foregroundColor(AppConstants.Colors.text)
+                        Spacer()
+                        Picker("End Hour", selection: $endHour) {
+                            ForEach(0..<24) { hour in
+                                Text(Self.hourFormatter.string(from: dateFromHour(hour)))
+                                    .tag(hour)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
                 } header: {
-                    Text("Blocking Mode")
+                    Text("Free Time Window")
                 } footer: {
-                    Text(isEnabled ? "Apps will only be blocked during specified times and days" : "Apps will be blocked by default 24/7")
+                    Text(scheduleFooterText)
                         .foregroundColor(AppConstants.Colors.textSecondary)
                 }
 
-                if isEnabled {
-                    Section {
+                Section {
+                    ForEach(Weekday.allCases, id: \.self) { day in
                         HStack {
-                            Text("Start Time")
+                            Text(day.displayName)
                                 .foregroundColor(AppConstants.Colors.text)
                             Spacer()
-                            Picker("Start Hour", selection: $startHour) {
-                                ForEach(0..<24) { hour in
-                                    Text(hourFormatter.string(from: dateFromHour(hour)))
-                                        .tag(hour)
-                                }
+                            if selectedDays.contains(day) {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(AppConstants.Colors.accent)
                             }
-                            .pickerStyle(.menu)
                         }
-
-                        HStack {
-                            Text("End Time")
-                                .foregroundColor(AppConstants.Colors.text)
-                            Spacer()
-                            Picker("End Hour", selection: $endHour) {
-                                ForEach(1..<24) { hour in
-                                    Text(hourFormatter.string(from: dateFromHour(hour)))
-                                        .tag(hour)
-                                }
-                            }
-                            .pickerStyle(.menu)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            toggleDay(day)
                         }
-                    } header: {
-                        Text("Blocking Hours")
-                    } footer: {
-                        Text("Apps will be blocked from \(hourFormatter.string(from: dateFromHour(startHour))) to \(hourFormatter.string(from: dateFromHour(endHour)))")
-                            .foregroundColor(AppConstants.Colors.textSecondary)
                     }
 
-                    Section {
-                        ForEach(Weekday.allCases, id: \.self) { day in
-                            HStack {
-                                Text(day.displayName)
-                                    .foregroundColor(AppConstants.Colors.text)
-                                Spacer()
-                                if selectedDays.contains(day) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(AppConstants.Colors.accent)
-                                }
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                toggleDay(day)
-                            }
+                    if selectedDays.count < Weekday.allCases.count {
+                        Button("Select All") {
+                            selectedDays = Set(Weekday.allCases)
                         }
-
-                        VStack(spacing: 8) {
-                            HStack {
-                                Button("All Days") {
-                                    selectedDays = Set(Weekday.allCases)
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(AppConstants.Colors.accent)
-
-                                Button("Weekdays") {
-                                    selectedDays = [.monday, .tuesday, .wednesday, .thursday, .friday]
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(AppConstants.Colors.accent)
-
-                                Button("Weekends") {
-                                    selectedDays = [.saturday, .sunday]
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(AppConstants.Colors.accent)
-                            }
-
-                            Button("Clear All") {
-                                selectedDays.removeAll()
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(AppConstants.Colors.destructive)
-                        }
-                        .padding(.vertical, 8)
-                    } header: {
-                        Text("Blocking Days")
-                    } footer: {
-                        Text("Select the days when apps should be blocked by default. At least one day must be selected.")
-                            .foregroundColor(AppConstants.Colors.textSecondary)
+                        .frame(maxWidth: .infinity)
                     }
-
-                    Section {
-                        TextField("Why did you set up protection?", text: $intentionQuote, axis: .vertical)
-                            .lineLimit(2...4)
-                            .foregroundColor(AppConstants.Colors.text)
-                    } header: {
-                        Text("Your Intention")
-                    } footer: {
-                        Text("Shown when you try to disable blocking, to remind you why you started.")
-                            .foregroundColor(AppConstants.Colors.textSecondary)
-                    }
+                } header: {
+                    Text("Free Time Days")
+                } footer: {
+                    Text("Select the days when free time applies. Days not selected will be fully blocked.")
+                        .foregroundColor(AppConstants.Colors.textSecondary)
                 }
             }
             .background(AppConstants.Colors.background)
             .scrollContentBackground(.hidden)
-            .navigationTitle("Protected Hours")
+            .navigationTitle("Free Time")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -156,8 +107,13 @@ struct ScheduleSettingsView: View {
     }
 
     private var isValidConfiguration: Bool {
-        if !isEnabled { return true }
-        return startHour < endHour && !selectedDays.isEmpty
+        startHour != endHour
+    }
+
+    private var scheduleFooterText: String {
+        let start = Self.hourFormatter.string(from: dateFromHour(startHour))
+        let end = Self.hourFormatter.string(from: dateFromHour(endHour))
+        return "Apps will be unblocked from \(start) to \(end)"
     }
 
     private func toggleDay(_ day: Weekday) {
@@ -170,20 +126,21 @@ struct ScheduleSettingsView: View {
 
     private func saveSettings() {
         let updatedSettings = ScheduleSettings()
-        updatedSettings.isEnabled = isEnabled
-        updatedSettings.activeHours = startHour...endHour
+        updatedSettings.isEnabled = true
+        updatedSettings.startHour = startHour
+        updatedSettings.endHour = endHour
         updatedSettings.activeDays = selectedDays
         updatedSettings.timeZone = settings.timeZone
-        updatedSettings.intentionQuote = intentionQuote.isEmpty ? nil : intentionQuote
+        updatedSettings.intentionQuote = settings.intentionQuote
         updatedSettings.lastDisabledAt = settings.lastDisabledAt
         onSave(updatedSettings)
     }
 
-    private var hourFormatter: DateFormatter {
+    private static let hourFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
         return formatter
-    }
+    }()
 
     private func dateFromHour(_ hour: Int) -> Date {
         Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: Date()) ?? Date()

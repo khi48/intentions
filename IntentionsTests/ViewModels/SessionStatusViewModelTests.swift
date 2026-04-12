@@ -182,31 +182,33 @@ final class SessionStatusViewModelTests: XCTestCase {
         
         // Then
         let formatted = viewModel.formattedRemainingTime
-        XCTAssertTrue(formatted.contains(":"))
+        // Format is "Xh Xm Xs" or "Xm Xs"
+        XCTAssertTrue(formatted.contains("m"))
     }
-    
+
     func testFormattedElapsedTime() {
         // Given
         let testSession = try! IntentionSession(appGroups: [], applications: [], duration: 1800)
-        
+
         // When
         viewModel.updateSession(testSession)
-        
+
         // Then
         let formatted = viewModel.formattedElapsedTime
-        XCTAssertTrue(formatted.contains(":"))
+        // Format is "Xh Xm Xs" or "Xm Xs"
+        XCTAssertTrue(formatted.contains("m"))
     }
-    
+
     func testFormattedTotalDuration() {
         // Given
         let testSession = try! IntentionSession(appGroups: [], applications: [], duration: 3600) // 1 hour
-        
+
         // When
         viewModel.updateSession(testSession)
-        
+
         // Then
         let formatted = viewModel.formattedTotalDuration
-        XCTAssertTrue(formatted.contains("1:00:00"))
+        XCTAssertTrue(formatted.contains("1h 0m 0s"))
     }
     
     // MARK: - Session Phase Tests

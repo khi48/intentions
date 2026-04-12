@@ -10,24 +10,25 @@ import SwiftUI
 
 /// ViewModel for managing quick actions - pre-configured sessions for fast access
 @MainActor
-final class QuickActionsViewModel: ObservableObject, Sendable {
-    
-    // MARK: - Published Properties
-    
+@Observable
+final class QuickActionsViewModel: Sendable {
+
+    // MARK: - Properties
+
     /// Whether the view is currently loading
-    @Published var isLoading: Bool = false
-    
+    var isLoading: Bool = false
+
     /// Current error message to display
-    @Published var errorMessage: String? = nil
-    
+    var errorMessage: String? = nil
+
     /// All quick actions
-    @Published private(set) var quickActions: [QuickAction] = []
+    private(set) var quickActions: [QuickAction] = []
 
     /// Whether showing delete confirmation alert
-    @Published var showingDeleteAlert: Bool = false
-    
+    var showingDeleteAlert: Bool = false
+
     /// Quick action pending deletion
-    @Published var quickActionToDelete: QuickAction? = nil
+    var quickActionToDelete: QuickAction? = nil
     
     // MARK: - Dependencies
 

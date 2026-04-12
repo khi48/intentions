@@ -2,6 +2,7 @@
 // Core Screen Time Service Implementation
 
 import Foundation
+import Synchronization
 import OSLog
 @preconcurrency import FamilyControls
 @preconcurrency import ManagedSettings
@@ -38,18 +39,13 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// Essential system apps that should never be blocked
     private var essentialSystemApps: Set<ApplicationToken> = []
     
-    /// Track initialization state. nonisolated(unsafe) is safe here because this
-    /// only transitions false→true once in performInitialize() (guarded by the
-    /// single-flight initializationTask) and is never reset.
-    nonisolated(unsafe) private var isInitialized = false
+    /// Track initialization state. Uses Atomic for safe nonisolated reads.
+    private let _isInitialized = Atomic<Bool>(false)
 
     /// Single-flight task for initialize(). Prevents reentrancy races when multiple
     /// concurrent callers enter initialize() and both suspend on await authorizationStatus().
     /// Once set, subsequent callers await the same task instead of starting a new one.
     private var initializationTask: Task<Void, Error>?
-
-    /// Track the state before a session started (was Intentions blocking or allowing?)
-    private var preSessionBlockingState: Bool?
 
     /// Callback to restore proper default state when session ends
     private var restoreDefaultStateCallback: (@Sendable () async -> Void)?
@@ -72,7 +68,7 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// Uses a single-flight Task pattern to prevent reentrancy: if called
     /// concurrently, all callers await the same underlying initialization task.
     func initialize() async throws {
-        if isInitialized { return }
+        if _isInitialized.load(ordering: .acquiring) { return }
 
         // If initialization is already in progress, await the existing task
         if let existingTask = initializationTask {
@@ -116,18 +112,18 @@ actor ScreenTimeService: ScreenTimeManaging {
         }
 
         // Mark as initialized - blocking will be applied separately by ContentViewModel
-        isInitialized = true
+        _isInitialized.store(true, ordering: .releasing)
         logger.info("ScreenTimeService initialized successfully")
     }
     
     /// Check if the service has been properly initialized
     nonisolated var isReady: Bool {
-        isInitialized
+        _isInitialized.load(ordering: .acquiring)
     }
-    
+
     /// Ensure service is initialized before performing operations
     private func ensureInitialized() throws {
-        guard isInitialized else {
+        guard _isInitialized.load(ordering: .acquiring) else {
             throw AppError.serviceUnavailable("ScreenTimeService not initialized. Call initialize() first.")
         }
     }
@@ -243,9 +239,6 @@ actor ScreenTimeService: ScreenTimeManaging {
             throw AppError.validationFailed("applications", reason: "At least one application must be specified")
         }
 
-        // Capture current blocking state before starting session
-        preSessionBlockingState = !currentlyAllowedApps.isEmpty || managedSettingsStore.shield.applications != nil || managedSettingsStore.shield.applicationCategories != nil
-
         // CRITICAL: Clear previous session's shields to prevent cumulative effects
         managedSettingsStore.shield.applications = nil
         managedSettingsStore.shield.applicationCategories = nil
@@ -254,11 +247,7 @@ actor ScreenTimeService: ScreenTimeManaging {
         managedSettingsStore.webContent.blockedByFilter = nil
 
         // Block everything except the apps the user selected for this session
-        if !tokens.isEmpty {
-            managedSettingsStore.shield.applicationCategories = .all(except: tokens)
-        } else {
-            managedSettingsStore.shield.applicationCategories = .all()
-        }
+        managedSettingsStore.shield.applicationCategories = .all(except: tokens)
 
         // Conditionally allow web content
         if allowWebsites {
@@ -373,13 +362,6 @@ actor ScreenTimeService: ScreenTimeManaging {
         managedSettingsStore.application.denyAppRemoval = nil
         managedSettingsStore.gameCenter.denyMultiplayerGaming = nil
         managedSettingsStore.gameCenter.denyAddingFriends = nil
-
-        // Brief delay to ensure clearing takes effect
-        do {
-            try await Task.sleep(nanoseconds: 200_000_000)
-        } catch {
-            // Delay interrupted - continue
-        }
     }
     
     func isAppAllowed(_ token: sending ApplicationToken) async -> Bool {
@@ -439,7 +421,7 @@ actor ScreenTimeService: ScreenTimeManaging {
             currentlyAllowedAppsCount: currentlyAllowedApps.count,
             essentialSystemAppsCount: essentialSystemApps.count,
             hasActiveSession: sessionExpirationTask != nil,
-            isInitialized: isInitialized
+            isInitialized: isReady
         )
     }
     
@@ -513,7 +495,7 @@ actor ScreenTimeService: ScreenTimeManaging {
             }
         } catch {
             logger.error("DeviceActivity scheduling failed: \(error.localizedDescription)")
-            // Don't throw - fall back to in-app timer only
+            throw error
         }
     }
 

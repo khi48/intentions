@@ -9,12 +9,13 @@ import SwiftUI
 
 /// Centralized navigation state manager for controlling navigation across the app
 @MainActor
-final class NavigationStateManager: ObservableObject {
-    
-    // MARK: - Published Properties
-    
+@Observable
+final class NavigationStateManager {
+
+    // MARK: - Properties
+
     /// Navigation path for the Settings tab
-    @Published var settingsPath = NavigationPath()
+    var settingsPath = NavigationPath()
     
     // MARK: - Navigation Control Methods
     
@@ -48,6 +49,6 @@ final class NavigationStateManager: ObservableObject {
     // MARK: - Future Extensions
     
     // Can add navigation paths for other tabs as needed:
-    // @Published var groupsPath = NavigationPath()
-    // @Published var homePath = NavigationPath()
+    // var groupsPath = NavigationPath()
+    // var homePath = NavigationPath()
 }

@@ -159,66 +159,6 @@ struct SessionStatusView: View {
     }
 }
 
-// MARK: - Extend Session Sheet
-
-private struct ExtendSessionSheet: View {
-    @Bindable var viewModel: SessionStatusViewModel
-    let onExtend: (Int) async -> Void
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 16) {
-                // Header
-                VStack(spacing: 8) {
-                    Text("Extend Session")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-
-                    Text("Add more time to your current focused session")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.top, 8)
-
-                // Extension options
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Add time:")
-                        .font(.headline)
-
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
-                        ForEach(viewModel.extensionOptions, id: \.self) { minutes in
-                            ExtensionOptionButton(
-                                minutes: minutes,
-                                action: {
-                                    Task {
-                                        await onExtend(minutes)
-                                        dismiss()
-                                    }
-                                }
-                            )
-                        }
-                    }
-                }
-                .padding(.top, 8)
-
-                Spacer()
-            }
-            .padding()
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-}
-
 private struct ExtensionOptionButton: View {
     let minutes: Int
     let action: () -> Void

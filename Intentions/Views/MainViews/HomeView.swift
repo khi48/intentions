@@ -77,7 +77,7 @@ private struct ActiveSessionCard: View {
 /// Quick actions section
 private struct QuickActionsSection: View {
     let viewModel: ContentViewModel
-    @ObservedObject private var quickActionsViewModel: QuickActionsViewModel
+    private var quickActionsViewModel: QuickActionsViewModel
     @State private var draggingQuickAction: QuickAction?
     @State private var editorMode: QuickActionEditorMode?
     @State private var isPulsing = false

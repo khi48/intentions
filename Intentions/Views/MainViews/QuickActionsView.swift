@@ -37,7 +37,7 @@ struct QuickActionsView: View {
     let dataService: DataPersisting
     let contentViewModel: ContentViewModel
 
-    @ObservedObject private var viewModel: QuickActionsViewModel
+    @Bindable private var viewModel: QuickActionsViewModel
     @State private var editorMode: QuickActionEditorMode?
     @State private var searchText = ""
 

@@ -14,8 +14,8 @@ struct NotificationSettingsView: View {
     @State private var showingPermissionAlert = false
 
     init() {
-        let service = NotificationService.shared
-        self._settings = State(initialValue: service.currentSettings)
+        // Copy the current settings value — struct semantics ensure independence from the service
+        self._settings = State(initialValue: NotificationService.shared.currentSettings)
     }
 
     var body: some View {

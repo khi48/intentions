@@ -62,7 +62,7 @@ struct SetupFlowView: View {
     var body: some View {
         Group {
             if embedInNavigationView {
-                NavigationView {
+                NavigationStack {
                     setupContent
                 }
             } else {
@@ -131,7 +131,9 @@ struct SetupFlowView: View {
                 }
             }
         }
-        .navigationViewStyle(StackNavigationViewStyle())
+        .onTapGesture {
+            isIntentionFieldFocused = false
+        }
         .task {
             await initializeSetup()
         }
@@ -231,6 +233,12 @@ struct SetupFlowView: View {
                 .cornerRadius(12)
                 .focused($isIntentionFieldFocused)
                 .textInputAutocapitalization(.sentences)
+                .onChange(of: intentionQuoteText) { _, newValue in
+                    if newValue.contains("\n") {
+                        intentionQuoteText = newValue.replacingOccurrences(of: "\n", with: "")
+                        isIntentionFieldFocused = false
+                    }
+                }
 
             Button(action: {
                 let trimmed = intentionQuoteText.trimmingCharacters(in: .whitespacesAndNewlines)
