@@ -357,15 +357,16 @@ struct SettingsView: View {
     }
 
     private var blockingToggleRow: some View {
-        HStack {
-            Text("Blocking")
-                .font(.body)
-                .foregroundColor(AppConstants.Colors.text)
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Enabled")
+                    .font(.body)
+                    .foregroundColor(AppConstants.Colors.text)
+                Text(blockingToggleSubtitle)
+                    .font(.caption)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+            }
             Spacer()
-            Text(viewModel.intentionsStateText)
-                .font(.subheadline)
-                .foregroundColor(AppConstants.Colors.textSecondary)
-                .padding(.trailing, 8)
             Toggle("", isOn: Binding(
                 get: { viewModel.scheduleSettings.isEnabled },
                 set: { newValue in
@@ -383,6 +384,14 @@ struct SettingsView: View {
         }
         .padding(.vertical, 14)
         .overlay(alignment: .bottom) { rowDivider }
+    }
+
+    private var blockingToggleSubtitle: String {
+        if viewModel.scheduleSettings.isEnabled {
+            return "Blocks apps 24/7 outside free time"
+        } else {
+            return "Blocking is off — no apps are blocked"
+        }
     }
 
     private func settingsRow(_ title: String, value: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
