@@ -161,8 +161,8 @@ struct SettingsView: View {
                         // Stats banner
                         statsBanner
 
-                        // Free Time
-                        sectionLabel("Free Time")
+                        // Blocking
+                        sectionLabel("Blocking")
                         blockingToggleRow
                         settingsRow("Free Hours", value: viewModel.formattedActiveHours, disabled: isScheduleEditingDisabled) {
                             viewModel.showScheduleEditor()
