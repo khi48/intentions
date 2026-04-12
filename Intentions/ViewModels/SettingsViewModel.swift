@@ -154,26 +154,6 @@ final class SettingsViewModel: Sendable {
         return scheduleSettings.isCurrentlyActive ? .green : .orange
     }
 
-    var intentionsStateText: String {
-        if !scheduleSettings.isEnabled {
-            return "Disabled"
-        }
-
-        if scheduleSettings.isCurrentlyActive {
-            return "Blocked"
-        } else {
-            return "Free Time"
-        }
-    }
-
-    var intentionsStateColor: Color {
-        if !scheduleSettings.isEnabled {
-            return .gray
-        }
-
-        return scheduleSettings.isCurrentlyActive ? .green : .orange
-    }
-    
     var formattedActiveHours: String {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
