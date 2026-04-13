@@ -342,13 +342,13 @@ struct SettingsView: View {
     // MARK: - Sections
 
     private func sectionLabel(_ title: String) -> some View {
-        Text(title.uppercased())
-            .font(.caption)
-            .fontWeight(.medium)
-            .foregroundColor(AppConstants.Colors.textSecondary)
+        Text(title)
+            .font(.title3)
+            .fontWeight(.bold)
+            .foregroundColor(AppConstants.Colors.text)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 20)
-            .padding(.bottom, 4)
+            .padding(.top, 24)
+            .padding(.bottom, 6)
     }
 
     private var blockingToggleRow: some View {

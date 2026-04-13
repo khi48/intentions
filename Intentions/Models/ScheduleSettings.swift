@@ -120,21 +120,35 @@ final class ScheduleSettings: @preconcurrency Codable {
 
     /// Minutes of blocking elapsed today (time spent outside free window).
     var protectedMinutesToday: Int {
+        protectedMinutes(at: Date())
+    }
+
+    /// Minutes of blocking remaining today.
+    var remainingProtectedMinutesToday: Int {
+        remainingProtectedMinutes(at: Date())
+    }
+
+    /// Minutes of blocking elapsed on the calendar day containing `date`, up to `date`.
+    func protectedMinutes(at date: Date) -> Int {
         guard isEnabled else { return 0 }
 
-        let calendar = Calendar.current
-        let now = Date()
-        let currentHour = calendar.component(.hour, from: now)
-        let currentMinute = calendar.component(.minute, from: now)
-        let nowMinuteOfDay = currentHour * 60 + currentMinute
+        var calendar = Calendar.current
+        calendar.timeZone = timeZone
+
+        let nowMinuteOfDay = calendar.component(.hour, from: date) * 60 + calendar.component(.minute, from: date)
+
+        // If today isn't a free-time day, blocking is active all day so far.
+        let weekday = Weekday.from(calendarWeekday: calendar.component(.weekday, from: date))
+        guard activeDays.contains(weekday) else {
+            return nowMinuteOfDay
+        }
 
         let start = startTotalMinutes
         let end = endTotalMinutes
-
-        // Calculate free time minutes elapsed today
         let freeMinutesElapsed: Int
         if start <= end {
-            if nowMinuteOfDay < start {
+            // Daytime window: free is [start, end)
+            if nowMinuteOfDay <= start {
                 freeMinutesElapsed = 0
             } else if nowMinuteOfDay < end {
                 freeMinutesElapsed = nowMinuteOfDay - start
@@ -142,19 +156,34 @@ final class ScheduleSettings: @preconcurrency Codable {
                 freeMinutesElapsed = end - start
             }
         } else {
-            // Overnight free time — unusual but handle it
-            freeMinutesElapsed = 0 // Simplified for v1
+            // Overnight window: free is [0, end) ∪ [start, 1440)
+            if nowMinuteOfDay < end {
+                freeMinutesElapsed = nowMinuteOfDay
+            } else if nowMinuteOfDay < start {
+                freeMinutesElapsed = end
+            } else {
+                freeMinutesElapsed = end + (nowMinuteOfDay - start)
+            }
         }
 
         return nowMinuteOfDay - freeMinutesElapsed
     }
 
-    /// Minutes of blocking remaining today.
-    var remainingProtectedMinutesToday: Int {
+    /// Minutes of blocking remaining on the calendar day containing `date`, after `date`.
+    func remainingProtectedMinutes(at date: Date) -> Int {
         guard isEnabled else { return 0 }
 
-        let totalBlockingMinutes = (24 * 60) - totalFreeTimeMinutes
-        return max(0, totalBlockingMinutes - protectedMinutesToday)
+        var calendar = Calendar.current
+        calendar.timeZone = timeZone
+        let weekday = Weekday.from(calendarWeekday: calendar.component(.weekday, from: date))
+
+        let totalBlockingMinutes: Int
+        if activeDays.contains(weekday) {
+            totalBlockingMinutes = (24 * 60) - totalFreeTimeMinutes
+        } else {
+            totalBlockingMinutes = 24 * 60
+        }
+        return max(0, totalBlockingMinutes - protectedMinutes(at: date))
     }
 
     // MARK: - Backward Compatibility

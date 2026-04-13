@@ -21,7 +21,8 @@ final class ScheduleSettingsTests: XCTestCase {
         
         // Then
         XCTAssertTrue(settings.isEnabled)
-        XCTAssertEqual(settings.activeHours, 6...22)
+        XCTAssertEqual(settings.startHour, AppConstants.Schedule.defaultStartHour)
+        XCTAssertEqual(settings.endHour, AppConstants.Schedule.defaultEndHour)
         XCTAssertEqual(settings.activeDays.count, 7) // All days
         XCTAssertEqual(settings.timeZone, TimeZone.current)
         
@@ -165,11 +166,13 @@ final class ScheduleSettingsTests: XCTestCase {
     }
     
     func testSingleFreeDay() {
-        // Given — only Friday has free time
+        // Given — only Friday has free time, daytime window 6-22
         let settings = ScheduleSettings()
         settings.activeDays = [.friday]
+        settings.startHour = 6
+        settings.endHour = 22
 
-        // Create a Friday date at noon (within default free window 6-22)
+        // Create a Friday date at noon (within free window 6-22)
         var components = DateComponents()
         components.year = 2024
         components.month = 1
@@ -224,28 +227,117 @@ final class ScheduleSettingsTests: XCTestCase {
 
     // MARK: - Time Stats Tests
 
-    func testProtectedMinutesTodayBeforeSchedule() {
-        let settings = ScheduleSettings()
-        settings.activeHours = 22...23 // Late night schedule
-
+    // Helper: build a deterministic Date at `hour:minute` on a known weekday.
+    // 2024-01-01 is a Monday — offset from there for other weekdays.
+    private func date(weekday: Weekday, hour: Int, minute: Int = 0) -> Date {
+        let offsetFromMonday: [Weekday: Int] = [
+            .monday: 0, .tuesday: 1, .wednesday: 2, .thursday: 3,
+            .friday: 4, .saturday: 5, .sunday: 6
+        ]
         let calendar = Calendar.current
-        let hour = calendar.component(.hour, from: Date())
-
-        if hour < 22 {
-            XCTAssertEqual(settings.protectedMinutesToday, 0)
-        }
+        let monday = calendar.date(from: DateComponents(year: 2024, month: 1, day: 1))!
+        let day = calendar.date(byAdding: .day, value: offsetFromMonday[weekday]!, to: monday)!
+        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)!
     }
 
-    func testRemainingProtectedMinutesAfterSchedule() {
+    // MARK: Daytime free window
+
+    func testProtectedMinutesDaytimeFreeWindowBeforeStart() {
         let settings = ScheduleSettings()
-        settings.activeHours = 0...1 // Early morning schedule
+        settings.startHour = 9
+        settings.startMinute = 0
+        settings.endHour = 17
+        settings.endMinute = 0
 
-        let calendar = Calendar.current
-        let hour = calendar.component(.hour, from: Date())
+        // 08:00 — no free time elapsed yet, entire morning is protected.
+        XCTAssertEqual(settings.protectedMinutes(at: date(weekday: .monday, hour: 8)), 8 * 60)
+    }
 
-        if hour >= 1 {
-            XCTAssertEqual(settings.remainingProtectedMinutesToday, 0)
-        }
+    func testProtectedMinutesDaytimeFreeWindowMidFree() {
+        let settings = ScheduleSettings()
+        settings.startHour = 9
+        settings.endHour = 17
+
+        // 12:00 — 9:00-12:00 was free, 0:00-9:00 was protected.
+        XCTAssertEqual(settings.protectedMinutes(at: date(weekday: .monday, hour: 12)), 9 * 60)
+    }
+
+    func testProtectedMinutesDaytimeFreeWindowAfterEnd() {
+        let settings = ScheduleSettings()
+        settings.startHour = 9
+        settings.endHour = 17
+
+        // 20:00 — 9:00-17:00 (8 hrs) was free, 0:00-9:00 + 17:00-20:00 protected = 12 hrs.
+        XCTAssertEqual(settings.protectedMinutes(at: date(weekday: .monday, hour: 20)), 12 * 60)
+    }
+
+    // MARK: Overnight free window (new default)
+
+    func testProtectedMinutesOvernightBeforeMorningEnd() {
+        let settings = ScheduleSettings()
+        settings.startHour = 22
+        settings.endHour = 6
+
+        // 04:00 — still inside the early-morning free tail. Nothing protected yet.
+        XCTAssertEqual(settings.protectedMinutes(at: date(weekday: .monday, hour: 4)), 0)
+    }
+
+    func testProtectedMinutesOvernightMiddleOfDay() {
+        let settings = ScheduleSettings()
+        settings.startHour = 22
+        settings.endHour = 6
+
+        // 12:00 — free [0,6) elapsed (6h), blocking [6,12) elapsed (6h).
+        XCTAssertEqual(settings.protectedMinutes(at: date(weekday: .monday, hour: 12)), 6 * 60)
+    }
+
+    func testProtectedMinutesOvernightAfterEveningStart() {
+        let settings = ScheduleSettings()
+        settings.startHour = 22
+        settings.endHour = 6
+
+        // 23:00 — free [0,6) (6h) + free [22,23) (1h) = 7h free, rest of day = 16h blocked.
+        XCTAssertEqual(settings.protectedMinutes(at: date(weekday: .monday, hour: 23)), 16 * 60)
+    }
+
+    func testRemainingProtectedMinutesOvernightMiddleOfDay() {
+        let settings = ScheduleSettings()
+        settings.startHour = 22
+        settings.endHour = 6
+
+        // Total blocking per active day: 1440 - 480 = 960. By noon: 360 done, 600 remain.
+        XCTAssertEqual(settings.remainingProtectedMinutes(at: date(weekday: .monday, hour: 12)), 600)
+    }
+
+    func testRemainingProtectedMinutesOvernightAfterAllBlocking() {
+        let settings = ScheduleSettings()
+        settings.startHour = 22
+        settings.endHour = 6
+
+        // 22:00 — all 960 blocking minutes elapsed, 0 remain.
+        XCTAssertEqual(settings.remainingProtectedMinutes(at: date(weekday: .monday, hour: 22)), 0)
+    }
+
+    // MARK: activeDays interaction
+
+    func testProtectedMinutesDayNotInActiveDays() {
+        let settings = ScheduleSettings()
+        settings.startHour = 22
+        settings.endHour = 6
+        settings.activeDays = [.monday, .tuesday, .wednesday, .thursday, .friday]
+
+        // Saturday 12:00 — weekend is not a free-time day, so every elapsed minute is protected.
+        XCTAssertEqual(settings.protectedMinutes(at: date(weekday: .saturday, hour: 12)), 12 * 60)
+    }
+
+    func testRemainingProtectedMinutesDayNotInActiveDays() {
+        let settings = ScheduleSettings()
+        settings.startHour = 22
+        settings.endHour = 6
+        settings.activeDays = [.monday, .tuesday, .wednesday, .thursday, .friday]
+
+        // Saturday 12:00 — full 24h of blocking, 12h elapsed, 12h remain.
+        XCTAssertEqual(settings.remainingProtectedMinutes(at: date(weekday: .saturday, hour: 12)), 12 * 60)
     }
 
     // MARK: - Codable Tests for New Fields
