@@ -160,4 +160,24 @@ final class SettingsViewModel: Sendable {
             return "\(minutes)m remaining"
         }
     }
+
+    var isCurrentlyBlocking: Bool {
+        weeklySchedule.isBlocking(at: Date())
+    }
+
+    /// Time until the next free-time window starts. Returns `nil` when the user is currently
+    /// in free time (no blocking session active).
+    var timeUntilFreeTimeText: String? {
+        let now = Date()
+        guard weeklySchedule.isBlocking(at: now) else { return nil }
+        guard let boundary = weeklySchedule.nextBoundary(after: now) else { return nil }
+        let mins = max(0, Int(boundary.timeIntervalSince(now) / 60))
+        let hours = mins / 60
+        let minutes = mins % 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
 }

@@ -13,41 +13,53 @@ struct WeekGridView: View {
     private static let days: [Weekday] = [.monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday]
 
     var body: some View {
-        VStack(spacing: 6) {
-            // Header row — empty spacer over hour column, then 7 day labels.
-            HStack(spacing: 4) {
-                Color.clear.frame(width: 22)
-                HStack(spacing: 4) {
-                    ForEach(Self.days, id: \.self) { day in
-                        Text(day.shortName.prefix(1).uppercased())
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(AppConstants.Colors.textSecondary)
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-            }
+        // Use a GeometryReader to get explicit dimensions; pass concrete heights to each row.
+        GeometryReader { geo in
+            let labelHeight: CGFloat = 22
+            let spacing: CGFloat = 8
+            let hourColWidth: CGFloat = 26
+            let bodyHeight = max(0, geo.size.height - labelHeight - spacing)
 
-            // Body: hour column + day columns + overlay.
-            HStack(spacing: 4) {
-                HourColumn()
-                ZStack {
+            VStack(spacing: spacing) {
+                // Header row — empty spacer over hour column, then 7 day labels.
+                HStack(spacing: 4) {
+                    Color.clear.frame(width: hourColWidth, height: labelHeight)
                     HStack(spacing: 4) {
                         ForEach(Self.days, id: \.self) { day in
-                            DayColumn(
-                                dayOfWeek: day,
-                                renderedBlocks: renderedBlocks(for: day),
-                                selectedIntervalID: selectedIntervalID,
-                                onTapEmpty: { minute in onTapEmpty(day, minute) },
-                                onTapBlock: onTapBlock,
-                                onEditBlock: onEditBlock,
-                                onDeleteBlock: onDeleteBlock
-                            )
-                            .frame(maxWidth: .infinity)
+                            Text(day.shortName.prefix(1).uppercased())
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(AppConstants.Colors.textSecondary)
+                                .frame(maxWidth: .infinity)
                         }
                     }
-                    HourGridOverlay()
+                }
+                .frame(height: labelHeight)
+
+                // Body: hour column + day columns + overlay. Explicit height.
+                HStack(spacing: 4) {
+                    HourColumn()
+                        .frame(width: hourColWidth, height: bodyHeight)
+                    ZStack {
+                        HStack(spacing: 4) {
+                            ForEach(Self.days, id: \.self) { day in
+                                DayColumn(
+                                    dayOfWeek: day,
+                                    renderedBlocks: renderedBlocks(for: day),
+                                    selectedIntervalID: selectedIntervalID,
+                                    onTapEmpty: { minute in onTapEmpty(day, minute) },
+                                    onTapBlock: onTapBlock,
+                                    onEditBlock: onEditBlock,
+                                    onDeleteBlock: onDeleteBlock
+                                )
+                                .frame(maxWidth: .infinity)
+                            }
+                        }
+                        HourGridOverlay()
+                    }
+                    .frame(height: bodyHeight)
                 }
             }
+            .frame(width: geo.size.width, height: geo.size.height)
         }
     }
 

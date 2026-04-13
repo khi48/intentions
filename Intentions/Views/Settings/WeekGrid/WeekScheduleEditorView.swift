@@ -7,55 +7,79 @@ struct WeekScheduleEditorView: View {
     @State private var draftForCopy: DraftInterval?
 
     let onSave: (WeeklySchedule) -> Void
-    let onCancel: () -> Void
 
     @MainActor
     init(schedule: WeeklySchedule,
-         onSave: @escaping (WeeklySchedule) -> Void,
-         onCancel: @escaping () -> Void) {
+         onSave: @escaping (WeeklySchedule) -> Void) {
         // Deep copy via codable round-trip so the caller's schedule isn't mutated until Save.
         let data = (try? JSONEncoder().encode(schedule)) ?? Data()
         let copy = (try? JSONDecoder().decode(WeeklySchedule.self, from: data)) ?? WeeklySchedule()
         _editing = State(wrappedValue: copy)
         self.onSave = onSave
-        self.onCancel = onCancel
+    }
+
+    /// Intervals to render: the editing schedule plus a live preview of the in-progress draft
+    /// (if any). For new drafts the preview is appended; for existing drafts the persisted
+    /// interval is replaced with the live draft so edits show immediately.
+    private var displayedIntervals: [FreeTimeInterval] {
+        guard let draft = draftForEdit else { return editing.intervals }
+        let live = draft.toInterval()
+        if let idx = editing.intervals.firstIndex(where: { $0.id == draft.id }) {
+            var copy = editing.intervals
+            copy[idx] = live
+            return copy
+        } else {
+            return editing.intervals + [live]
+        }
+    }
+
+    private var editSheetBinding: Binding<Bool> {
+        Binding(
+            get: { draftForEdit != nil },
+            set: { newValue in if !newValue { draftForEdit = nil } }
+        )
+    }
+
+    private var draftBinding: Binding<DraftInterval> {
+        Binding(
+            get: { draftForEdit ?? DraftInterval(from: FreeTimeInterval(id: UUID(), startMinuteOfWeek: 0, durationMinutes: 60)) },
+            set: { draftForEdit = $0 }
+        )
     }
 
     var body: some View {
-        NavigationStack {
-            WeekGridView(
-                intervals: editing.intervals,
-                selectedIntervalID: selectedIntervalID,
-                onTapEmpty: handleTapEmpty,
-                onTapBlock: handleTapBlock,
-                onEditBlock: handleEditBlock,
-                onDeleteBlock: handleDeleteBlock
-            )
-            .padding(.horizontal, 12)
-            .padding(.top, 4)
-            .padding(.bottom, 24)
-            .background(AppConstants.Colors.background)
-            .navigationTitle("Free Time")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { onCancel() }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") { onSave(editing) }
-                        .fontWeight(.semibold)
-                }
+        WeekGridView(
+            intervals: displayedIntervals,
+            selectedIntervalID: draftForEdit?.id ?? selectedIntervalID,
+            onTapEmpty: handleTapEmpty,
+            onTapBlock: handleTapBlock,
+            onEditBlock: handleEditBlock,
+            onDeleteBlock: handleDeleteBlock
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 12)
+        .padding(.top, 20)
+        .padding(.bottom, 28)
+        .background(AppConstants.Colors.background)
+        .navigationTitle("Free Time Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Save") { onSave(editing) }
+                    .fontWeight(.semibold)
             }
         }
-        .sheet(item: $draftForEdit) { draft in
+        .sheet(isPresented: editSheetBinding) {
             EditFreeTimeSheet(
-                editing: draft,
+                editing: draftBinding,
                 onConfirm: { updated in
                     commitEditedInterval(updated)
                     draftForEdit = nil
                 },
                 onDelete: {
-                    deleteInterval(id: draft.id)
+                    if let id = draftForEdit?.id {
+                        deleteInterval(id: id)
+                    }
                     draftForEdit = nil
                 },
                 onCopyTo: { current in
@@ -63,7 +87,6 @@ struct WeekScheduleEditorView: View {
                     draftForCopy = current
                 }
             )
-            .presentationDetents([.medium])
         }
         .sheet(item: $draftForCopy) { draft in
             CopyToSheet(
@@ -71,20 +94,26 @@ struct WeekScheduleEditorView: View {
                 onCopy: { targets in
                     copyIntervalToDays(source: draft, targets: targets)
                     draftForCopy = nil
+                },
+                onBack: {
+                    // Return to the edit sheet with the same draft.
+                    draftForCopy = nil
+                    draftForEdit = draft
                 }
             )
-            .presentationDetents([.medium])
         }
     }
 
     // MARK: - Gesture handlers
 
     private func handleTapEmpty(day: Weekday, minuteOfDay: Int) {
-        // Create a new 1-hour block at the tapped day/minute.
-        let mow = FreeTimeInterval.mondayDayIndex(for: day) * FreeTimeInterval.minutesPerDay + minuteOfDay
+        // Open the edit sheet for a NEW 1-hour block, but do NOT append it to `intervals`
+        // until the user taps Confirm. Dismissing the sheet without confirming discards the
+        // pending block. The tapped minute snaps DOWN to the nearest whole hour so a tap at
+        // 6:15 produces a 6:00–7:00 block.
+        let snappedToHour = (minuteOfDay / 60) * 60
+        let mow = FreeTimeInterval.mondayDayIndex(for: day) * FreeTimeInterval.minutesPerDay + snappedToHour
         let newInterval = FreeTimeInterval(id: UUID(), startMinuteOfWeek: mow, durationMinutes: 60)
-        editing.intervals.append(newInterval)
-        selectedIntervalID = newInterval.id
         draftForEdit = DraftInterval(from: newInterval)
     }
 
@@ -124,6 +153,10 @@ struct WeekScheduleEditorView: View {
         let timeOfDayStart = sourceInterval.startMinuteOfWeek - sourceDayIndex * FreeTimeInterval.minutesPerDay
 
         for target in targets {
+            // Skip the source day — the block already lives there. CopyToSheet pre-selects
+            // it so the user can see the source, but we don't want to create a duplicate.
+            guard target != sourceInterval.startDayOfWeek else { continue }
+
             let dayIndex = FreeTimeInterval.mondayDayIndex(for: target)
             let newMoW = dayIndex * FreeTimeInterval.minutesPerDay + timeOfDayStart
             editing.intervals.append(FreeTimeInterval(

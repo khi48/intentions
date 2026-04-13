@@ -12,12 +12,14 @@ enum SettingsDestination: Hashable {
     case notifications
     case setupFlow
     case greyscale
+    case scheduleEditor
 
     var title: String {
         switch self {
         case .notifications: return "Notifications"
         case .setupFlow: return "App Setup"
         case .greyscale: return "Enable Greyscale"
+        case .scheduleEditor: return "Free Time Settings"
         }
     }
 
@@ -26,6 +28,7 @@ enum SettingsDestination: Hashable {
         case .notifications: return "bell.fill"
         case .setupFlow: return "gear.badge.checkmark"
         case .greyscale: return "circle.lefthalf.filled"
+        case .scheduleEditor: return "calendar"
         }
     }
 }
@@ -241,32 +244,27 @@ struct SettingsView: View {
                         }
                     case .greyscale:
                         GreyscaleGuideView()
+                    case .scheduleEditor:
+                        WeekScheduleEditorView(
+                            schedule: viewModel.weeklySchedule,
+                            onSave: { updated in
+                                Task {
+                                    await viewModel.updateSchedule(updated)
+                                    await onScheduleSettingsChanged?(updated)
+                                }
+                                navigationManager.resetSettingsNavigation()
+                            }
+                        )
                     }
                 }
             }
         }
         .background(AppConstants.Colors.background)
         .toolbarBackground(.visible, for: .tabBar)
-        .sheet(isPresented: Binding(
-            get: { viewModel.showingScheduleEditor },
-            set: { if !$0 { viewModel.hideScheduleEditor() } }
-        )) {
-            WeekScheduleEditorView(
-                schedule: viewModel.weeklySchedule,
-                onSave: { updated in
-                    Task {
-                        await viewModel.updateSchedule(updated)
-                        await onScheduleSettingsChanged?(updated)
-                    }
-                    viewModel.hideScheduleEditor()
-                },
-                onCancel: { viewModel.hideScheduleEditor() }
-            )
-        }
         .sheet(isPresented: $showingDisableConfirmation) {
             DisableBlockingConfirmationView(
                 streakDays: viewModel.streakDays,
-                remainingTimeText: viewModel.formattedRemainingTime,
+                timeUntilFreeTimeText: viewModel.timeUntilFreeTimeText,
                 intentionQuote: viewModel.weeklySchedule.intentionQuote,
                 onConfirm: {
                     showingDisableConfirmation = false
@@ -342,13 +340,18 @@ struct SettingsView: View {
     // MARK: - Sections
 
     private func sectionLabel(_ title: String) -> some View {
-        Text(title)
-            .font(.title3)
-            .fontWeight(.bold)
-            .foregroundColor(AppConstants.Colors.text)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 24)
-            .padding(.bottom, 6)
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(AppConstants.Colors.text)
+            Rectangle()
+                .fill(AppConstants.Colors.textSecondary.opacity(0.25))
+                .frame(height: 1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 28)
+        .padding(.bottom, 8)
     }
 
     private var blockingToggleRow: some View {
@@ -391,19 +394,13 @@ struct SettingsView: View {
     private var freeTimeRow: some View {
         let disabled = isScheduleEditingDisabled
         let titleColor = disabled ? AppConstants.Colors.disabled : AppConstants.Colors.text
-        let valueColor = disabled ? AppConstants.Colors.disabled : AppConstants.Colors.textSecondary
 
-        return Button(action: disabled ? {} : { viewModel.showScheduleEditor() }) {
+        return NavigationLink(value: SettingsDestination.scheduleEditor) {
             HStack(spacing: 12) {
-                Text("Free Time")
+                Text("Free Time Settings")
                     .font(.body)
                     .foregroundColor(titleColor)
                 Spacer()
-                Text(viewModel.scheduleSummary)
-                    .font(.subheadline)
-                    .foregroundColor(valueColor)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
                 if !disabled {
                     Image(systemName: "chevron.right")
                         .font(.caption2)

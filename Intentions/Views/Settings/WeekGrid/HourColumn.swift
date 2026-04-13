@@ -13,16 +13,16 @@ struct HourColumn: View {
                 hourLabel("24", y: geo.size.height, alignBottom: true)
             }
         }
-        .frame(width: 22)
+        .frame(width: 26)
     }
 
     @ViewBuilder
     private func hourLabel(_ text: String, y: CGFloat, alignBottom: Bool = false) -> some View {
         Text(text)
-            .font(.system(size: 9, weight: .semibold))
+            .font(.system(size: 14, weight: .semibold))
             .foregroundColor(AppConstants.Colors.textSecondary)
             .monospacedDigit()
-            .offset(y: alignBottom ? y - 9 : y - (y == 0 ? 0 : 4))
-            .padding(.trailing, 2)
+            .offset(y: alignBottom ? y - 14 : y - (y == 0 ? 0 : 7))
+            .padding(.trailing, 4)
     }
 }

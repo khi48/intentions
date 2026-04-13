@@ -9,11 +9,13 @@ import SwiftUI
 import Combine
 
 /// Confirmation modal that adds friction when disabling Intentions blocking.
-/// Two-halves layout: reflection (streak, stats, intention quote) above
-/// action (reason input + progress-bar-in-button timer).
+/// Layout: stat boxes at the top (streak + optional time remaining), intention quote
+/// in the middle, reason field, and a progress-bar Disable button at the bottom.
 struct DisableBlockingConfirmationView: View {
     let streakDays: Int?
-    let remainingTimeText: String
+    /// Time until the next free-time window. Nil when the user is currently in free time —
+    /// in which case the second stat box shows a "Free Time" status instead.
+    let timeUntilFreeTimeText: String?
     let intentionQuote: String?
     let onConfirm: () -> Void
     let onCancel: () -> Void
@@ -32,8 +34,17 @@ struct DisableBlockingConfirmationView: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 0) {
-                        reflectionSection
-                        divider
+                        statsBanner
+                            .padding(.top, 16)
+
+                        Spacer(minLength: 32)
+
+                        if let quote = intentionQuote, !quote.isEmpty {
+                            quoteSection(quote)
+                        }
+
+                        Spacer(minLength: 32)
+
                         actionSection
                     }
                     .padding(.horizontal)
@@ -66,43 +77,61 @@ struct DisableBlockingConfirmationView: View {
         }
     }
 
-    // MARK: - Reflection Section (Top Half)
+    // MARK: - Stats banner
 
-    private var reflectionSection: some View {
-        VStack(spacing: 0) {
-            // Stats row: streak left, time stats right
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(streakDays ?? 0) days")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .foregroundColor(AppConstants.Colors.text)
-                    Text("streak")
-                        .font(.caption)
-                        .foregroundColor(AppConstants.Colors.textSecondary)
-                }
-                Spacer()
-                Text(remainingTimeText)
-                    .font(.subheadline)
-                    .foregroundColor(AppConstants.Colors.textSecondary)
-            }
-            .padding(.top, 24)
-            .padding(.bottom, 20)
-
-            // Intention quote
-            if let quote = intentionQuote, !quote.isEmpty {
-                Text("\"\(quote)\"")
-                    .font(.body)
-                    .italic()
-                    .foregroundColor(AppConstants.Colors.textSecondary.opacity(0.85))
-                    .lineSpacing(4)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, 20)
+    private var statsBanner: some View {
+        HStack(spacing: 10) {
+            statBox(value: "\(streakDays ?? 0)", unit: "days", label: "STREAK")
+            if let timeText = timeUntilFreeTimeText {
+                statBox(value: timeText, unit: nil, label: "BLOCKING ENDS IN")
+            } else {
+                statBox(value: "Free Time", unit: nil, label: "RIGHT NOW")
             }
         }
     }
 
-    // MARK: - Action Section (Bottom Half)
+    private func statBox(value: String, unit: String?, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(value)
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(AppConstants.Colors.text)
+                if let unit {
+                    Text(unit)
+                        .font(.subheadline)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
+                }
+            }
+            Text(label)
+                .font(.caption2)
+                .fontWeight(.medium)
+                .foregroundColor(AppConstants.Colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(AppConstants.Colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppConstants.Colors.textSecondary.opacity(0.15), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Quote section
+
+    private func quoteSection(_ quote: String) -> some View {
+        Text("\u{201C}\(quote)\u{201D}")
+            .font(.title3)
+            .italic()
+            .foregroundColor(AppConstants.Colors.textSecondary.opacity(0.9))
+            .multilineTextAlignment(.center)
+            .lineSpacing(4)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 8)
+    }
+
+    // MARK: - Action Section (reason input)
 
     private var actionSection: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -110,7 +139,6 @@ struct DisableBlockingConfirmationView: View {
                 .font(.title3)
                 .fontWeight(.semibold)
                 .foregroundColor(AppConstants.Colors.text)
-                .padding(.top, 28)
                 .padding(.bottom, 14)
 
             TextField("Write your reason...", text: $reasonText)
@@ -223,7 +251,7 @@ struct DisableBlockingConfirmationView: View {
 #Preview {
     DisableBlockingConfirmationView(
         streakDays: 6,
-        remainingTimeText: "1h 48m remaining",
+        timeUntilFreeTimeText: "1h 48m",
         intentionQuote: "I want to be more present with my family.",
         onConfirm: { print("Confirmed") },
         onCancel: { print("Cancelled") }

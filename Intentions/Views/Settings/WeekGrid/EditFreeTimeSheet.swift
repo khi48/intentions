@@ -1,98 +1,117 @@
 import SwiftUI
 
 /// Edit-free-time modal sheet. Lets the user pick start/end day and time with a 10-minute snap.
+/// Visual format mirrors the v7 mockup: title, two inline picker rows, action row, primary Confirm button.
 struct EditFreeTimeSheet: View {
-    @State var editing: DraftInterval
+    @Binding var editing: DraftInterval
     let onConfirm: (DraftInterval) -> Void
     let onDelete: () -> Void
     let onCopyTo: (DraftInterval) -> Void
+
+    @Environment(\.dismiss) private var dismiss
 
     private static let days: [Weekday] = [.monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday]
 
     var body: some View {
         VStack(spacing: 0) {
-            handle
             Text("Edit Free Time")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.title3.weight(.semibold))
                 .foregroundColor(AppConstants.Colors.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.horizontal, 16)
+                .padding(.top, 24)
+                .padding(.bottom, 18)
 
-            pickerRow(label: "Starts", day: $editing.startDay, hour: $editing.startHour, minute: $editing.startMinute)
-            Divider().overlay(AppConstants.Colors.textSecondary.opacity(0.3))
-            pickerRow(label: "Ends", day: $editing.endDay, hour: $editing.endHour, minute: $editing.endMinute)
+            VStack(spacing: 0) {
+                pickerRow(label: "Starts",
+                          day: $editing.startDay,
+                          hour: $editing.startHour,
+                          minute: $editing.startMinute)
+                Divider()
+                    .background(AppConstants.Colors.textSecondary.opacity(0.3))
+                    .padding(.horizontal, 16)
+                pickerRow(label: "Ends",
+                          day: $editing.endDay,
+                          hour: $editing.endHour,
+                          minute: $editing.endMinute)
+            }
 
-            HStack(spacing: 8) {
-                Button(action: { onCopyTo(editing) }) {
+            HStack(spacing: 10) {
+                Button {
+                    onCopyTo(editing)
+                } label: {
                     Text("Copy to…")
+                        .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 6)
                 }
                 .buttonStyle(.bordered)
+                .controlSize(.large)
+                .tint(AppConstants.Colors.text)
 
-                Button(action: onDelete) {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
                     Text("Delete")
+                        .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 6)
                 }
                 .buttonStyle(.bordered)
-                .tint(AppConstants.Colors.textSecondary)
+                .controlSize(.large)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 14)
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
+            .padding(.bottom, 12)
 
-            Button(action: {
+            Button {
                 if isValid { onConfirm(editing) }
-            }) {
+            } label: {
                 Text("Confirm")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(Color(red: 0x0a/255, green: 0x0a/255, blue: 0x0a/255))
+                    .font(.subheadline.weight(.bold))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(AppConstants.Colors.text))
+                    .padding(.vertical, 6)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 24)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(AppConstants.Colors.text)
+            .foregroundColor(AppConstants.Colors.background)
             .disabled(!isValid)
-            .opacity(isValid ? 1 : 0.4)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
         }
-        .background(Color(red: 0x16/255, green: 0x16/255, blue: 0x16/255))
-    }
-
-    private var handle: some View {
-        RoundedRectangle(cornerRadius: 2)
-            .fill(Color.white.opacity(0.3))
-            .frame(width: 36, height: 4)
-            .padding(.top, 10)
-            .padding(.bottom, 14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(AppConstants.Colors.surface)
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
     }
 
     private func pickerRow(label: String, day: Binding<Weekday>, hour: Binding<Int>, minute: Binding<Int>) -> some View {
-        HStack {
+        HStack(spacing: 6) {
             Text(label)
-                .font(.system(size: 14))
+                .font(.body)
                 .foregroundColor(AppConstants.Colors.text)
-            Spacer()
-            Menu {
+            Spacer(minLength: 4)
+            Picker("", selection: day) {
                 ForEach(Self.days, id: \.self) { d in
-                    Button(d.displayName) { day.wrappedValue = d }
+                    Text(d.displayName).tag(d)
                 }
-            } label: {
-                Text(day.wrappedValue.displayName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(AppConstants.Colors.text)
             }
-            Text("·").foregroundColor(AppConstants.Colors.textSecondary.opacity(0.45))
-            DatePicker("", selection: bindingForTime(hour: hour, minute: minute), displayedComponents: .hourAndMinute)
-                .labelsHidden()
-                .datePickerStyle(.compact)
-                .environment(\.locale, Locale(identifier: "en_GB_POSIX"))
-                .frame(maxWidth: 90)
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .tint(AppConstants.Colors.text)
+            .fixedSize()
+            DatePicker(
+                "",
+                selection: bindingForTime(hour: hour, minute: minute),
+                displayedComponents: .hourAndMinute
+            )
+            .labelsHidden()
+            .datePickerStyle(.compact)
+            .fixedSize()
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 11)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 
     private func bindingForTime(hour: Binding<Int>, minute: Binding<Int>) -> Binding<Date> {
@@ -103,9 +122,7 @@ struct EditFreeTimeSheet: View {
             set: { newDate in
                 let comps = Calendar.current.dateComponents([.hour, .minute], from: newDate)
                 hour.wrappedValue = comps.hour ?? 0
-                // Snap minute to the nearest 10-minute increment.
-                let m = comps.minute ?? 0
-                minute.wrappedValue = (Int((Double(m) / 10).rounded()) * 10) % 60
+                minute.wrappedValue = comps.minute ?? 0
             }
         )
     }

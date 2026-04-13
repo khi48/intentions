@@ -73,11 +73,12 @@ enum AppConstants {
     enum Schedule {
         /// Seed intervals for a brand-new install. Mon–Fri 17:00–21:30.
         static var defaultIntervals: [FreeTimeInterval] {
-            (0...4).map { dayIndex in
+            // Mon–Sun 17:30–23:00
+            (0...6).map { dayIndex in
                 FreeTimeInterval(
                     id: UUID(),
-                    startMinuteOfWeek: dayIndex * FreeTimeInterval.minutesPerDay + 17 * 60,
-                    durationMinutes: 4 * 60 + 30
+                    startMinuteOfWeek: dayIndex * FreeTimeInterval.minutesPerDay + 17 * 60 + 30,
+                    durationMinutes: 5 * 60 + 30
                 )
             }
         }
