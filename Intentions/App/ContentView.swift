@@ -13,6 +13,7 @@ import SwiftUI
 /// Main app content view with navigation and authorization handling
 struct ContentView: View {
     @State private var viewModel: ContentViewModel
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var initError: String?
 
@@ -55,6 +56,11 @@ struct ContentView: View {
         }
         .task {
             await viewModel.initializeApp()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task { await viewModel.reconcileBlockingOnForeground() }
+            }
         }
         .onOpenURL { url in
             guard url.scheme == "intentions", url.host == "home" else { return }

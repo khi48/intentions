@@ -465,6 +465,12 @@ final class ContentViewModel: Sendable {
         }
     }
     
+    /// Called when the app becomes active. Re-applies the blocking state so the physical
+    /// shield matches the schedule even if iOS has been sitting on a stale state while backgrounded.
+    func reconcileBlockingOnForeground() async {
+        await applyDefaultBlocking()
+    }
+
     /// Apply default blocking state based on schedule settings
     /// If a session is active, preserves session blocking
     private func applyDefaultBlocking() async {
