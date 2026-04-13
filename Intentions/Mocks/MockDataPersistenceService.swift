@@ -9,6 +9,7 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
     private var keyValueStore: [String: Data] = [:]
     private var intentionSessions: [UUID: IntentionSession] = [:]
     private var scheduleSettings: ScheduleSettings?
+    var weeklyScheduleStore: WeeklySchedule?
 
     // Error simulation flags
     var shouldThrowError = false
@@ -156,14 +157,44 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
         if shouldThrowLoadError {
             throw AppError.persistenceError("Mock load error for ScheduleSettings")
         }
-        
+
         return try await withCheckedContinuation { continuation in
             queue.async {
                 continuation.resume(returning: self.scheduleSettings)
             }
         }
     }
-    
+
+    // MARK: - Weekly Schedule Methods
+
+    func saveWeeklySchedule(_ schedule: WeeklySchedule) async throws {
+        trackMethodCall("saveWeeklySchedule")
+        try throwErrorIfNeeded()
+
+        if shouldThrowSaveError {
+            throw AppError.persistenceError("Mock save error for WeeklySchedule")
+        }
+
+        return try await withCheckedContinuation { continuation in
+            queue.async(flags: .barrier) {
+                self.weeklyScheduleStore = schedule
+                continuation.resume()
+            }
+        }
+    }
+
+    func loadWeeklySchedule() async throws -> WeeklySchedule? {
+        if shouldThrowLoadError {
+            throw AppError.persistenceError("Mock load error for WeeklySchedule")
+        }
+
+        return try await withCheckedContinuation { continuation in
+            queue.async {
+                continuation.resume(returning: self.weeklyScheduleStore)
+            }
+        }
+    }
+
     // MARK: - Intention Session Methods
     
     func saveIntentionSession(_ session: IntentionSession) async throws {
@@ -255,6 +286,7 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
                 self.keyValueStore.removeAll()
                 self.intentionSessions.removeAll()
                 self.scheduleSettings = nil
+                self.weeklyScheduleStore = nil
                 self.shouldThrowError = false
                 self.shouldThrowSaveError = false
                 self.shouldThrowLoadError = false

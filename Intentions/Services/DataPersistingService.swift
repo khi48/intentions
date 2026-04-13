@@ -10,6 +10,8 @@ protocol DataPersisting: Sendable {
     func delete(forKey key: String) async throws
     func saveScheduleSettings(_ settings: ScheduleSettings) async throws
     func loadScheduleSettings() async throws -> ScheduleSettings?
+    func saveWeeklySchedule(_ schedule: WeeklySchedule) async throws
+    func loadWeeklySchedule() async throws -> WeeklySchedule?
     func saveIntentionSession(_ session: IntentionSession) async throws
     func loadIntentionSessions() async throws -> [IntentionSession]
     func loadIntentionSessionsSince(_ date: Date) async throws -> [IntentionSession]
@@ -116,6 +118,44 @@ protocol DataPersisting: Sendable {
         userDefaults.removeObject(forKey: key.prefixedKey)
     }
     
+    // MARK: - Weekly Schedule Storage Key
+    private static let weeklyScheduleKey = "intentions.weeklySchedule"
+
+    // MARK: - Weekly Schedule Methods
+    func saveWeeklySchedule(_ schedule: WeeklySchedule) async throws {
+        do {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let data = try encoder.encode(schedule)
+            userDefaults.set(data, forKey: Self.weeklyScheduleKey)
+        } catch {
+            throw AppError.persistenceError("Failed to save WeeklySchedule: \(error.localizedDescription)")
+        }
+    }
+
+    func loadWeeklySchedule() async throws -> WeeklySchedule? {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        // 1. Try the new blob first
+        if let data = userDefaults.data(forKey: Self.weeklyScheduleKey) {
+            do {
+                return try decoder.decode(WeeklySchedule.self, from: data)
+            } catch {
+                throw AppError.persistenceError("Failed to decode WeeklySchedule: \(error.localizedDescription)")
+            }
+        }
+
+        // 2. Fall back to legacy ScheduleSettings via SwiftData
+        let legacy = try await loadScheduleSettings()
+        guard let legacy else { return nil }
+
+        // Migrate once and persist so future reads skip this path
+        let migrated = WeeklySchedule.migrate(from: legacy)
+        try await saveWeeklySchedule(migrated)
+        return migrated
+    }
+
     // MARK: - Schedule Settings Methods
     func saveScheduleSettings(_ settings: ScheduleSettings) async throws {
         do {
