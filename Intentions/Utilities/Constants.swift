@@ -74,26 +74,22 @@ enum AppConstants {
     
     // MARK: - Schedule Settings
     enum Schedule {
-        /// Default free time start hour (5 PM — after-work window)
-        static let defaultStartHour: Int = 17
-
-        /// Default start minute
-        static let defaultStartMinute: Int = 0
-
-        /// Default free time end hour (9:30 PM)
-        static let defaultEndHour: Int = 21
-
-        /// Default end minute
-        static let defaultEndMinute: Int = 30
+        /// Seed intervals for a brand-new install. Mon–Fri 17:00–21:30.
+        static var defaultIntervals: [FreeTimeInterval] {
+            (0...4).map { dayIndex in
+                FreeTimeInterval(
+                    id: UUID(),
+                    startMinuteOfWeek: dayIndex * FreeTimeInterval.minutesPerDay + 17 * 60,
+                    durationMinutes: 4 * 60 + 30
+                )
+            }
+        }
 
         /// Valid hour range for scheduling
         static let validHourRange: ClosedRange<Int> = 0...23
 
         /// Valid minute range for scheduling
         static let validMinuteRange: ClosedRange<Int> = 0...59
-
-        /// Default timezone (current system timezone)
-        static var defaultTimeZone: TimeZone { TimeZone.current }
     }
     
     // MARK: - Time Conversion
