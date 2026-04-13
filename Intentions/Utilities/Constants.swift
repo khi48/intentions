@@ -31,11 +31,8 @@ enum AppConstants {
 
         // Schedule
         static let scheduleIsEnabled = "intentions.schedule.isEnabled"
-        static let scheduleStartHour = "intentions.schedule.startHour"
-        static let scheduleStartMinute = "intentions.schedule.startMinute"
-        static let scheduleEndHour = "intentions.schedule.endHour"
-        static let scheduleEndMinute = "intentions.schedule.endMinute"
-        static let scheduleActiveDays = "intentions.schedule.activeDays"
+        static let scheduleIntervalsData = "intentions.schedule.intervalsData"
+        static let scheduleTimeZoneId = "intentions.schedule.timeZoneId"
 
         // DeviceActivity
         static let lastScheduledActivity = "intentions.lastScheduledActivity"

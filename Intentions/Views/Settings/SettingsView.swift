@@ -113,20 +113,21 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel
     @State private var showingDisableConfirmation = false
     @State private var showingIntentionQuoteEditor = false
-    private let onScheduleSettingsChanged: ((ScheduleSettings) async -> Void)?
+    // TODO(Task 11): wire callback into new schedule editor
+    private let onScheduleSettingsChanged: ((WeeklySchedule) async -> Void)?
     private let onViewModelReady: ((SettingsViewModel) -> Void)?
     private let setupCoordinator: SetupCoordinator?
     private let hasActiveSession: Bool
     @Environment(NavigationStateManager.self) private var navigationManager
 
     private var isScheduleEditingDisabled: Bool {
-        hasActiveSession || viewModel.scheduleSettings.isCurrentlyActive
+        hasActiveSession || viewModel.weeklySchedule.isBlocking(at: Date())
     }
 
     private var scheduleEditingDisabledReason: String {
         if hasActiveSession {
             return "Cannot modify schedule while session is active"
-        } else if viewModel.scheduleSettings.isCurrentlyActive {
+        } else if viewModel.weeklySchedule.isBlocking(at: Date()) {
             return "Cannot modify schedule during active protected hours"
         }
         return ""
@@ -136,7 +137,7 @@ struct SettingsView: View {
         dataService: DataPersisting? = nil,
         setupCoordinator: SetupCoordinator? = nil,
         hasActiveSession: Bool = false,
-        onScheduleSettingsChanged: ((ScheduleSettings) async -> Void)? = nil,
+        onScheduleSettingsChanged: ((WeeklySchedule) async -> Void)? = nil,
         onViewModelReady: ((SettingsViewModel) -> Void)? = nil
     ) {
         let service = dataService ?? MockDataPersistenceService()
@@ -186,7 +187,7 @@ struct SettingsView: View {
                                     .font(.body)
                                     .foregroundColor(AppConstants.Colors.text)
                                 Spacer()
-                                Text(viewModel.scheduleSettings.intentionQuote ?? "Not set")
+                                Text(viewModel.weeklySchedule.intentionQuote ?? "Not set")
                                     .font(.subheadline)
                                     .foregroundColor(AppConstants.Colors.textSecondary)
                                     .lineLimit(1)
@@ -227,10 +228,9 @@ struct SettingsView: View {
                                 embedInNavigationView: false,
                                 forceSetup: true,
                                 onIntentionQuoteSet: { quote in
-                                    viewModel.scheduleSettings.intentionQuote = quote
+                                    viewModel.weeklySchedule.intentionQuote = quote
                                     Task {
-                                        await viewModel.updateScheduleSettings(viewModel.scheduleSettings)
-                                        await onScheduleSettingsChanged?(viewModel.scheduleSettings)
+                                        await viewModel.updateSchedule(viewModel.weeklySchedule)
                                     }
                                 }
                             ) {
@@ -248,29 +248,16 @@ struct SettingsView: View {
         }
         .background(AppConstants.Colors.background)
         .toolbarBackground(.visible, for: .tabBar)
-        .sheet(isPresented: $viewModel.showingScheduleEditor) {
-            ScheduleSettingsView(
-                settings: viewModel.scheduleSettings,
-                onSave: { settings in
-                    Task {
-                        await viewModel.updateScheduleSettings(settings)
-                        await onScheduleSettingsChanged?(settings)
-                    }
-                    viewModel.hideScheduleEditor()
-                },
-                onCancel: { viewModel.hideScheduleEditor() }
-            )
-        }
+        // TODO(Task 11): replace ScheduleSettingsView sheet with WeeklySchedule-aware editor
         .sheet(isPresented: $showingDisableConfirmation) {
             DisableBlockingConfirmationView(
                 streakDays: viewModel.streakDays,
                 remainingTimeText: viewModel.formattedRemainingTime,
-                intentionQuote: viewModel.scheduleSettings.intentionQuote,
+                intentionQuote: viewModel.weeklySchedule.intentionQuote,
                 onConfirm: {
                     showingDisableConfirmation = false
                     Task {
                         await viewModel.recordDisableAndToggle()
-                        await onScheduleSettingsChanged?(viewModel.scheduleSettings)
                     }
                 },
                 onCancel: { showingDisableConfirmation = false }
@@ -278,12 +265,11 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showingIntentionQuoteEditor) {
             IntentionQuoteEditorView(
-                quote: viewModel.scheduleSettings.intentionQuote ?? "",
+                quote: viewModel.weeklySchedule.intentionQuote ?? "",
                 onSave: { newQuote in
-                    viewModel.scheduleSettings.intentionQuote = newQuote.isEmpty ? nil : newQuote
+                    viewModel.weeklySchedule.intentionQuote = newQuote.isEmpty ? nil : newQuote
                     Task {
-                        await viewModel.updateScheduleSettings(viewModel.scheduleSettings)
-                        await onScheduleSettingsChanged?(viewModel.scheduleSettings)
+                        await viewModel.updateSchedule(viewModel.weeklySchedule)
                     }
                     showingIntentionQuoteEditor = false
                 },
@@ -363,12 +349,11 @@ struct SettingsView: View {
             }
             Spacer()
             Toggle("", isOn: Binding(
-                get: { viewModel.scheduleSettings.isEnabled },
+                get: { viewModel.weeklySchedule.isEnabled },
                 set: { newValue in
                     if newValue {
                         Task {
                             await viewModel.toggleScheduleEnabled()
-                            await onScheduleSettingsChanged?(viewModel.scheduleSettings)
                         }
                     } else {
                         showingDisableConfirmation = true
@@ -382,7 +367,7 @@ struct SettingsView: View {
     }
 
     private var blockingToggleSubtitle: String {
-        if viewModel.scheduleSettings.isEnabled {
+        if viewModel.weeklySchedule.isEnabled {
             return "Blocks apps 24/7 outside free time"
         } else {
             return "Blocking is off — no apps are blocked"
@@ -393,7 +378,6 @@ struct SettingsView: View {
         let disabled = isScheduleEditingDisabled
         let titleColor = disabled ? AppConstants.Colors.disabled : AppConstants.Colors.text
         let valueColor = disabled ? AppConstants.Colors.disabled : AppConstants.Colors.textSecondary
-        let secondaryColor = disabled ? AppConstants.Colors.disabled : AppConstants.Colors.textSecondary.opacity(0.75)
 
         return Button(action: disabled ? {} : { viewModel.showScheduleEditor() }) {
             HStack(spacing: 12) {
@@ -403,19 +387,15 @@ struct SettingsView: View {
                         .foregroundColor(titleColor)
                     Text("Every other hour is blocked")
                         .font(.caption)
-                        .foregroundColor(secondaryColor)
+                        .foregroundColor(disabled ? AppConstants.Colors.disabled : AppConstants.Colors.textSecondary.opacity(0.75))
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(viewModel.formattedActiveHours)
-                        .font(.subheadline)
-                        .foregroundColor(valueColor)
-                    Text(viewModel.activeDaysText)
-                        .font(.caption)
-                        .foregroundColor(secondaryColor)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
+                // TODO(Task 11): replace with proper WeeklySchedule summary layout
+                Text(viewModel.scheduleSummary)
+                    .font(.subheadline)
+                    .foregroundColor(valueColor)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 if !disabled {
                     Image(systemName: "chevron.right")
                         .font(.caption2)

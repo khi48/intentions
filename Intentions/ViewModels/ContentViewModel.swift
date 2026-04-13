@@ -48,8 +48,8 @@ final class ContentViewModel: Sendable {
     /// Current active session if any
     private(set) var activeSession: IntentionSession? = nil
     
-    /// Current schedule settings
-    private var scheduleSettings: ScheduleSettings = ScheduleSettings()
+    /// Current weekly schedule
+    private var weeklySchedule: WeeklySchedule = WeeklySchedule()
     
     /// Whether initial app loading has completed
     var hasInitialized: Bool = false
@@ -170,23 +170,16 @@ final class ContentViewModel: Sendable {
         hasInitialized = true
     }
     
-    /// Load schedule settings from persistence
+    /// Load weekly schedule from persistence
     private func loadScheduleSettings() async {
         do {
-            if let savedSettings = try await dataService.loadScheduleSettings() {
-                scheduleSettings = savedSettings
-            } else {
-                // Use default settings if none exist and save them
-                scheduleSettings = ScheduleSettings()
-                try await dataService.saveScheduleSettings(scheduleSettings)
-            }
-
+            weeklySchedule = try await dataService.loadWeeklySchedule() ?? WeeklySchedule()
             // CRITICAL: Also save to UserDefaults so DeviceActivityMonitor extension can access it
-            saveScheduleSettingsToUserDefaults(scheduleSettings)
+            saveWeeklyScheduleToUserDefaults(weeklySchedule)
         } catch {
-            logger.warning("Failed to load schedule settings, using defaults: \(error.localizedDescription)")
-            scheduleSettings = ScheduleSettings()
-            saveScheduleSettingsToUserDefaults(scheduleSettings)
+            logger.warning("Failed to load weekly schedule, using defaults: \(error.localizedDescription)")
+            weeklySchedule = WeeklySchedule()
+            saveWeeklyScheduleToUserDefaults(weeklySchedule)
         }
     }
     
@@ -244,21 +237,21 @@ final class ContentViewModel: Sendable {
     }
     
     // MARK: - Schedule Management
-    
-    /// Update schedule settings and apply blocking accordingly
-    func updateScheduleSettings(_ newSettings: ScheduleSettings) async {
-        scheduleSettings = newSettings
+
+    /// Update weekly schedule and apply blocking accordingly
+    func updateWeeklySchedule(_ schedule: WeeklySchedule) async {
+        weeklySchedule = schedule
 
         // Save to persistence
         do {
-            try await dataService.saveScheduleSettings(newSettings)
+            try await dataService.saveWeeklySchedule(schedule)
         } catch {
-            logger.error("Failed to save schedule settings: \(error.localizedDescription)")
+            logger.error("Failed to save weekly schedule: \(error.localizedDescription)")
             handleError(error)
         }
 
         // Also save to UserDefaults for DeviceActivityMonitor extension
-        saveScheduleSettingsToUserDefaults(newSettings)
+        saveWeeklyScheduleToUserDefaults(schedule)
 
         // Apply blocking based on new schedule
         if authorizationStatus == .approved {
@@ -266,16 +259,15 @@ final class ContentViewModel: Sendable {
         }
     }
 
-    /// Save schedule settings to UserDefaults for DeviceActivityMonitor extension
-    private func saveScheduleSettingsToUserDefaults(_ settings: ScheduleSettings) {
+    /// Save weekly schedule to UserDefaults for DeviceActivityMonitor extension
+    private func saveWeeklyScheduleToUserDefaults(_ schedule: WeeklySchedule) {
         guard let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) else { return }
 
-        sharedDefaults.set(settings.isEnabled, forKey: AppConstants.Keys.scheduleIsEnabled)
-        sharedDefaults.set(settings.startHour, forKey: AppConstants.Keys.scheduleStartHour)
-        sharedDefaults.set(settings.startMinute, forKey: AppConstants.Keys.scheduleStartMinute)
-        sharedDefaults.set(settings.endHour, forKey: AppConstants.Keys.scheduleEndHour)
-        sharedDefaults.set(settings.endMinute, forKey: AppConstants.Keys.scheduleEndMinute)
-        sharedDefaults.set(settings.activeDays.map { $0.calendarWeekday }, forKey: AppConstants.Keys.scheduleActiveDays)
+        sharedDefaults.set(schedule.isEnabled, forKey: AppConstants.Keys.scheduleIsEnabled)
+        if let data = try? JSONEncoder().encode(schedule.intervals) {
+            sharedDefaults.set(data, forKey: AppConstants.Keys.scheduleIntervalsData)
+        }
+        sharedDefaults.set(schedule.timeZone.identifier, forKey: AppConstants.Keys.scheduleTimeZoneId)
         sharedDefaults.synchronize()
     }
     
@@ -492,7 +484,7 @@ final class ContentViewModel: Sendable {
             currentlyAppliedSessionId = nil
 
             // Block or allow based on schedule
-            if scheduleSettings.isEnabled && scheduleSettings.isCurrentlyActive {
+            if weeklySchedule.isBlocking(at: Date()) {
                 try await screenTimeService.blockAllApps()
             } else {
                 try await screenTimeService.allowAllAccess()
@@ -524,10 +516,10 @@ final class ContentViewModel: Sendable {
     
     /// Save the user's intention quote from the setup flow
     func setIntentionQuote(_ quote: String) {
-        scheduleSettings.intentionQuote = quote
+        weeklySchedule.intentionQuote = quote
         Task {
             do {
-                try await dataService.saveScheduleSettings(scheduleSettings)
+                try await dataService.saveWeeklySchedule(weeklySchedule)
             } catch {
                 logger.error("Failed to save intention quote: \(error.localizedDescription)")
                 handleError(error)
@@ -638,7 +630,7 @@ final class ContentViewModel: Sendable {
 
         sharedDefaults.removeObject(forKey: AppConstants.Keys.widgetSessionTitle)
         sharedDefaults.removeObject(forKey: AppConstants.Keys.widgetSessionEndTime)
-        sharedDefaults.set(scheduleSettings.isEnabled && scheduleSettings.isCurrentlyActive, forKey: AppConstants.Keys.widgetBlockingStatus)
+        sharedDefaults.set(weeklySchedule.isBlocking(at: Date()), forKey: AppConstants.Keys.widgetBlockingStatus)
         sharedDefaults.set(Date(), forKey: AppConstants.Keys.widgetLastUpdate)
         sharedDefaults.synchronize()
         WidgetCenter.shared.reloadAllTimelines()

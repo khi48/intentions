@@ -12,19 +12,19 @@ import ManagedSettings
 
 /// ViewModel for managing app settings and configuration
 @MainActor
-@Observable 
+@Observable
 final class SettingsViewModel: Sendable {
-    
+
     // MARK: - Dependencies
     private let dataService: DataPersisting
-    
+
     // MARK: - Published State
     var isLoading: Bool = false
     var hasLoadedOnce: Bool = false
     var errorMessage: String?
-    
-    // Schedule Settings
-    var scheduleSettings = ScheduleSettings()
+
+    // Schedule
+    var weeklySchedule = WeeklySchedule()
 
     // UI State
     var showingScheduleEditor = false
@@ -32,15 +32,15 @@ final class SettingsViewModel: Sendable {
     // Statistics
     var todaySessionCount: Int = 0
     var weeklySessionCount: Int = 0
-    
+
     // MARK: - Initialization
-    
+
     init(dataService: DataPersisting) {
         self.dataService = dataService
     }
-    
+
     // MARK: - Data Loading
-    
+
     func loadData() async {
         isLoading = true
         defer {
@@ -50,14 +50,7 @@ final class SettingsViewModel: Sendable {
         errorMessage = nil
 
         do {
-            // Load schedule settings
-            if let savedSettings = try await dataService.loadScheduleSettings() {
-                scheduleSettings = savedSettings
-            } else {
-                // No saved settings exist - use defaults (isEnabled = true) and save them
-                scheduleSettings = ScheduleSettings()
-                try await dataService.saveScheduleSettings(scheduleSettings)
-            }
+            weeklySchedule = try await dataService.loadWeeklySchedule() ?? WeeklySchedule()
 
             // Update statistics from persisted sessions
             await updateStatistics()
@@ -66,31 +59,31 @@ final class SettingsViewModel: Sendable {
             errorMessage = "Failed to load settings: \(error.localizedDescription)"
         }
     }
-    
-    // MARK: - Schedule Settings
-    
-    func updateScheduleSettings(_ settings: ScheduleSettings) async {
+
+    // MARK: - Schedule
+
+    func updateSchedule(_ schedule: WeeklySchedule) async {
         do {
-            try await dataService.saveScheduleSettings(settings)
-            scheduleSettings = settings
+            try await dataService.saveWeeklySchedule(schedule)
+            weeklySchedule = schedule
         } catch {
-            errorMessage = "Failed to save schedule settings: \(error.localizedDescription)"
+            errorMessage = "Failed to save schedule: \(error.localizedDescription)"
         }
     }
-    
+
     func toggleScheduleEnabled() async {
-        scheduleSettings.isEnabled.toggle()
-        await updateScheduleSettings(scheduleSettings)
+        weeklySchedule.isEnabled.toggle()
+        await updateSchedule(weeklySchedule)
     }
 
     func recordDisableAndToggle() async {
-        scheduleSettings.lastDisabledAt = Date()
-        scheduleSettings.isEnabled = false
-        await updateScheduleSettings(scheduleSettings)
+        weeklySchedule.lastDisabledAt = Date()
+        weeklySchedule.isEnabled = false
+        await updateSchedule(weeklySchedule)
     }
 
     // MARK: - Statistics
-    
+
     private func updateStatistics() async {
         do {
             let calendar = Calendar.current
@@ -107,23 +100,23 @@ final class SettingsViewModel: Sendable {
             weeklySessionCount = 0
         }
     }
-    
+
     // MARK: - Error Handling
-    
+
     func clearError() {
         errorMessage = nil
     }
-    
+
     func handleError(_ error: Error) {
         errorMessage = error.localizedDescription
     }
-    
+
     // MARK: - Navigation
-    
+
     func showScheduleEditor() {
         showingScheduleEditor = true
     }
-    
+
     func hideScheduleEditor() {
         showingScheduleEditor = false
     }
@@ -131,62 +124,34 @@ final class SettingsViewModel: Sendable {
     func resetSheetState() {
         showingScheduleEditor = false
     }
-    
+
     // MARK: - Computed Properties
-    
-    var scheduleStatusText: String {
-        if !scheduleSettings.isEnabled {
-            return "Disabled"
-        }
 
-        if scheduleSettings.isCurrentlyActive {
-            return "Active"
-        } else {
-            return "Inactive"
+    var scheduleSummary: String {
+        guard weeklySchedule.isEnabled else { return "Blocking is off" }
+        let count = weeklySchedule.intervals.count
+        switch count {
+        case 0: return "No free time set"
+        case 1:
+            let i = weeklySchedule.intervals[0]
+            return "\(i.startDayOfWeek.shortName) \(formattedTime(hour: i.startHour, minute: i.startMinute))–\(formattedTime(hour: i.endHour, minute: i.endMinute))"
+        default:
+            return "\(count) free time blocks"
         }
     }
 
-    var scheduleStatusColor: Color {
-        if !scheduleSettings.isEnabled {
-            return .gray
-        }
-
-        return scheduleSettings.isCurrentlyActive ? .green : .orange
-    }
-
-    var formattedActiveHours: String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-
-        let startTime = Calendar.current.date(bySettingHour: scheduleSettings.startHour, minute: scheduleSettings.startMinute, second: 0, of: Date()) ?? Date()
-        let endTime = Calendar.current.date(bySettingHour: scheduleSettings.endHour, minute: scheduleSettings.endMinute, second: 0, of: Date()) ?? Date()
-
-        return "\(formatter.string(from: startTime)) - \(formatter.string(from: endTime))"
-    }
-    
-    var activeDaysText: String {
-        if scheduleSettings.activeDays.count == 7 {
-            return "Every day"
-        } else if scheduleSettings.activeDays.count == 5 && 
-                  scheduleSettings.activeDays.isDisjoint(with: [.saturday, .sunday]) {
-            return "Weekdays"
-        } else if scheduleSettings.activeDays.count == 2 && 
-                  scheduleSettings.activeDays == [.saturday, .sunday] {
-            return "Weekends"
-        } else {
-            let sortedDays = scheduleSettings.activeDays.sorted { $0.rawValue < $1.rawValue }
-            return sortedDays.map { $0.shortName }.joined(separator: ", ")
-        }
+    private func formattedTime(hour: Int, minute: Int) -> String {
+        String(format: "%02d:%02d", hour, minute)
     }
 
     // MARK: - Disable Confirmation Data
 
     var streakDays: Int? {
-        scheduleSettings.streakDays
+        weeklySchedule.streakDays
     }
 
     var formattedRemainingTime: String {
-        let totalMinutes = scheduleSettings.remainingProtectedMinutesToday
+        let totalMinutes = weeklySchedule.remainingProtectedMinutes(at: Date())
         let hours = totalMinutes / 60
         let minutes = totalMinutes % 60
         if hours > 0 {
@@ -196,4 +161,3 @@ final class SettingsViewModel: Sendable {
         }
     }
 }
-
