@@ -29,12 +29,12 @@ final class ScheduleSettings: @preconcurrency Codable {
 
     init() {
         self.isEnabled = true
-        self.startHour = AppConstants.Schedule.defaultStartHour
-        self.startMinute = AppConstants.Schedule.defaultStartMinute
-        self.endHour = AppConstants.Schedule.defaultEndHour
-        self.endMinute = AppConstants.Schedule.defaultEndMinute
+        self.startHour = 17
+        self.startMinute = 0
+        self.endHour = 21
+        self.endMinute = 30
         self.activeDays = Set(Weekday.allCases)
-        self.timeZone = AppConstants.Schedule.defaultTimeZone
+        self.timeZone = TimeZone.current
         self.lastDisabledAt = nil
         self.intentionQuote = nil
     }

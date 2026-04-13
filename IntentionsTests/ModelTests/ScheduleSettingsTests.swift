@@ -21,8 +21,8 @@ final class ScheduleSettingsTests: XCTestCase {
         
         // Then
         XCTAssertTrue(settings.isEnabled)
-        XCTAssertEqual(settings.startHour, AppConstants.Schedule.defaultStartHour)
-        XCTAssertEqual(settings.endHour, AppConstants.Schedule.defaultEndHour)
+        XCTAssertEqual(settings.startHour, 17)
+        XCTAssertEqual(settings.endHour, 21)
         XCTAssertEqual(settings.activeDays.count, 7) // All days
         XCTAssertEqual(settings.timeZone, TimeZone.current)
         

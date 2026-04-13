@@ -152,3 +152,37 @@ final class WeeklySchedule: @preconcurrency Codable {
         try c.encodeIfPresent(intentionQuote, forKey: .intentionQuote)
     }
 }
+
+// MARK: - Migration from legacy ScheduleSettings
+
+extension WeeklySchedule {
+    /// One-shot conversion of the legacy `ScheduleSettings` model to `WeeklySchedule`.
+    /// Creates one `FreeTimeInterval` per day in `old.activeDays`, faithfully replaying
+    /// overnight windows (start > end) as per-day cross-midnight intervals.
+    static func migrate(from old: ScheduleSettings) -> WeeklySchedule {
+        let schedule = WeeklySchedule()
+        schedule.intervals = [] // overwrite the defaultIntervals seed
+        schedule.isEnabled = old.isEnabled
+        schedule.timeZone = old.timeZone
+        schedule.lastDisabledAt = old.lastDisabledAt
+        schedule.intentionQuote = old.intentionQuote
+
+        let timeStart = old.startHour * 60 + old.startMinute
+        let timeEnd = old.endHour * 60 + old.endMinute
+        // Modulo-1440 so overnight windows keep their natural duration.
+        let duration = ((timeEnd - timeStart) + FreeTimeInterval.minutesPerDay) % FreeTimeInterval.minutesPerDay
+        guard duration >= 10 else { return schedule }
+
+        // Sort for a stable order in tests.
+        let sortedDays = old.activeDays.sorted { FreeTimeInterval.mondayDayIndex(for: $0) < FreeTimeInterval.mondayDayIndex(for: $1) }
+        for day in sortedDays {
+            let dayOrigin = FreeTimeInterval.mondayDayIndex(for: day) * FreeTimeInterval.minutesPerDay
+            schedule.intervals.append(FreeTimeInterval(
+                id: UUID(),
+                startMinuteOfWeek: dayOrigin + timeStart,
+                durationMinutes: duration
+            ))
+        }
+        return schedule
+    }
+}
