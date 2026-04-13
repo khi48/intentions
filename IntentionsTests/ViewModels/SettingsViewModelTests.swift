@@ -35,12 +35,10 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.showingScheduleEditor)
     }
 
-    func testDefaultScheduleSettings() {
-        // Should initialize with default schedule settings
-        XCTAssertTrue(viewModel.scheduleSettings.isEnabled)
-        XCTAssertEqual(viewModel.scheduleSettings.startHour, 17)
-        XCTAssertEqual(viewModel.scheduleSettings.endHour, 21)
-        XCTAssertEqual(viewModel.scheduleSettings.activeDays.count, 7) // All days by default
+    func testDefaultWeeklySchedule() {
+        XCTAssertTrue(viewModel.weeklySchedule.isEnabled)
+        XCTAssertEqual(viewModel.weeklySchedule.intervals.count, 5) // Mon-Fri seed
+        XCTAssertTrue(viewModel.weeklySchedule.intervals.allSatisfy { $0.durationMinutes == 4 * 60 + 30 })
     }
 
     // MARK: - Data Loading Tests
@@ -53,7 +51,6 @@ final class SettingsViewModelTests: XCTestCase {
     }
 
     func testLoadDataFailure() async {
-        // Setup mock to throw error
         mockDataService.shouldThrowError = true
         mockDataService.errorToThrow = AppError.persistenceError("Test error")
 
@@ -64,40 +61,40 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.errorMessage?.contains("Failed to load settings") == true)
     }
 
-    // MARK: - Schedule Settings Tests
+    // MARK: - Schedule Tests
 
     func testToggleScheduleEnabled() async {
-        let initialState = viewModel.scheduleSettings.isEnabled
+        let initialState = viewModel.weeklySchedule.isEnabled
 
         await viewModel.toggleScheduleEnabled()
 
-        XCTAssertEqual(viewModel.scheduleSettings.isEnabled, !initialState)
-        XCTAssertTrue(mockDataService.saveScheduleSettingsCalled)
+        XCTAssertEqual(viewModel.weeklySchedule.isEnabled, !initialState)
+        XCTAssertTrue(mockDataService.saveWeeklyScheduleCalled)
     }
 
-    func testUpdateScheduleSettings() async {
-        let newSettings = ScheduleSettings()
-        newSettings.isEnabled = false
-        newSettings.activeHours = 10...18
-        newSettings.activeDays = [.monday, .tuesday, .wednesday, .thursday, .friday]
+    func testUpdateSchedule() async {
+        let newSchedule = WeeklySchedule()
+        newSchedule.isEnabled = false
+        newSchedule.intervals = [
+            FreeTimeInterval(id: UUID(), startMinuteOfWeek: 9 * 60, durationMinutes: 8 * 60)
+        ]
 
-        await viewModel.updateScheduleSettings(newSettings)
+        await viewModel.updateSchedule(newSchedule)
 
-        XCTAssertFalse(viewModel.scheduleSettings.isEnabled)
-        XCTAssertEqual(viewModel.scheduleSettings.activeHours, 10...18)
-        XCTAssertEqual(viewModel.scheduleSettings.activeDays.count, 5)
-        XCTAssertTrue(mockDataService.saveScheduleSettingsCalled)
+        XCTAssertFalse(viewModel.weeklySchedule.isEnabled)
+        XCTAssertEqual(viewModel.weeklySchedule.intervals.count, 1)
+        XCTAssertTrue(mockDataService.saveWeeklyScheduleCalled)
     }
 
-    func testUpdateScheduleSettingsFailure() async {
+    func testUpdateScheduleFailure() async {
         mockDataService.shouldThrowError = true
         mockDataService.errorToThrow = AppError.persistenceError("Save failed")
 
-        let newSettings = ScheduleSettings()
-        await viewModel.updateScheduleSettings(newSettings)
+        let newSchedule = WeeklySchedule()
+        await viewModel.updateSchedule(newSchedule)
 
         XCTAssertNotNil(viewModel.errorMessage)
-        XCTAssertTrue(viewModel.errorMessage?.contains("Failed to save schedule settings") == true)
+        XCTAssertTrue(viewModel.errorMessage?.contains("Failed to save schedule") == true)
     }
 
     // MARK: - Error Handling Tests
@@ -130,63 +127,31 @@ final class SettingsViewModelTests: XCTestCase {
 
     // MARK: - Computed Properties Tests
 
-    func testScheduleStatusText() {
-        // Test disabled
-        viewModel.scheduleSettings.isEnabled = false
-        XCTAssertEqual(viewModel.scheduleStatusText, "Disabled")
-
-        // Test enabled but inactive (mock current time outside active hours)
-        viewModel.scheduleSettings.isEnabled = true
-        // Note: This test would need time mocking for proper testing of active/inactive states
-        // For now, we test the enabled state
-        XCTAssertTrue(["Active", "Inactive"].contains(viewModel.scheduleStatusText))
+    func testScheduleSummaryDisabled() {
+        viewModel.weeklySchedule.isEnabled = false
+        XCTAssertEqual(viewModel.scheduleSummary, "Blocking is off")
     }
 
-    func testScheduleStatusColor() {
-        // Test disabled
-        viewModel.scheduleSettings.isEnabled = false
-        XCTAssertEqual(viewModel.scheduleStatusColor, .gray)
-
-        // Test enabled
-        viewModel.scheduleSettings.isEnabled = true
-        XCTAssertTrue([Color.green, Color.orange].contains(viewModel.scheduleStatusColor))
+    func testScheduleSummaryNoIntervals() {
+        viewModel.weeklySchedule.isEnabled = true
+        viewModel.weeklySchedule.intervals = []
+        XCTAssertEqual(viewModel.scheduleSummary, "No free time set")
     }
 
-    func testFormattedActiveHours() {
-        viewModel.scheduleSettings.activeHours = 9...17
-        let formatted = viewModel.formattedActiveHours
-
-        // Should contain time format (basic check since exact format depends on locale)
-        XCTAssertTrue(formatted.contains("-"))
-        XCTAssertTrue(formatted.count > 5) // Should be something like "9:00 AM - 5:00 PM"
-    }
-
-    func testActiveDaysText() {
-        // Test all days
-        viewModel.scheduleSettings.activeDays = Set(Weekday.allCases)
-        XCTAssertEqual(viewModel.activeDaysText, "Every day")
-
-        // Test weekdays only
-        viewModel.scheduleSettings.activeDays = [.monday, .tuesday, .wednesday, .thursday, .friday]
-        XCTAssertEqual(viewModel.activeDaysText, "Weekdays")
-
-        // Test weekends only
-        viewModel.scheduleSettings.activeDays = [.saturday, .sunday]
-        XCTAssertEqual(viewModel.activeDaysText, "Weekends")
-
-        // Test custom days
-        viewModel.scheduleSettings.activeDays = [.monday, .wednesday, .friday]
-        let result = viewModel.activeDaysText
-        XCTAssertTrue(result.contains("Mon"))
-        XCTAssertTrue(result.contains("Wed"))
-        XCTAssertTrue(result.contains("Fri"))
+    func testScheduleSummaryMultipleIntervals() {
+        viewModel.weeklySchedule.isEnabled = true
+        viewModel.weeklySchedule.intervals = [
+            FreeTimeInterval(id: UUID(), startMinuteOfWeek: 9 * 60, durationMinutes: 60),
+            FreeTimeInterval(id: UUID(), startMinuteOfWeek: 14 * 60, durationMinutes: 60)
+        ]
+        XCTAssertTrue(viewModel.scheduleSummary.contains("2"))
     }
 }
 
 // MARK: - Mock Data Service Extensions
 
 extension MockDataPersistenceService {
-    var saveScheduleSettingsCalled: Bool {
-        return methodCalls.contains("saveScheduleSettings")
+    var saveWeeklyScheduleCalled: Bool {
+        return methodCalls.contains("saveWeeklySchedule")
     }
 }

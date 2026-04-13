@@ -14,6 +14,10 @@
 
 import Foundation
 
+/// Legacy model kept as a decode-only shim for the persistence migration fallback.
+/// Do NOT use in new code — use `WeeklySchedule` instead.
+/// Remove once all users have migrated (i.e., after one additional app version).
+@available(*, deprecated, message: "Only used by the persistence migration fallback. Use WeeklySchedule instead.")
 @MainActor
 @Observable
 final class ScheduleSettings: @preconcurrency Codable {

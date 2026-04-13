@@ -18,7 +18,6 @@
 		207E148B2E9F5D8500730900 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E148A2E9F5D8500730900 /* DeviceActivity.framework */; };
 		207E14932E9F5D8600730900 /* IntentionsDeviceActivityMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 207E14892E9F5D8500730900 /* IntentionsDeviceActivityMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2085A8ED2DF55F7A0011EB9A /* IntentionSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8EC2DF55F7A0011EB9A /* IntentionSessionTests.swift */; };
-		2085A8EF2DF55F820011EB9A /* ScheduleSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8EE2DF55F820011EB9A /* ScheduleSettingsTests.swift */; };
 		2085A8F12DF55F980011EB9A /* WeekdayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8F02DF55F980011EB9A /* WeekdayTests.swift */; };
 		2085A8F32DF55FAF0011EB9A /* AppErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8F22DF55FAF0011EB9A /* AppErrorTests.swift */; };
 		2085A9072DF6D5D20011EB9A /* ScreenTimeServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A9062DF6D5D20011EB9A /* ScreenTimeServiceTests.swift */; };
@@ -115,7 +114,6 @@
 		207E14892E9F5D8500730900 /* IntentionsDeviceActivityMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = IntentionsDeviceActivityMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		207E148A2E9F5D8500730900 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
 		2085A8EC2DF55F7A0011EB9A /* IntentionSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentionSessionTests.swift; sourceTree = "<group>"; };
-		2085A8EE2DF55F820011EB9A /* ScheduleSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleSettingsTests.swift; sourceTree = "<group>"; };
 		2085A8F02DF55F980011EB9A /* WeekdayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekdayTests.swift; sourceTree = "<group>"; };
 		2085A8F22DF55FAF0011EB9A /* AppErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppErrorTests.swift; sourceTree = "<group>"; };
 		2085A9062DF6D5D20011EB9A /* ScreenTimeServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeServiceTests.swift; sourceTree = "<group>"; };
@@ -334,7 +332,6 @@
 				206592132DFF50FD00B93819 /* ScreenTimeStatusInfoTests.swift */,
 				2085A8F22DF55FAF0011EB9A /* AppErrorTests.swift */,
 				2085A8EC2DF55F7A0011EB9A /* IntentionSessionTests.swift */,
-				2085A8EE2DF55F820011EB9A /* ScheduleSettingsTests.swift */,
 				2085A8F02DF55F980011EB9A /* WeekdayTests.swift */,
 			);
 			path = ModelTests;
@@ -661,7 +658,6 @@
 				20EB26572E1322B200FC4BE4 /* DataPersistenceServiceTests.swift in Sources */,
 				2085A8F32DF55FAF0011EB9A /* AppErrorTests.swift in Sources */,
 				20A359AE2F8B9B3300535175 /* NotificationSettingsTests.swift in Sources */,
-				2085A8EF2DF55F820011EB9A /* ScheduleSettingsTests.swift in Sources */,
 				20EB26592E1322C900FC4BE4 /* DataPersistenceIntegrationTests.swift in Sources */,
 			);
 		};
