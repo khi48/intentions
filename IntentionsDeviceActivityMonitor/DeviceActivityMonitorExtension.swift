@@ -302,8 +302,8 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     }
 
     /// Check if blocking should be active based on schedule settings.
-    /// Blocking is the default state. It is only lifted during the free time window
-    /// (startHour:startMinute – endHour:endMinute) on days listed in activeDays.
+    /// Blocking is the default state. It is only lifted during free time intervals
+    /// stored as a JSON-encoded [FreeTimeIntervalLite] in shared UserDefaults.
     private func isCurrentlyInProtectedHours(sharedDefaults: UserDefaults) -> Bool {
         let isEnabled = sharedDefaults.bool(forKey: "intentions.schedule.isEnabled")
         guard isEnabled else {
@@ -311,38 +311,54 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             return false
         }
 
-        let startHour = sharedDefaults.integer(forKey: "intentions.schedule.startHour")
-        let startMinute = sharedDefaults.integer(forKey: "intentions.schedule.startMinute")
-        let endHour = sharedDefaults.integer(forKey: "intentions.schedule.endHour")
-        let endMinute = sharedDefaults.integer(forKey: "intentions.schedule.endMinute")
-        let freeTimeDays = sharedDefaults.array(forKey: "intentions.schedule.activeDays") as? [Int] ?? []
-
-        let now = Date()
-        let calendar = Calendar.current
-        let weekdayComponent = calendar.component(.weekday, from: now)
-        let hour = calendar.component(.hour, from: now)
-        let minute = calendar.component(.minute, from: now)
-        let minuteOfDay = hour * 60 + minute
-
-        // If today isn't a free-time day, blocking is active
-        guard freeTimeDays.contains(weekdayComponent) else {
-            logger.info("📅 SCHEDULE CHECK: day=\(weekdayComponent) not a free day - blocking active")
+        guard let data = sharedDefaults.data(forKey: "intentions.schedule.intervalsData"),
+              let intervals = try? JSONDecoder().decode([FreeTimeIntervalLite].self, from: data) else {
+            logger.info("📅 SCHEDULE CHECK: No intervals data — defaulting to blocking")
             return true
         }
 
-        let startTotal = startHour * 60 + startMinute
-        let endTotal = endHour * 60 + endMinute
+        let tzID = sharedDefaults.string(forKey: "intentions.schedule.timeZoneId") ?? TimeZone.current.identifier
+        let tz = TimeZone(identifier: tzID) ?? TimeZone.current
 
-        // Check if current minute-of-day is in the free time window
-        let inFreeTime: Bool
-        if startTotal <= endTotal {
-            inFreeTime = minuteOfDay >= startTotal && minuteOfDay < endTotal
-        } else {
-            inFreeTime = minuteOfDay >= startTotal || minuteOfDay < endTotal
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = tz
+        let now = Date()
+        let mow = Self.minuteOfWeek(date: now, calendar: calendar)
+
+        let inFree = intervals.contains { interval in
+            let start = interval.startMinuteOfWeek
+            let end = start + interval.durationMinutes
+            if end <= 10080 {
+                return mow >= start && mow < end
+            } else {
+                return mow >= start || mow < (end - 10080)
+            }
         }
+        return !inFree
+    }
 
-        logger.info("📅 SCHEDULE CHECK: day=\(weekdayComponent), time=\(hour):\(String(format: "%02d", minute)), freeWindow=\(startHour):\(String(format: "%02d", startMinute))-\(endHour):\(String(format: "%02d", endMinute)), inFreeTime=\(inFreeTime), blocking=\(!inFreeTime)")
+    /// Minimal mirror of FreeTimeInterval so the extension target does not have to import the main target.
+    private struct FreeTimeIntervalLite: Codable {
+        let id: UUID
+        let startMinuteOfWeek: Int
+        let durationMinutes: Int
+    }
 
-        return !inFreeTime
+    private static func minuteOfWeek(date: Date, calendar: Calendar) -> Int {
+        let calendarWeekday = calendar.component(.weekday, from: date)
+        let mondayZero: Int
+        switch calendarWeekday {
+        case 1: mondayZero = 6
+        case 2: mondayZero = 0
+        case 3: mondayZero = 1
+        case 4: mondayZero = 2
+        case 5: mondayZero = 3
+        case 6: mondayZero = 4
+        case 7: mondayZero = 5
+        default: mondayZero = 0
+        }
+        let hour = calendar.component(.hour, from: date)
+        let minute = calendar.component(.minute, from: date)
+        return mondayZero * 1440 + hour * 60 + minute
     }
 }
