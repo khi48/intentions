@@ -113,7 +113,6 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel
     @State private var showingDisableConfirmation = false
     @State private var showingIntentionQuoteEditor = false
-    // TODO(Task 11): wire callback into new schedule editor
     private let onScheduleSettingsChanged: ((WeeklySchedule) async -> Void)?
     private let onViewModelReady: ((SettingsViewModel) -> Void)?
     private let setupCoordinator: SetupCoordinator?
@@ -248,7 +247,22 @@ struct SettingsView: View {
         }
         .background(AppConstants.Colors.background)
         .toolbarBackground(.visible, for: .tabBar)
-        // TODO(Task 11): replace ScheduleSettingsView sheet with WeeklySchedule-aware editor
+        .sheet(isPresented: Binding(
+            get: { viewModel.showingScheduleEditor },
+            set: { if !$0 { viewModel.hideScheduleEditor() } }
+        )) {
+            WeekScheduleEditorView(
+                schedule: viewModel.weeklySchedule,
+                onSave: { updated in
+                    Task {
+                        await viewModel.updateSchedule(updated)
+                        await onScheduleSettingsChanged?(updated)
+                    }
+                    viewModel.hideScheduleEditor()
+                },
+                onCancel: { viewModel.hideScheduleEditor() }
+            )
+        }
         .sheet(isPresented: $showingDisableConfirmation) {
             DisableBlockingConfirmationView(
                 streakDays: viewModel.streakDays,
@@ -381,16 +395,10 @@ struct SettingsView: View {
 
         return Button(action: disabled ? {} : { viewModel.showScheduleEditor() }) {
             HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Free Time")
-                        .font(.body)
-                        .foregroundColor(titleColor)
-                    Text("Every other hour is blocked")
-                        .font(.caption)
-                        .foregroundColor(disabled ? AppConstants.Colors.disabled : AppConstants.Colors.textSecondary.opacity(0.75))
-                }
+                Text("Free Time")
+                    .font(.body)
+                    .foregroundColor(titleColor)
                 Spacer()
-                // TODO(Task 11): replace with proper WeeklySchedule summary layout
                 Text(viewModel.scheduleSummary)
                     .font(.subheadline)
                     .foregroundColor(valueColor)
