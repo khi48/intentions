@@ -198,6 +198,7 @@ struct SettingsView: View {
                                     .foregroundColor(AppConstants.Colors.textSecondary)
                             }
                             .padding(.vertical, 14)
+                            .contentShape(Rectangle())
                             .overlay(alignment: .bottom) { rowDivider }
                         }
                         .buttonStyle(.plain)
@@ -450,6 +451,7 @@ struct SettingsView: View {
                 .foregroundColor(AppConstants.Colors.textSecondary)
         }
         .padding(.vertical, 14)
+        .contentShape(Rectangle())
     }
 
     private var rowDivider: some View {
