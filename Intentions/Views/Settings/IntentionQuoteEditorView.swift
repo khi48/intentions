@@ -5,60 +5,74 @@
 
 import SwiftUI
 
-/// Sheet for editing the user's intention quote
+/// Navigation page (no longer a sheet) for editing the user's intention quote.
+/// Pushed from `SettingsView` via `SettingsDestination.intentionQuote`.
 struct IntentionQuoteEditorView: View {
+    let initialQuote: String
     let onSave: (String) -> Void
-    let onCancel: () -> Void
 
     @State private var quote: String
     @FocusState private var isFocused: Bool
+    @Environment(\.dismiss) private var dismiss
 
-    init(quote: String, onSave: @escaping (String) -> Void, onCancel: @escaping () -> Void) {
-        self._quote = State(initialValue: quote)
+    init(quote: String, onSave: @escaping (String) -> Void) {
+        self.initialQuote = quote
         self.onSave = onSave
-        self.onCancel = onCancel
+        self._quote = State(initialValue: quote)
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
-                VStack(spacing: 8) {
+        ScrollView {
+            VStack(spacing: 24) {
+                // Header
+                VStack(spacing: 12) {
                     Image(systemName: "quote.opening")
-                        .font(.title)
+                        .font(.system(size: 48))
                         .foregroundColor(AppConstants.Colors.accent)
 
                     Text("Why did you set up protection?")
                         .font(.headline)
                         .foregroundColor(AppConstants.Colors.text)
+                        .multilineTextAlignment(.center)
 
                     Text("This is shown when you try to disable blocking, to remind you why you started.")
                         .font(.subheadline)
                         .foregroundColor(AppConstants.Colors.textSecondary)
                         .multilineTextAlignment(.center)
                 }
-                .padding(.top, 12)
+                .padding(.top, 8)
 
-                TextField("e.g. To be more present with my family", text: $quote, axis: .vertical)
-                    .lineLimit(3...6)
-                    .textFieldStyle(.roundedBorder)
-                    .focused($isFocused)
+                // Editor card
+                VStack(alignment: .leading, spacing: 8) {
+                    TextField("e.g. To be more present with my family",
+                              text: $quote,
+                              axis: .vertical)
+                        .lineLimit(3...8)
+                        .font(.body)
+                        .foregroundColor(AppConstants.Colors.text)
+                        .focused($isFocused)
+                        .textInputAutocapitalization(.sentences)
+                        .padding(14)
+                        .background(AppConstants.Colors.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(AppConstants.Colors.textSecondary.opacity(0.15), lineWidth: 1)
+                        )
+                }
 
-                Spacer()
+                SettingsPrimaryButton("Save", systemImage: "checkmark") {
+                    onSave(quote.trimmingCharacters(in: .whitespacesAndNewlines))
+                    dismiss()
+                }
+
+                Spacer(minLength: 24)
             }
             .padding()
-            .background(AppConstants.Colors.background)
-            .navigationTitle("Your Intention")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { onCancel() }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") { onSave(quote) }
-                }
-            }
-            .onAppear { isFocused = true }
         }
-        .presentationDetents([.medium])
+        .settingsPageBackground()
+        .navigationTitle("Your Intention")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear { isFocused = true }
     }
 }

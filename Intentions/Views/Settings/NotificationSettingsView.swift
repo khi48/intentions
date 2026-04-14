@@ -6,7 +6,9 @@
 import SwiftUI
 @preconcurrency import UserNotifications
 
-/// Settings view for notification preferences
+/// Settings page for notification preferences. Uses the shared Settings dark
+/// background, custom rows, and primary button so it matches every other
+/// settings sub-page.
 struct NotificationSettingsView: View {
     @State private var notificationService = NotificationService.shared
     @State private var settings: NotificationSettings
@@ -14,30 +16,84 @@ struct NotificationSettingsView: View {
     @State private var showingPermissionAlert = false
 
     init() {
-        // Copy the current settings value — struct semantics ensure independence from the service
         self._settings = State(initialValue: NotificationService.shared.currentSettings)
     }
 
     var body: some View {
-        List {
-            permissionSection
+        ScrollView {
+            VStack(spacing: 0) {
+                // Permission section
+                SettingsSectionHeader(title: "Permission")
+                permissionRow
 
-            if authorizationStatus == .authorized || authorizationStatus == .provisional {
-                masterToggleSection
-            }
-
-            if settings.isEnabled && isAuthorized {
-                sessionNotificationsSection
-
-                Section {
-                    Button("Reset to Defaults") {
-                        settings.resetToDefaults()
-                        Task { await saveSettings() }
+                if authorizationStatus == .notDetermined {
+                    SettingsHelperText("Allow notifications to receive session reminders.")
+                    SettingsPrimaryButton("Enable Notifications", systemImage: "bell.fill") {
+                        Task { await requestPermissions() }
                     }
-                    .foregroundColor(AppConstants.Colors.destructive)
+                    .padding(.top, 8)
+                } else if authorizationStatus == .denied {
+                    SettingsHelperText("To enable notifications, open iOS Settings → Notifications → Intent.")
+                    SettingsPrimaryButton("Open iOS Settings", systemImage: "gear") {
+                        openAppSettings()
+                    }
+                    .padding(.top, 8)
+                } else {
+                    SettingsHelperText("Intent can send you session reminders and completion notifications.")
+                }
+
+                if isAuthorized {
+                    // Master toggle
+                    SettingsSectionHeader(title: "Notifications")
+                    SettingsToggleRow(
+                        "Enable Notifications",
+                        subtitle: "Turn off to silence all session-related notifications",
+                        isOn: Binding(
+                            get: { settings.isEnabled },
+                            set: { newValue in
+                                settings.isEnabled = newValue
+                                Task { await saveSettings() }
+                            }
+                        )
+                    )
+
+                    if settings.isEnabled {
+                        SettingsSectionHeader(title: "Session Reminders")
+                        SettingsToggleRow(
+                            NotificationType.sessionWarning.displayName,
+                            subtitle: NotificationType.sessionWarning.description,
+                            isOn: Binding(
+                                get: { settings.sessionWarningsEnabled },
+                                set: { newValue in
+                                    settings.sessionWarningsEnabled = newValue
+                                    Task { await saveSettings() }
+                                }
+                            )
+                        )
+                        SettingsToggleRow(
+                            NotificationType.sessionCompletion.displayName,
+                            subtitle: NotificationType.sessionCompletion.description,
+                            isOn: Binding(
+                                get: { settings.sessionCompletionEnabled },
+                                set: { newValue in
+                                    settings.sessionCompletionEnabled = newValue
+                                    Task { await saveSettings() }
+                                }
+                            )
+                        )
+
+                        SettingsPrimaryButton("Reset to Defaults", systemImage: "arrow.counterclockwise") {
+                            settings.resetToDefaults()
+                            Task { await saveSettings() }
+                        }
+                        .padding(.top, 24)
+                    }
                 }
             }
+            .padding(.horizontal)
+            .padding(.bottom, 40)
         }
+        .settingsPageBackground()
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(.visible, for: .tabBar)
@@ -54,83 +110,26 @@ struct NotificationSettingsView: View {
         }
     }
 
-    // MARK: - Sections
+    // MARK: - Custom rows
 
-    private var permissionSection: some View {
-        Section {
-            HStack {
-                Image(systemName: permissionStatusIcon)
-                    .foregroundColor(permissionStatusColor)
-                    .frame(width: 20)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Notification Permission")
-                        .font(.headline)
-                    Text(permissionStatusText)
-                        .font(.caption)
-                        .foregroundColor(AppConstants.Colors.textSecondary)
-                }
-
-                Spacer()
-
-                if authorizationStatus == .denied {
-                    Button("Settings") { openAppSettings() }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                } else if authorizationStatus == .notDetermined {
-                    Button("Enable") {
-                        Task { await requestPermissions() }
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
+    private var permissionRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: permissionStatusIcon)
+                .font(.body)
+                .foregroundColor(permissionStatusColor)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Notification Permission")
+                    .font(.body)
+                    .foregroundColor(AppConstants.Colors.text)
+                Text(permissionStatusText)
+                    .font(.caption)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
             }
-        } footer: {
-            Text(permissionFooterText)
-                .foregroundColor(AppConstants.Colors.textSecondary)
+            Spacer()
         }
-    }
-
-    private var masterToggleSection: some View {
-        Section {
-            Toggle("Enable Notifications", isOn: Binding(
-                get: { settings.isEnabled },
-                set: { newValue in
-                    settings.isEnabled = newValue
-                    Task { await saveSettings() }
-                }
-            ))
-            .tint(AppConstants.Colors.accent)
-        } footer: {
-            Text("Turn off to disable all session-related notifications.")
-                .foregroundColor(AppConstants.Colors.textSecondary)
-        }
-    }
-
-    private var sessionNotificationsSection: some View {
-        Section("Session Reminders") {
-            NotificationToggleRow(
-                type: .sessionWarning,
-                isOn: Binding(
-                    get: { settings.sessionWarningsEnabled },
-                    set: { newValue in
-                        settings.sessionWarningsEnabled = newValue
-                        Task { await saveSettings() }
-                    }
-                )
-            )
-
-            NotificationToggleRow(
-                type: .sessionCompletion,
-                isOn: Binding(
-                    get: { settings.sessionCompletionEnabled },
-                    set: { newValue in
-                        settings.sessionCompletionEnabled = newValue
-                        Task { await saveSettings() }
-                    }
-                )
-            )
-        }
+        .padding(.vertical, 14)
+        .overlay(alignment: .bottom) { SettingsRowDivider() }
     }
 
     // MARK: - Helpers
@@ -150,10 +149,10 @@ struct NotificationSettingsView: View {
 
     private var permissionStatusColor: Color {
         switch authorizationStatus {
-        case .authorized, .provisional, .ephemeral: return AppConstants.Colors.textSecondary
-        case .denied: return .red
-        case .notDetermined: return .orange
-        @unknown default: return .gray
+        case .authorized, .provisional, .ephemeral: return AppConstants.Colors.text
+        case .denied: return AppConstants.Colors.disabled
+        case .notDetermined: return AppConstants.Colors.textSecondary
+        @unknown default: return AppConstants.Colors.disabled
         }
     }
 
@@ -165,19 +164,6 @@ struct NotificationSettingsView: View {
         case .denied: return "Notifications are disabled"
         case .notDetermined: return "Permission not requested"
         @unknown default: return "Unknown status"
-        }
-    }
-
-    private var permissionFooterText: String {
-        switch authorizationStatus {
-        case .authorized, .provisional, .ephemeral:
-            return "Intent can send you session reminders and completion notifications."
-        case .denied:
-            return "To enable notifications, go to Settings > Notifications > Intent."
-        case .notDetermined:
-            return "Allow notifications to receive session reminders."
-        @unknown default:
-            return ""
         }
     }
 
@@ -200,33 +186,5 @@ struct NotificationSettingsView: View {
         guard let settingsUrl = URL(string: UIApplication.openSettingsURLString),
               UIApplication.shared.canOpenURL(settingsUrl) else { return }
         UIApplication.shared.open(settingsUrl)
-    }
-}
-
-// MARK: - Supporting Views
-
-struct NotificationToggleRow: View {
-    let type: NotificationType
-    let isOn: Binding<Bool>
-
-    var body: some View {
-        HStack {
-            Image(systemName: type.systemImage)
-                .foregroundColor(AppConstants.Colors.accent)
-                .frame(width: 20)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(type.displayName)
-                    .foregroundColor(AppConstants.Colors.text)
-                Text(type.description)
-                    .font(.caption)
-                    .foregroundColor(AppConstants.Colors.textSecondary)
-            }
-
-            Spacer()
-
-            Toggle("", isOn: isOn)
-                .tint(AppConstants.Colors.accent)
-        }
     }
 }

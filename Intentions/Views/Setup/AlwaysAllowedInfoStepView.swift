@@ -115,18 +115,8 @@ struct AlwaysAllowedInfoStepView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
-            // Continue button
-            Button(action: onContinue) {
-                HStack {
-                    Text("Continue")
-                        .font(.headline)
-                    Image(systemName: "arrow.right")
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(AppConstants.Colors.buttonPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            SettingsPrimaryButton("Continue", systemImage: "arrow.right") {
+                onContinue()
             }
             .padding(.top, 8)
 

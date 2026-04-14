@@ -39,23 +39,15 @@ struct GreyscaleGuideView: View {
                         .stroke(AppConstants.Colors.textSecondary.opacity(0.15), lineWidth: 1)
                 )
 
-                Button(action: openSettings) {
-                    HStack {
-                        Image(systemName: "gear")
-                        Text("Open Settings")
-                    }
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                SettingsPrimaryButton("Open iOS Settings", systemImage: "gear") {
+                    openSettings()
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(AppConstants.Colors.accent)
 
                 Spacer()
             }
             .padding()
         }
-        .background(AppConstants.Colors.background)
+        .settingsPageBackground()
         .navigationTitle("Enable Greyscale")
         .navigationBarTitleDisplayMode(.inline)
     }

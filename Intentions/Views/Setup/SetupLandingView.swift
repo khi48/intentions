@@ -138,17 +138,8 @@ struct SetupLandingView: View {
     
     private var getStartedButton: some View {
         VStack(spacing: 12) {
-            Button(action: { onGetStarted() }) {
-                HStack {
-                    Text("Get Started")
-                        .font(.headline)
-                    Image(systemName: "arrow.right")
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(AppConstants.Colors.buttonPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            SettingsPrimaryButton("Get Started", systemImage: "arrow.right") {
+                onGetStarted()
             }
 
             Text("This setup takes about 2 minutes")

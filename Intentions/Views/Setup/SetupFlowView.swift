@@ -73,12 +73,8 @@ struct SetupFlowView: View {
 
     private var setupContent: some View {
         ZStack {
-            LinearGradient(
-                colors: [AppConstants.Colors.surface, AppConstants.Colors.surface],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            AppConstants.Colors.background
+                .ignoresSafeArea()
 
             Group {
                 switch currentPage {
@@ -240,26 +236,16 @@ struct SetupFlowView: View {
                     }
                 }
 
-            Button(action: {
+            SettingsPrimaryButton("Continue",
+                                  systemImage: "arrow.right",
+                                  isEnabled: isIntentionQuoteValid) {
                 let trimmed = intentionQuoteText.trimmingCharacters(in: .whitespacesAndNewlines)
                 onIntentionQuoteSet?(trimmed)
                 Task {
                     await setupCoordinator.completeSetupStep(.intentionQuote)
                 }
                 currentPage = .screenTimePermission
-            }) {
-                HStack {
-                    Text("Continue")
-                        .font(.headline)
-                    Image(systemName: "arrow.right")
-                }
-                .foregroundColor(isIntentionQuoteValid ? .white : AppConstants.Colors.textSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(isIntentionQuoteValid ? AppConstants.Colors.buttonPrimary : AppConstants.Colors.buttonPrimary.opacity(0.3))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .disabled(!isIntentionQuoteValid)
             .padding(.horizontal)
             .padding(.top, 8)
 
@@ -325,19 +311,8 @@ struct SetupFlowView: View {
             .background(Color(.systemGray6))
             .cornerRadius(12)
 
-            Button(action: {
+            SettingsPrimaryButton("Start Using Intent", systemImage: "arrow.right") {
                 onComplete()
-            }) {
-                HStack {
-                    Text("Start Using Intent")
-                        .font(.headline)
-                    Image(systemName: "arrow.right")
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(AppConstants.Colors.buttonPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .padding(.horizontal)
             .padding(.top, 8)

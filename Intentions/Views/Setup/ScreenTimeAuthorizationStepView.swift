@@ -129,56 +129,33 @@ struct ScreenTimeAuthorizationStepView: View {
         Group {
             switch authorizationStatus {
             case .approved:
-                Button(action: {
+                SettingsPrimaryButton("Continue", systemImage: "arrow.right") {
                     Task { await completeStep() }
-                }) {
-                    HStack {
-                        Text("Continue")
-                            .font(.headline)
-                        Image(systemName: "arrow.right")
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(AppConstants.Colors.buttonPrimary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 
             case .denied:
                 VStack(spacing: 12) {
-                    Button("Open Settings to Grant Permission") {
+                    SettingsPrimaryButton("Open iOS Settings", systemImage: "gear") {
                         openSettings()
                     }
-                    .buttonStyle(.bordered)
-            .foregroundColor(AppConstants.Colors.text)
-                    .controlSize(.large)
-                    
-                    Button("I've Updated Settings") {
-                        Task {
-                            await recheckPermission()
-                        }
+                    SettingsPrimaryButton("I've Updated Settings", systemImage: "arrow.clockwise") {
+                        Task { await recheckPermission() }
                     }
-                    .buttonStyle(.bordered)
                 }
-                
+
             case .notDetermined:
-                Button(isRequesting ? "Requesting..." : "Grant Screen Time Permission") {
-                    Task {
-                        await requestPermission()
-                    }
+                SettingsPrimaryButton(
+                    isRequesting ? "Requesting..." : "Grant Screen Time Permission",
+                    systemImage: "lock.shield",
+                    isEnabled: !isRequesting
+                ) {
+                    Task { await requestPermission() }
                 }
-                .buttonStyle(.bordered)
-            .foregroundColor(AppConstants.Colors.text)
-                .controlSize(.large)
-                .disabled(isRequesting)
-                
+
             @unknown default:
-                Button("Check Permission Status") {
-                    Task {
-                        await checkAuthorizationStatus()
-                    }
+                SettingsPrimaryButton("Check Permission Status", systemImage: "arrow.clockwise") {
+                    Task { await checkAuthorizationStatus() }
                 }
-                .buttonStyle(.bordered)
             }
         }
     }
