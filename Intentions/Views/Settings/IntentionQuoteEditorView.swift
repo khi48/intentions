@@ -30,7 +30,7 @@ struct IntentionQuoteEditorView: View {
                         .font(.system(size: 48))
                         .foregroundColor(AppConstants.Colors.accent)
 
-                    Text("Why did you set up protection?")
+                    Text("Why have you tried to control your screen time?")
                         .font(.headline)
                         .foregroundColor(AppConstants.Colors.text)
                         .multilineTextAlignment(.center)

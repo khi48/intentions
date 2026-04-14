@@ -175,7 +175,6 @@ struct SettingsToggleRow: View {
             Spacer()
             Toggle("", isOn: isOn)
                 .labelsHidden()
-                .tint(AppConstants.Colors.text)
         }
         .padding(.vertical, 14)
         .overlay(alignment: .bottom) { SettingsRowDivider() }
