@@ -13,6 +13,10 @@ struct TimeWheelPicker: UIViewRepresentable {
         picker.datePickerMode = .time
         picker.preferredDatePickerStyle = .compact
         picker.minuteInterval = minuteInterval
+        // Force dark appearance + an explicit tint so the compact button's time text
+        // is always legible regardless of the surrounding view's inherited tintColor.
+        picker.overrideUserInterfaceStyle = .dark
+        picker.tintColor = .white
         picker.addTarget(context.coordinator,
                          action: #selector(Coordinator.valueChanged(_:)),
                          for: .valueChanged)
@@ -28,6 +32,15 @@ struct TimeWheelPicker: UIViewRepresentable {
         if picker.date != date {
             picker.date = date
         }
+    }
+
+    /// SwiftUI doesn't query `intrinsicContentSize` on every wrapped UIView automatically,
+    /// so a `.compact` `UIDatePicker` can lay out at 0×0 inside a `.fixedSize()` HStack
+    /// — making the time button literally have no room to render. Returning the picker's
+    /// real intrinsic size here gives SwiftUI the width it needs.
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UIDatePicker, context: Context) -> CGSize? {
+        let target = uiView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+        return CGSize(width: ceil(target.width), height: ceil(target.height))
     }
 
     func makeCoordinator() -> Coordinator {
