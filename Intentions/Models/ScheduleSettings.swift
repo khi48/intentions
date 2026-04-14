@@ -31,6 +31,12 @@ final class ScheduleSettings: @preconcurrency Codable {
     var lastDisabledAt: Date?
     var intentionQuote: String?
 
+    /// True when this instance was rehydrated from a v1.0 build 1 record where
+    /// `activeHours` represented BLOCKING hours rather than free time. The
+    /// migration to `WeeklySchedule` must invert the semantics in this case.
+    /// Not persisted; only set transiently by `PersistentScheduleSettings.toScheduleSettings()`.
+    var wasLegacyV1Format: Bool = false
+
     init() {
         self.isEnabled = true
         self.startHour = 17

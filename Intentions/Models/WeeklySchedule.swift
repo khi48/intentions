@@ -191,9 +191,20 @@ extension WeeklySchedule {
 // MARK: - Migration from legacy ScheduleSettings
 
 extension WeeklySchedule {
+    /// Minimum free-time interval length emitted by migration. Matches the
+    /// faithful migration's existing duration guard.
+    private static let migrationMinIntervalMinutes = 10
+
     /// One-shot conversion of the legacy `ScheduleSettings` model to `WeeklySchedule`.
-    /// Creates one `FreeTimeInterval` per day in `old.activeDays`, faithfully replaying
-    /// overnight windows (start > end) as per-day cross-midnight intervals.
+    ///
+    /// Two semantics are supported:
+    /// - **Faithful** (default): `activeHours` are FREE TIME windows. Each `activeDays`
+    ///   day gets one `FreeTimeInterval` covering the start..end window. Overnight
+    ///   windows wrap naturally.
+    /// - **Inverted** (`old.wasLegacyV1Format == true`): `activeHours` were BLOCKING hours
+    ///   on a day-by-day basis (v1.0 build 1 model). Each `activeDays` day emits the
+    ///   COMPLEMENT of its blocking range as up to two free intervals. Days NOT in
+    ///   `activeDays` were unblocked entirely and emit a full 24-hour free interval.
     static func migrate(from old: ScheduleSettings) -> WeeklySchedule {
         let schedule = WeeklySchedule()
         schedule.intervals = [] // overwrite the defaultIntervals seed
@@ -202,22 +213,78 @@ extension WeeklySchedule {
         schedule.lastDisabledAt = old.lastDisabledAt
         schedule.intentionQuote = old.intentionQuote
 
+        if old.wasLegacyV1Format {
+            schedule.intervals = invertedIntervals(from: old)
+        } else {
+            schedule.intervals = faithfulIntervals(from: old)
+        }
+        return schedule
+    }
+
+    private static func faithfulIntervals(from old: ScheduleSettings) -> [FreeTimeInterval] {
         let timeStart = old.startHour * 60 + old.startMinute
         let timeEnd = old.endHour * 60 + old.endMinute
         // Modulo-1440 so overnight windows keep their natural duration.
         let duration = ((timeEnd - timeStart) + FreeTimeInterval.minutesPerDay) % FreeTimeInterval.minutesPerDay
-        guard duration >= 10 else { return schedule }
+        guard duration >= migrationMinIntervalMinutes else { return [] }
 
-        // Sort for a stable order in tests.
         let sortedDays = old.activeDays.sorted { FreeTimeInterval.mondayDayIndex(for: $0) < FreeTimeInterval.mondayDayIndex(for: $1) }
-        for day in sortedDays {
+        return sortedDays.map { day in
             let dayOrigin = FreeTimeInterval.mondayDayIndex(for: day) * FreeTimeInterval.minutesPerDay
-            schedule.intervals.append(FreeTimeInterval(
+            return FreeTimeInterval(
                 id: UUID(),
                 startMinuteOfWeek: dayOrigin + timeStart,
                 durationMinutes: duration
-            ))
+            )
         }
-        return schedule
+    }
+
+    /// Inverted migration for v1.0 build 1 records. v1 stored `activeHours` as a
+    /// `ClosedRange<Int>` of BLOCKING hours, where `9...17` meant "blocked during
+    /// hours 9, 10, ..., 17 inclusive" — i.e. blocked minute-of-day [9*60, 18*60).
+    /// Free time is the complement on each `activeDays` day, plus full days for
+    /// any non-active day.
+    ///
+    /// v1's ClosedRange precondition guaranteed `startHour <= endHour`, so no
+    /// wraparound case is possible from a v1 record.
+    private static func invertedIntervals(from old: ScheduleSettings) -> [FreeTimeInterval] {
+        var intervals: [FreeTimeInterval] = []
+        let allDays: [Weekday] = [.monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday]
+
+        for day in allDays {
+            let dayOrigin = FreeTimeInterval.mondayDayIndex(for: day) * FreeTimeInterval.minutesPerDay
+
+            if old.activeDays.contains(day) {
+                // Day had a v1 blocking window. Free = complement.
+                let blockStart = old.startHour * 60                  // inclusive
+                let blockEnd = min((old.endHour + 1) * 60, FreeTimeInterval.minutesPerDay) // exclusive
+
+                // Pre-blocking free segment: [0, blockStart)
+                if blockStart >= migrationMinIntervalMinutes {
+                    intervals.append(FreeTimeInterval(
+                        id: UUID(),
+                        startMinuteOfWeek: dayOrigin,
+                        durationMinutes: blockStart
+                    ))
+                }
+                // Post-blocking free segment: [blockEnd, 1440)
+                let postFreeDuration = FreeTimeInterval.minutesPerDay - blockEnd
+                if postFreeDuration >= migrationMinIntervalMinutes {
+                    intervals.append(FreeTimeInterval(
+                        id: UUID(),
+                        startMinuteOfWeek: dayOrigin + blockEnd,
+                        durationMinutes: postFreeDuration
+                    ))
+                }
+            } else {
+                // Non-active day in v1 = no blocking = free all day.
+                intervals.append(FreeTimeInterval(
+                    id: UUID(),
+                    startMinuteOfWeek: dayOrigin,
+                    durationMinutes: FreeTimeInterval.minutesPerDay
+                ))
+            }
+        }
+        return intervals
     }
 }

@@ -221,6 +221,9 @@ final class PersistentScheduleSettings {
         settings.timeZone = timeZone
         settings.lastDisabledAt = lastDisabledAt
         settings.intentionQuote = intentionQuote
+        // v1.0 build 1 records pre-date the minute fields. Their `activeHours` were
+        // BLOCKING hours, not free hours — flag them so the migration inverts.
+        settings.wasLegacyV1Format = (activeMinutesStart == nil && activeMinutesEnd == nil)
 
         return settings
     }
