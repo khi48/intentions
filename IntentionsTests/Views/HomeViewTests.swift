@@ -9,6 +9,7 @@ import XCTest
 import SwiftUI
 @testable import Intentions
 
+@MainActor
 final class HomeViewTests: XCTestCase {
     
     private var viewModel: ContentViewModel!

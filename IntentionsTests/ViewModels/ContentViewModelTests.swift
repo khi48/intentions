@@ -10,6 +10,7 @@ import XCTest
 import ManagedSettings
 @testable import Intentions
 
+@MainActor
 final class ContentViewModelTests: XCTestCase {
     
     private var viewModel: ContentViewModel!

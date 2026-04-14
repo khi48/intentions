@@ -10,6 +10,7 @@ import SwiftUI
 @preconcurrency import FamilyControls
 @testable import Intentions
 
+@MainActor
 final class ContentViewTests: XCTestCase {
     
     @MainActor
