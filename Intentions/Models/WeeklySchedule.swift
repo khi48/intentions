@@ -153,6 +153,41 @@ final class WeeklySchedule: @preconcurrency Codable {
     }
 }
 
+// MARK: - Weekend backfill (one-shot, v97+)
+
+extension WeeklySchedule {
+    private static let weekendBackfillFlagKey = "intentions.weeklySchedule.backfill.weekends.v97"
+
+    /// One-shot upgrade for users who persisted a Mon–Fri-only schedule before build 97,
+    /// when the app defaults expanded to Mon–Sun. Uses the first existing interval as the
+    /// time-of-day template and appends matching Saturday + Sunday intervals if either is
+    /// missing. Runs at most once per install (guarded by a UserDefaults flag).
+    ///
+    /// Returns `true` if any intervals were appended.
+    @discardableResult
+    func backfillWeekendsIfNeeded() -> Bool {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: Self.weekendBackfillFlagKey) else { return false }
+        defaults.set(true, forKey: Self.weekendBackfillFlagKey)
+
+        guard let template = intervals.first else { return false }
+
+        let existingDays = Set(intervals.map { $0.startDayOfWeek })
+        var changed = false
+        for day: Weekday in [.saturday, .sunday] where !existingDays.contains(day) {
+            let dayOrigin = FreeTimeInterval.mondayDayIndex(for: day) * FreeTimeInterval.minutesPerDay
+            let timeOfDay = template.startMinuteOfWeek % FreeTimeInterval.minutesPerDay
+            intervals.append(FreeTimeInterval(
+                id: UUID(),
+                startMinuteOfWeek: dayOrigin + timeOfDay,
+                durationMinutes: template.durationMinutes
+            ))
+            changed = true
+        }
+        return changed
+    }
+}
+
 // MARK: - Migration from legacy ScheduleSettings
 
 extension WeeklySchedule {

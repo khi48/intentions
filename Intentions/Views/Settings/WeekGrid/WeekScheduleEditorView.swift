@@ -36,7 +36,12 @@ struct WeekScheduleEditorView: View {
     private var editSheetBinding: Binding<Bool> {
         Binding(
             get: { draftForEdit != nil },
-            set: { newValue in if !newValue { draftForEdit = nil } }
+            set: { newValue in
+                if !newValue {
+                    draftForEdit = nil
+                    selectedIntervalID = nil
+                }
+            }
         )
     }
 
@@ -139,7 +144,8 @@ struct WeekScheduleEditorView: View {
         } else {
             editing.intervals.append(updated)
         }
-        selectedIntervalID = updated.id
+        // Deselect after commit so the block returns to its normal visual state.
+        selectedIntervalID = nil
     }
 
     private func deleteInterval(id: UUID) {

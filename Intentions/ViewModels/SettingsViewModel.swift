@@ -50,7 +50,14 @@ final class SettingsViewModel: Sendable {
         errorMessage = nil
 
         do {
-            weeklySchedule = try await dataService.loadWeeklySchedule() ?? WeeklySchedule()
+            let loaded = try await dataService.loadWeeklySchedule() ?? WeeklySchedule()
+            // One-shot upgrade: populate weekend blocks for users persisted on the
+            // Mon–Fri default from earlier builds. Idempotent; guarded by a flag.
+            let didBackfill = loaded.backfillWeekendsIfNeeded()
+            weeklySchedule = loaded
+            if didBackfill {
+                try? await dataService.saveWeeklySchedule(loaded)
+            }
 
             // Update statistics from persisted sessions
             await updateStatistics()

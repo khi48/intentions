@@ -101,14 +101,8 @@ struct EditFreeTimeSheet: View {
             .labelsHidden()
             .tint(AppConstants.Colors.text)
             .fixedSize()
-            DatePicker(
-                "",
-                selection: bindingForTime(hour: hour, minute: minute),
-                displayedComponents: .hourAndMinute
-            )
-            .labelsHidden()
-            .datePickerStyle(.compact)
-            .fixedSize()
+            TimeWheelPicker(date: bindingForTime(hour: hour, minute: minute))
+                .fixedSize()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
