@@ -360,8 +360,8 @@ struct QuickActionEditorSheet: View {
     // MARK: - Actions
 
     private func updateSelectedItems(from selection: FamilyActivitySelection) {
-        selectedApps = Set(selection.applications.compactMap { $0.token })
-        selectedWebDomains = Set(selection.webDomains.compactMap { $0.token })
+        selectedApps = selection.applicationTokens
+        selectedWebDomains = selection.webDomainTokens
     }
 
     private func removeApp(_ token: ApplicationToken) {
@@ -443,6 +443,11 @@ struct QuickActionEditorSheet: View {
 
         selectedApps = quickAction.individualApplications
         selectedWebDomains = quickAction.individualWebDomains
+
+        var selection = FamilyActivitySelection(includeEntireCategory: true)
+        selection.applicationTokens = quickAction.individualApplications
+        selection.webDomainTokens = quickAction.individualWebDomains
+        familyActivitySelection = selection
     }
 
     private func formatDuration(_ duration: TimeInterval) -> String {

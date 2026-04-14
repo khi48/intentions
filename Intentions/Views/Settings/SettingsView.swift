@@ -408,6 +408,7 @@ struct SettingsView: View {
                 }
             }
             .padding(.vertical, 14)
+            .contentShape(Rectangle())
             .overlay(alignment: .bottom) { rowDivider }
         }
         .buttonStyle(.plain)
@@ -431,6 +432,7 @@ struct SettingsView: View {
                 }
             }
             .padding(.vertical, 14)
+            .contentShape(Rectangle())
             .overlay(alignment: .bottom) { rowDivider }
         }
         .buttonStyle(.plain)
