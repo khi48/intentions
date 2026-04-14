@@ -292,11 +292,11 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             trigger: trigger
         )
 
-        UNUserNotificationCenter.current().add(request) { error in
+        UNUserNotificationCenter.current().add(request) { [logger] error in
             if let error = error {
-                self.logger.error("Failed to send session expired notification from extension: \(error.localizedDescription)")
+                logger.error("Failed to send session expired notification from extension: \(error.localizedDescription)")
             } else {
-                self.logger.info("✅ Session expired notification scheduled from extension")
+                logger.info("✅ Session expired notification scheduled from extension")
             }
         }
     }

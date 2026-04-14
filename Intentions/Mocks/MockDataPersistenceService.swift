@@ -3,8 +3,9 @@ import SwiftUI
 import FamilyControls
 
 // MARK: - Mock Data Persistence Service
-final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
-    
+@MainActor
+final class MockDataPersistenceService: DataPersisting {
+
     // In-memory storage for testing
     private var keyValueStore: [String: Data] = [:]
     private var intentionSessions: [UUID: IntentionSession] = [:]
@@ -20,20 +21,19 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
 
     // Method call tracking for testing
     var methodCalls: [String] = []
-    
+
     // Convenience aliases for testing
     var shouldFailSave: Bool {
         get { shouldThrowSaveError }
         set { shouldThrowSaveError = newValue }
     }
-    
+
     // MARK: - Initialization
-    
+
     init() {
-        // Set up default quick actions for testing
         setupDefaultQuickActions()
     }
-    
+
     private func setupDefaultQuickActions() {
         let defaultQuickActions = [
             QuickAction(
@@ -41,25 +41,24 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
                 subtitle: "Productivity focus",
                 iconName: "laptopcomputer",
                 color: Color.blue,
-                duration: 30 * 60 // 30 minutes
+                duration: 30 * 60
             ),
             QuickAction(
-                name: "Study Time", 
+                name: "Study Time",
                 subtitle: "Deep learning",
                 iconName: "book.fill",
                 color: Color.green,
-                duration: 60 * 60 // 1 hour
+                duration: 60 * 60
             ),
             QuickAction(
                 name: "Break Time",
                 subtitle: "Social & entertainment",
-                iconName: "cup.and.saucer.fill", 
+                iconName: "cup.and.saucer.fill",
                 color: Color.orange,
-                duration: 15 * 60 // 15 minutes
+                duration: 15 * 60
             )
         ]
-        
-        // Store as JSON data
+
         do {
             let data = try JSONEncoder().encode(defaultQuickActions)
             keyValueStore["quickActions"] = data
@@ -67,102 +66,73 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
             print("Failed to setup default quick actions: \(error)")
         }
     }
-    
-    private let queue = DispatchQueue(label: "MockDataPersistenceService", attributes: .concurrent)
-    
+
     private func trackMethodCall(_ method: String) {
         methodCalls.append(method)
     }
-    
+
     private func throwErrorIfNeeded() throws {
         if shouldThrowError, let error = errorToThrow {
             throw error
         }
     }
-    
+
     // MARK: - Generic Storage Methods
-    
+
     func save<T: Codable & Sendable>(_ object: T, forKey key: String) async throws {
         if shouldThrowSaveError {
             throw AppError.persistenceError("Mock save error for key: \(key)")
         }
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            queue.async(flags: .barrier) {
-                do {
-                    let data = try JSONEncoder().encode(object)
-                    self.keyValueStore[key] = data
-                    continuation.resume()
-                } catch {
-                    continuation.resume(throwing: AppError.persistenceError("Failed to encode \(key): \(error.localizedDescription)"))
-                }
-            }
+
+        do {
+            let data = try JSONEncoder().encode(object)
+            keyValueStore[key] = data
+        } catch {
+            throw AppError.persistenceError("Failed to encode \(key): \(error.localizedDescription)")
         }
     }
-    
+
     func load<T: Codable & Sendable>(_ type: T.Type, forKey key: String) async throws -> T? {
         if shouldThrowLoadError {
             throw AppError.persistenceError("Mock load error for key: \(key)")
         }
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            queue.async {
-                guard let data = self.keyValueStore[key] else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                
-                do {
-                    let object = try JSONDecoder().decode(type, from: data)
-                    continuation.resume(returning: object)
-                } catch {
-                    continuation.resume(throwing: AppError.persistenceError("Failed to decode \(key): \(error.localizedDescription)"))
-                }
-            }
+
+        guard let data = keyValueStore[key] else { return nil }
+
+        do {
+            return try JSONDecoder().decode(type, from: data)
+        } catch {
+            throw AppError.persistenceError("Failed to decode \(key): \(error.localizedDescription)")
         }
     }
-    
+
     func delete(forKey key: String) async throws {
         if shouldThrowDeleteError {
             throw AppError.persistenceError("Mock delete error for key: \(key)")
         }
-        
-        return try await withCheckedContinuation { continuation in
-            queue.async(flags: .barrier) {
-                self.keyValueStore.removeValue(forKey: key)
-                continuation.resume()
-            }
-        }
+
+        keyValueStore.removeValue(forKey: key)
     }
-    
+
     // MARK: - Schedule Settings Methods
-    
+
     func saveScheduleSettings(_ settings: ScheduleSettings) async throws {
         trackMethodCall("saveScheduleSettings")
         try throwErrorIfNeeded()
-        
+
         if shouldThrowSaveError {
             throw AppError.persistenceError("Mock save error for ScheduleSettings")
         }
-        
-        return try await withCheckedContinuation { continuation in
-            queue.async(flags: .barrier) {
-                self.scheduleSettings = settings
-                continuation.resume()
-            }
-        }
+
+        scheduleSettings = settings
     }
-    
+
     func loadScheduleSettings() async throws -> ScheduleSettings? {
         if shouldThrowLoadError {
             throw AppError.persistenceError("Mock load error for ScheduleSettings")
         }
 
-        return try await withCheckedContinuation { continuation in
-            queue.async {
-                continuation.resume(returning: self.scheduleSettings)
-            }
-        }
+        return scheduleSettings
     }
 
     // MARK: - Weekly Schedule Methods
@@ -175,12 +145,7 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
             throw AppError.persistenceError("Mock save error for WeeklySchedule")
         }
 
-        return try await withCheckedContinuation { continuation in
-            queue.async(flags: .barrier) {
-                self.weeklyScheduleStore = schedule
-                continuation.resume()
-            }
-        }
+        weeklyScheduleStore = schedule
     }
 
     func loadWeeklySchedule() async throws -> WeeklySchedule? {
@@ -188,137 +153,88 @@ final class MockDataPersistenceService: DataPersisting, @unchecked Sendable {
             throw AppError.persistenceError("Mock load error for WeeklySchedule")
         }
 
-        return try await withCheckedContinuation { continuation in
-            queue.async {
-                continuation.resume(returning: self.weeklyScheduleStore)
-            }
-        }
+        return weeklyScheduleStore
     }
 
     // MARK: - Intention Session Methods
-    
+
     func saveIntentionSession(_ session: IntentionSession) async throws {
         if shouldThrowSaveError {
             throw AppError.persistenceError("Mock save error for IntentionSession: \(session.id)")
         }
-        
-        return try await withCheckedContinuation { continuation in
-            queue.async(flags: .barrier) {
-                self.intentionSessions[session.id] = session
-                continuation.resume()
-            }
-        }
+
+        intentionSessions[session.id] = session
     }
-    
+
     func loadIntentionSessions() async throws -> [IntentionSession] {
         if shouldThrowLoadError {
             throw AppError.persistenceError("Mock load error for IntentionSessions")
         }
-        
-        return try await withCheckedContinuation { continuation in
-            queue.async {
-                let sessions = Array(self.intentionSessions.values).sorted { $0.startTime > $1.startTime }
-                continuation.resume(returning: sessions)
-            }
-        }
+
+        return Array(intentionSessions.values).sorted { $0.startTime > $1.startTime }
     }
-    
+
     func loadIntentionSessionsSince(_ date: Date) async throws -> [IntentionSession] {
         if shouldThrowLoadError {
             throw AppError.persistenceError("Mock load error for IntentionSessions")
         }
 
-        return try await withCheckedContinuation { continuation in
-            queue.async {
-                let sessions = Array(self.intentionSessions.values)
-                    .filter { $0.createdAt >= date }
-                    .sorted { $0.startTime > $1.startTime }
-                continuation.resume(returning: sessions)
-            }
-        }
+        return Array(intentionSessions.values)
+            .filter { $0.createdAt >= date }
+            .sorted { $0.startTime > $1.startTime }
     }
 
     func deleteIntentionSession(_ id: UUID) async throws {
         if shouldThrowDeleteError {
             throw AppError.persistenceError("Mock delete error for IntentionSession: \(id)")
         }
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            queue.async(flags: .barrier) {
-                guard self.intentionSessions[id] != nil else {
-                    continuation.resume(throwing: AppError.dataNotFound("IntentionSession with ID \(id)"))
-                    return
-                }
-                
-                self.intentionSessions.removeValue(forKey: id)
-                continuation.resume()
-            }
+
+        guard intentionSessions[id] != nil else {
+            throw AppError.dataNotFound("IntentionSession with ID \(id)")
         }
+
+        intentionSessions.removeValue(forKey: id)
     }
-    
+
     func clearExpiredSessions() async throws {
         if shouldThrowDeleteError {
             throw AppError.persistenceError("Mock error clearing expired sessions")
         }
-        
-        return try await withCheckedContinuation { continuation in
-            queue.async(flags: .barrier) {
-                let cutoffDate = Date().addingTimeInterval(-24 * 60 * 60 * 7) // 7 days ago
-                
-                let expiredSessionIds = self.intentionSessions.values
-                    .filter { $0.startTime < cutoffDate }
-                    .map(\.id)
-                
-                for id in expiredSessionIds {
-                    self.intentionSessions.removeValue(forKey: id)
-                }
-                
-                continuation.resume()
-            }
-        }
-    }
-    
-    // MARK: - Test Helper Methods
-    
-    func reset() async {
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            queue.async(flags: .barrier) {
-                self.keyValueStore.removeAll()
-                self.intentionSessions.removeAll()
-                self.scheduleSettings = nil
-                self.weeklyScheduleStore = nil
-                self.shouldThrowError = false
-                self.shouldThrowSaveError = false
-                self.shouldThrowLoadError = false
-                self.shouldThrowDeleteError = false
-                self.errorToThrow = nil
-                self.methodCalls.removeAll()
-                continuation.resume()
-            }
-        }
-    }
-    
-    func getStoredSessionCount() async -> Int {
-        await withCheckedContinuation { continuation in
-            queue.async {
-                continuation.resume(returning: self.intentionSessions.count)
-            }
-        }
-    }
-    
-    func hasScheduleSettings() async -> Bool {
-        await withCheckedContinuation { continuation in
-            queue.async {
-                continuation.resume(returning: self.scheduleSettings != nil)
-            }
+
+        let cutoffDate = Date().addingTimeInterval(-24 * 60 * 60 * 7)
+        let expiredSessionIds = intentionSessions.values
+            .filter { $0.startTime < cutoffDate }
+            .map(\.id)
+
+        for id in expiredSessionIds {
+            intentionSessions.removeValue(forKey: id)
         }
     }
 
+    // MARK: - Test Helper Methods
+
+    func reset() async {
+        keyValueStore.removeAll()
+        intentionSessions.removeAll()
+        scheduleSettings = nil
+        weeklyScheduleStore = nil
+        shouldThrowError = false
+        shouldThrowSaveError = false
+        shouldThrowLoadError = false
+        shouldThrowDeleteError = false
+        errorToThrow = nil
+        methodCalls.removeAll()
+    }
+
+    func getStoredSessionCount() async -> Int {
+        intentionSessions.count
+    }
+
+    func hasScheduleSettings() async -> Bool {
+        scheduleSettings != nil
+    }
+
     func getSession(id: UUID) async -> IntentionSession? {
-        await withCheckedContinuation { continuation in
-            queue.async {
-                continuation.resume(returning: self.intentionSessions[id])
-            }
-        }
+        intentionSessions[id]
     }
 }
