@@ -198,6 +198,16 @@ private struct QuickActionsSection: View {
                 }
             }
         }
+        .alert("Please re-pick your apps", isPresented: Binding(
+            get: { quickActionsViewModel.showStaleTokenMigrationNotice },
+            set: { quickActionsViewModel.showStaleTokenMigrationNotice = $0 }
+        )) {
+            Button("OK", role: .cancel) {
+                quickActionsViewModel.showStaleTokenMigrationNotice = false
+            }
+        } message: {
+            Text("A Screen Time update required clearing the app selections on your quick actions. Your names, icons, and durations are preserved — tap a quick action to re-pick its apps.")
+        }
     }
     
     private var gettingStartedCard: some View {

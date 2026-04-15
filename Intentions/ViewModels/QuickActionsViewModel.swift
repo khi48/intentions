@@ -29,6 +29,13 @@ final class QuickActionsViewModel: Sendable {
 
     /// Quick action pending deletion
     var quickActionToDelete: QuickAction? = nil
+
+    /// Set once, when the stale-token migration has just wiped selections on
+    /// this launch. Views observe this to show a one-time notice asking the
+    /// user to re-pick apps.
+    var showStaleTokenMigrationNotice: Bool = false
+
+    private static let staleTokenMigrationKey = "staleTokenMigration_v1"
     
     // MARK: - Dependencies
 
@@ -49,9 +56,41 @@ final class QuickActionsViewModel: Sendable {
                 let actions = try await dataService.load([QuickAction].self, forKey: "quickActions") ?? []
                 quickActions = actions.sorted { $0.sortOrder < $1.sortOrder }
 
+                await runStaleTokenMigrationIfNeeded()
+
             } catch {
                 await handleError(error)
             }
+        }
+    }
+
+    /// One-time migration: clear app/category/webDomain tokens on all stored
+    /// quick actions. Necessary because pre-migration actions may contain
+    /// tokens for apps the user has since uninstalled; rendering those tokens
+    /// crashes the FamilyActivityPicker extension on search. Users re-pick
+    /// apps once after the update.
+    private func runStaleTokenMigrationIfNeeded() async {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: Self.staleTokenMigrationKey) else { return }
+
+        guard !quickActions.isEmpty else {
+            defaults.set(true, forKey: Self.staleTokenMigrationKey)
+            return
+        }
+
+        for index in quickActions.indices {
+            quickActions[index].individualApplications = []
+            quickActions[index].individualCategories = []
+            quickActions[index].individualWebDomains = []
+            quickActions[index].lastModified = Date()
+        }
+
+        do {
+            try await dataService.save(quickActions, forKey: "quickActions")
+            defaults.set(true, forKey: Self.staleTokenMigrationKey)
+            showStaleTokenMigrationNotice = true
+        } catch {
+            await handleError(error)
         }
     }
     

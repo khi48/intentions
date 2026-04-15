@@ -24,9 +24,10 @@ struct QuickActionEditorSheet: View {
     @State private var duration: TimeInterval = 300 // 5 minutes default
     @State private var selectedIcon: String = "bolt.fill"
     @State private var selectedApps: Set<ApplicationToken> = []
+    @State private var selectedCategories: Set<ActivityCategoryToken> = []
     @State private var selectedWebDomains: Set<WebDomainToken> = []
     @State private var allowAllWebsites: Bool = false
-    @State private var familyActivitySelection = FamilyActivitySelection(includeEntireCategory: true)
+    @State private var familyActivitySelection = FamilyActivitySelection()
     @State private var showingFamilyActivityPicker = false
 
     // UI state
@@ -65,6 +66,16 @@ struct QuickActionEditorSheet: View {
 
                         // Apps row
                         appsRow
+
+                        // Selected apps grid (× to remove individually)
+                        if !selectedApps.isEmpty {
+                            FullAppIconsGrid(
+                                applicationTokens: Array(selectedApps),
+                                onRemove: removeApp
+                            )
+                            .padding(.top, 12)
+                            .padding(.bottom, 4)
+                        }
 
                         // App limit warning
                         if selectedApps.count > 50 {
@@ -361,11 +372,15 @@ struct QuickActionEditorSheet: View {
 
     private func updateSelectedItems(from selection: FamilyActivitySelection) {
         selectedApps = selection.applicationTokens
+        selectedCategories = selection.categoryTokens
         selectedWebDomains = selection.webDomainTokens
     }
 
     private func removeApp(_ token: ApplicationToken) {
         selectedApps.remove(token)
+        var updated = familyActivitySelection
+        updated.applicationTokens.remove(token)
+        familyActivitySelection = updated
     }
 
     @MainActor
@@ -403,6 +418,7 @@ struct QuickActionEditorSheet: View {
                 color: .blue,
                 duration: duration,
                 individualApplications: selectedApps,
+                individualCategories: selectedCategories,
                 individualWebDomains: selectedWebDomains,
                 allowAllWebsites: allowAllWebsites
             )
@@ -416,6 +432,7 @@ struct QuickActionEditorSheet: View {
                 color: .blue,
                 duration: duration,
                 individualApplications: selectedApps,
+                individualCategories: selectedCategories,
                 individualWebDomains: selectedWebDomains,
                 allowAllWebsites: allowAllWebsites
             )
@@ -442,10 +459,15 @@ struct QuickActionEditorSheet: View {
         }
 
         selectedApps = quickAction.individualApplications
+        selectedCategories = quickAction.individualCategories
         selectedWebDomains = quickAction.individualWebDomains
 
+        // Seed picker so existing selection shows with checkmarks.
+        // Actions containing stale (uninstalled app) tokens will still crash
+        // the picker extension — those are unrecoverable and must be deleted.
         var selection = FamilyActivitySelection(includeEntireCategory: true)
         selection.applicationTokens = quickAction.individualApplications
+        selection.categoryTokens = quickAction.individualCategories
         selection.webDomainTokens = quickAction.individualWebDomains
         familyActivitySelection = selection
     }

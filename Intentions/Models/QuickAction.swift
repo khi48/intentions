@@ -37,6 +37,10 @@ struct QuickAction: Identifiable, Codable, Sendable {
     /// Individual applications selected for this quick action
     var individualApplications: Set<ApplicationToken>
 
+    /// Category tokens the user selected. Persisted so re-opening the picker
+    /// shows the original category selection rather than only its flattened apps.
+    var individualCategories: Set<ActivityCategoryToken>
+
     /// Web domains associated with selected apps/categories
     var individualWebDomains: Set<WebDomainToken>
 
@@ -113,6 +117,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
         color: Color = .blue,
         duration: TimeInterval = AppConstants.Session.defaultDuration,
         individualApplications: Set<ApplicationToken> = [],
+        individualCategories: Set<ActivityCategoryToken> = [],
         individualWebDomains: Set<WebDomainToken> = [],
         allowAllWebsites: Bool = false
     ) {
@@ -123,6 +128,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
         self._colorHex = color.toHex() ?? "#007AFF"
         self.duration = duration
         self.individualApplications = individualApplications
+        self.individualCategories = individualCategories
         self.individualWebDomains = individualWebDomains
         self.allowAllWebsites = allowAllWebsites
         self.isEnabled = true
@@ -138,11 +144,11 @@ struct QuickAction: Identifiable, Codable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case id, name, subtitle, iconName, _colorHex, duration
         case individualApplications
+        case individualCategories
         case individualWebDomains
         case allowAllWebsites
         case isEnabled, createdAt, lastModified, usageCount, lastUsed, sortOrder
         // Legacy keys for backward compatibility (not used)
-        case individualCategories
         case appGroupIds
     }
     
@@ -158,6 +164,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
 
         // Handle backward compatibility for individual tokens
         individualApplications = try container.decodeIfPresent(Set<ApplicationToken>.self, forKey: .individualApplications) ?? []
+        individualCategories = try container.decodeIfPresent(Set<ActivityCategoryToken>.self, forKey: .individualCategories) ?? []
         individualWebDomains = try container.decodeIfPresent(Set<WebDomainToken>.self, forKey: .individualWebDomains) ?? []
 
         // Handle backward compatibility for allowAllWebsites
@@ -184,6 +191,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
         try container.encode(_colorHex, forKey: ._colorHex)
         try container.encode(duration, forKey: .duration)
         try container.encode(individualApplications, forKey: .individualApplications)
+        try container.encode(individualCategories, forKey: .individualCategories)
         try container.encode(individualWebDomains, forKey: .individualWebDomains)
         try container.encode(allowAllWebsites, forKey: .allowAllWebsites)
 
@@ -207,6 +215,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
         color: Color? = nil,
         duration: TimeInterval? = nil,
         individualApplications: Set<ApplicationToken>? = nil,
+        individualCategories: Set<ActivityCategoryToken>? = nil,
         individualWebDomains: Set<WebDomainToken>? = nil,
         allowAllWebsites: Bool? = nil
     ) {
@@ -216,6 +225,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
         if let color = color { self.setColor(color) }
         if let duration = duration { self.duration = duration }
         if let individualApplications = individualApplications { self.individualApplications = individualApplications }
+        if let individualCategories = individualCategories { self.individualCategories = individualCategories }
         if let individualWebDomains = individualWebDomains { self.individualWebDomains = individualWebDomains }
         if let allowAllWebsites = allowAllWebsites { self.allowAllWebsites = allowAllWebsites }
 
