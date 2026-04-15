@@ -119,7 +119,7 @@ struct SetupFlowView: View {
                     ScrollView {
                         VStack(spacing: 24) {
                             progressSection(step: 4)
-                            widgetSetupContent
+                            WidgetSetupStepView(onComplete: onComplete)
                             Spacer(minLength: 50)
                         }
                         .padding()
@@ -252,80 +252,6 @@ struct SetupFlowView: View {
             Spacer(minLength: 40)
         }
     }
-
-    private var widgetSetupContent: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(AppConstants.Colors.surface)
-                        .frame(width: 80, height: 80)
-
-                    Image(systemName: "widget.large.badge.plus")
-                        .font(.system(size: 40))
-                        .foregroundColor(AppConstants.Colors.text)
-                }
-
-                Text("Add Intent Widget")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-
-                Text("Add the Intent widget to your lock screen or home screen to quickly see if your apps are currently blocked or accessible.")
-                    .font(.body)
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal)
-            }
-
-            VStack(spacing: 16) {
-                Text("Widget shows:")
-                    .font(.headline)
-
-                HStack(spacing: 20) {
-                    VStack(spacing: 4) {
-                        Image(systemName: "shield.fill")
-                            .foregroundColor(AppConstants.Colors.textSecondary)
-                            .font(.title2)
-                        Text("Blocked")
-                            .font(.caption)
-                    }
-
-                    VStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle")
-                            .foregroundColor(AppConstants.Colors.text)
-                            .font(.title2)
-                        Text("Open")
-                            .font(.caption)
-                    }
-
-                    VStack(spacing: 4) {
-                        Image(systemName: "questionmark.circle")
-                            .foregroundColor(AppConstants.Colors.textSecondary)
-                            .font(.title2)
-                        Text("Unknown")
-                            .font(.caption)
-                    }
-                }
-            }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
-
-            SettingsPrimaryButton("Start Using Intent", systemImage: "arrow.right") {
-                onComplete()
-            }
-            .padding(.horizontal)
-            .padding(.top, 8)
-
-            Text("You can add the widget later from your device settings")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-
-            Spacer(minLength: 40)
-        }
-    }
-
 
     // MARK: - Actions
 
