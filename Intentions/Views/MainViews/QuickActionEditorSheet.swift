@@ -67,16 +67,6 @@ struct QuickActionEditorSheet: View {
                         // Apps row
                         appsRow
 
-                        // Selected apps grid (× to remove individually)
-                        if !selectedApps.isEmpty {
-                            FullAppIconsGrid(
-                                applicationTokens: Array(selectedApps),
-                                onRemove: removeApp
-                            )
-                            .padding(.top, 12)
-                            .padding(.bottom, 4)
-                        }
-
                         // App limit warning
                         if selectedApps.count > 50 {
                             Text("Too many apps selected. Apple limits selection to 50 apps per session.")
@@ -376,13 +366,6 @@ struct QuickActionEditorSheet: View {
         selectedWebDomains = selection.webDomainTokens
     }
 
-    private func removeApp(_ token: ApplicationToken) {
-        selectedApps.remove(token)
-        var updated = familyActivitySelection
-        updated.applicationTokens.remove(token)
-        familyActivitySelection = updated
-    }
-
     @MainActor
     private func saveQuickAction() async {
         // Debounce rapid taps
@@ -494,106 +477,6 @@ struct QuickActionEditorSheet: View {
 
     private func clearError() {
         errorMessage = nil
-    }
-}
-
-// MARK: - Stable App Icons Grid (copied from AppGroupEditorSheet)
-
-private struct FullAppIconsGrid: View {
-    let applicationTokens: [ApplicationToken]
-    let onRemove: ((ApplicationToken) -> Void)?
-
-    init(applicationTokens: [ApplicationToken], onRemove: ((ApplicationToken) -> Void)? = nil) {
-        self.applicationTokens = applicationTokens
-        self.onRemove = onRemove
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            StableIconGrid(tokens: applicationTokens, onRemove: onRemove)
-        }
-    }
-}
-
-private struct StableIconGrid: View {
-    let tokens: [ApplicationToken]
-    let onRemove: ((ApplicationToken) -> Void)?
-
-    var body: some View {
-        let columns = Array(repeating: GridItem(.fixed(100), spacing: 16), count: 3)
-
-        LazyVGrid(columns: columns, spacing: 16) {
-            ForEach(tokens.indices, id: \.self) { index in
-                StableAppIconCell(
-                    token: tokens[index],
-                    tokenID: tokens[index].hashValue,
-                    onRemove: onRemove
-                )
-            }
-        }
-    }
-}
-
-private struct StableAppIconCell: View {
-    let token: ApplicationToken
-    let tokenID: Int
-    let onRemove: ((ApplicationToken) -> Void)?
-
-    var body: some View {
-        VStack(spacing: 0) {
-            StableFamilyControlsLabel(token: token, id: tokenID, size: 55)
-                .overlay(alignment: .topTrailing) {
-                    if let onRemove = onRemove {
-                        Button(action: {
-                            onRemove(token)
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(AppConstants.Colors.textSecondary)
-                                .background(Color.white, in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-            StableFamilyControlsName(token: token, id: tokenID)
-                .font(.caption2)
-                .foregroundColor(.primary)
-                .lineLimit(1)
-                .multilineTextAlignment(.center)
-        }
-    }
-}
-
-private struct StableFamilyControlsLabel: View {
-    let token: ApplicationToken
-    let id: Int
-    let size: CGFloat
-
-    init(token: ApplicationToken, id: Int, size: CGFloat = 50) {
-        self.token = token
-        self.id = id
-        self.size = size
-    }
-
-    var body: some View {
-        Label(token)
-            .labelStyle(.iconOnly)
-            .scaleEffect(size / 25)
-            .grayscale(1.0)
-            .frame(width: size, height: size)
-            .id("app_icon_\(id)")
-    }
-}
-
-private struct StableFamilyControlsName: View {
-    let token: ApplicationToken
-    let id: Int
-
-    var body: some View {
-        Label(token)
-            .labelStyle(.titleOnly)
-            .id("app_name_\(id)")
     }
 }
 
