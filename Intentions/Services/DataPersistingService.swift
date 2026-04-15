@@ -128,6 +128,7 @@ protocol DataPersisting: Sendable {
             encoder.dateEncodingStrategy = .iso8601
             let data = try encoder.encode(schedule)
             userDefaults.set(data, forKey: Self.weeklyScheduleKey)
+            Self.mirrorIntentionQuoteToSharedDefaults(schedule.intentionQuote)
         } catch {
             throw AppError.persistenceError("Failed to save WeeklySchedule: \(error.localizedDescription)")
         }
@@ -140,7 +141,9 @@ protocol DataPersisting: Sendable {
         // 1. Try the new blob first
         if let data = userDefaults.data(forKey: Self.weeklyScheduleKey) {
             do {
-                return try decoder.decode(WeeklySchedule.self, from: data)
+                let schedule = try decoder.decode(WeeklySchedule.self, from: data)
+                Self.mirrorIntentionQuoteToSharedDefaults(schedule.intentionQuote)
+                return schedule
             } catch {
                 throw AppError.persistenceError("Failed to decode WeeklySchedule: \(error.localizedDescription)")
             }
@@ -154,6 +157,19 @@ protocol DataPersisting: Sendable {
         let migrated = WeeklySchedule.migrate(from: legacy)
         try await saveWeeklySchedule(migrated)
         return migrated
+    }
+
+    /// Mirrors the user's intention quote into App Group UserDefaults so the
+    /// ShieldConfiguration extension can read it without decoding the full
+    /// WeeklySchedule (which lives only in the main app target).
+    private static func mirrorIntentionQuoteToSharedDefaults(_ quote: String?) {
+        guard let shared = UserDefaults(suiteName: SharedConstants.appGroupId) else { return }
+        let trimmed = quote?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmed, !trimmed.isEmpty {
+            shared.set(trimmed, forKey: SharedConstants.ShieldKeys.intentionQuote)
+        } else {
+            shared.removeObject(forKey: SharedConstants.ShieldKeys.intentionQuote)
+        }
     }
 
     // MARK: - Schedule Settings Methods
