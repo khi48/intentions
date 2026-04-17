@@ -40,6 +40,7 @@ struct QuickActionsView: View {
     @Bindable private var viewModel: QuickActionsViewModel
     @State private var editorMode: QuickActionEditorMode?
     @State private var searchText = ""
+    @State private var pendingQuickAction: QuickAction?
 
     init(dataService: DataPersisting, contentViewModel: ContentViewModel) {
         self.dataService = dataService
@@ -96,6 +97,26 @@ struct QuickActionsView: View {
             }
             .alert("Delete Quick Action", isPresented: $viewModel.showingDeleteAlert) {
                 deleteConfirmationAlert
+            }
+            .alert("Replace current session?", isPresented: Binding(
+                get: { pendingQuickAction != nil },
+                set: { if !$0 { pendingQuickAction = nil } }
+            )) {
+                Button("Cancel", role: .cancel) {
+                    pendingQuickAction = nil
+                }
+                Button("Replace") {
+                    if let quickAction = pendingQuickAction {
+                        pendingQuickAction = nil
+                        Task {
+                            await executeQuickAction(quickAction)
+                        }
+                    }
+                }
+            } message: {
+                if let session = contentViewModel.activeSession {
+                    Text("You have \(session.remainingTime.formattedDuration) left on your current session. Starting a new one will end it.")
+                }
             }
         }
         .task {
@@ -188,14 +209,17 @@ struct QuickActionsView: View {
     private var actionsList: some View {
         List {
                 ForEach(filteredQuickActions) { quickAction in
+                    let isRunning = quickAction.id == activeQuickActionID
                     QuickActionRowView(
                         quickAction: quickAction,
+                        isRunning: isRunning,
                         onTap: {
                             Task {
                                 await startQuickAction(quickAction)
                             }
                         },
                         onEdit: {
+                            guard !isRunning else { return }
                             editorMode = .edit(quickAction)
                         },
                         onDelete: {
@@ -250,19 +274,19 @@ struct QuickActionsView: View {
     }
     
     private func startQuickAction(_ quickAction: QuickAction) async {
+        if contentViewModel.activeSession?.isActive == true {
+            pendingQuickAction = quickAction
+            return
+        }
+        await executeQuickAction(quickAction)
+    }
+
+    private func executeQuickAction(_ quickAction: QuickAction) async {
         do {
-            // Record usage
             await viewModel.recordQuickActionUsage(quickAction)
-
-            // Create session from quick action
             let session = try quickAction.createSession()
-
-            // Start the session through ContentViewModel
             await contentViewModel.startSession(session)
-            
-            // Navigate to Home tab to show active session
             contentViewModel.navigateToTab(.home)
-            
         } catch {
             await viewModel.handleError(error)
         }
@@ -276,7 +300,15 @@ struct QuickActionsView: View {
     }
     
     // MARK: - Computed Properties
-    
+
+    /// ID of the quick action that spawned the current active session, if any.
+    private var activeQuickActionID: UUID? {
+        guard let session = contentViewModel.activeSession,
+              session.isActive,
+              case .quickAction(let qa) = session.source else { return nil }
+        return qa.id
+    }
+
     private var filteredQuickActions: [QuickAction] {
         if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return viewModel.quickActions.sorted { $0.usageCount > $1.usageCount }
@@ -294,10 +326,11 @@ struct QuickActionsView: View {
 
 private struct QuickActionRowView: View {
     let quickAction: QuickAction
+    let isRunning: Bool
     let onTap: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Header with name and info
@@ -311,15 +344,19 @@ private struct QuickActionRowView: View {
                         .frame(minWidth: 32, minHeight: 32)
                         .background(AppConstants.Colors.surface)
                         .clipShape(Circle())
-                    
+
                     VStack(alignment: .leading, spacing: 2) {
                         Text(quickAction.name)
                             .font(.headline)
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
                             .lineLimit(1)
-                        
-                        if let subtitle = quickAction.subtitle {
+
+                        if isRunning {
+                            Text("Currently running")
+                                .font(.caption)
+                                .foregroundColor(AppConstants.Colors.textSecondary)
+                        } else if let subtitle = quickAction.subtitle {
                             Text(subtitle)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -327,10 +364,10 @@ private struct QuickActionRowView: View {
                         }
                     }
                 }
-                
+
                 Spacer()
             }
-            
+
             // Duration and content info
             HStack(spacing: 20) {
                 HStack(spacing: 6) {
@@ -361,39 +398,42 @@ private struct QuickActionRowView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 Spacer()
             }
         }
         .padding()
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .opacity(isRunning ? 0.5 : 1.0)
         .contentShape(Rectangle())
         .onTapGesture {
-            onTap()
+            if !isRunning { onTap() }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button("Delete", role: .destructive) {
-                onDelete()
-            }
-            .tint(Color(.systemGray3))
-            .foregroundColor(AppConstants.Colors.text)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray3))
-                    .padding(4)
-            )
+            if !isRunning {
+                Button("Delete", role: .destructive) {
+                    onDelete()
+                }
+                .tint(Color(.systemGray3))
+                .foregroundColor(AppConstants.Colors.text)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray3))
+                        .padding(4)
+                )
 
-            Button("Edit") {
-                onEdit()
+                Button("Edit") {
+                    onEdit()
+                }
+                .tint(Color(.systemGray5))
+                .foregroundColor(AppConstants.Colors.text)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray5))
+                        .padding(4)
+                )
             }
-            .tint(Color(.systemGray5))
-            .foregroundColor(AppConstants.Colors.text)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray5))
-                    .padding(4)
-            )
         }
     }
 }

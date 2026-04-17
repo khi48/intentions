@@ -20,6 +20,11 @@ struct HomeView: View {
                         ActiveSessionCard(session: session, viewModel: viewModel)
                     }
 
+                    // Auth-revoked banner
+                    if !viewModel.isScreenTimeServiceReady && !viewModel.isAppReady {
+                        ScreenTimeAccessBanner(viewModel: viewModel)
+                    }
+
                     // Quick actions (now the main way to start sessions)
                     QuickActionsSection(viewModel: viewModel)
 
@@ -81,6 +86,7 @@ private struct QuickActionsSection: View {
     @State private var draggingQuickAction: QuickAction?
     @State private var editorMode: QuickActionEditorMode?
     @State private var isPulsing = false
+    @State private var pendingQuickAction: QuickAction?
 
     init(viewModel: ContentViewModel) {
         self.viewModel = viewModel
@@ -123,6 +129,7 @@ private struct QuickActionsSection: View {
                                 icon: quickAction.iconName,
                                 color: quickAction.color,
                                 isReady: viewModel.isScreenTimeServiceReady,
+                                isRunning: isQuickActionRunning(quickAction),
                                 onTap: {
                                     Task {
                                         await startQuickAction(quickAction)
@@ -208,6 +215,26 @@ private struct QuickActionsSection: View {
         } message: {
             Text("A Screen Time update required clearing the app selections on your quick actions. Your names, icons, and durations are preserved — tap a quick action to re-pick its apps.")
         }
+        .alert("Replace current session?", isPresented: Binding(
+            get: { pendingQuickAction != nil },
+            set: { if !$0 { pendingQuickAction = nil } }
+        )) {
+            Button("Cancel", role: .cancel) {
+                pendingQuickAction = nil
+            }
+            Button("Replace") {
+                if let quickAction = pendingQuickAction {
+                    pendingQuickAction = nil
+                    Task {
+                        await executeQuickAction(quickAction)
+                    }
+                }
+            }
+        } message: {
+            if let session = viewModel.activeSession {
+                Text("You have \(session.remainingTime.formattedDuration) left on your current session. Starting a new one will end it.")
+            }
+        }
     }
     
     private var gettingStartedCard: some View {
@@ -286,23 +313,31 @@ private struct QuickActionsSection: View {
         }
     }
     
+    private func isQuickActionRunning(_ quickAction: QuickAction) -> Bool {
+        guard let session = viewModel.activeSession, session.isActive,
+              case .quickAction(let qa) = session.source else { return false }
+        return qa.id == quickAction.id
+    }
+
     private func loadQuickActions() async {
         await quickActionsViewModel.loadData()
     }
     
     private func startQuickAction(_ quickAction: QuickAction) async {
+        // Confirm before replacing a running session
+        if viewModel.activeSession?.isActive == true {
+            pendingQuickAction = quickAction
+            return
+        }
+        await executeQuickAction(quickAction)
+    }
+
+    private func executeQuickAction(_ quickAction: QuickAction) async {
         do {
-            // Record usage
             await quickActionsViewModel.recordQuickActionUsage(quickAction)
-
-            // Create session from quick action
             let session = try quickAction.createSession()
-
-            // Start the session through ContentViewModel
             await viewModel.startSession(session)
-
         } catch {
-            // Handle error through viewModel
             await viewModel.handleError(error)
         }
     }
@@ -353,6 +388,64 @@ private struct QuickActionDropOutsideDelegate: DropDelegate {
     }
 }
 
+/// Banner shown when Screen Time authorization is missing or revoked
+private struct ScreenTimeAccessBanner: View {
+    let viewModel: ContentViewModel
+    @State private var isRequesting = false
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "lock.shield")
+                .font(.system(size: 36))
+                .foregroundColor(AppConstants.Colors.textSecondary)
+
+            Text("Screen Time Access Required")
+                .font(.headline)
+                .foregroundColor(AppConstants.Colors.text)
+
+            Text("Intent needs Screen Time access to manage app blocking. Enable it to start using quick actions.")
+                .font(.subheadline)
+                .foregroundColor(AppConstants.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+
+            Button(action: {
+                isRequesting = true
+                Task {
+                    await viewModel.requestReauthorization()
+                    isRequesting = false
+                }
+            }) {
+                HStack(spacing: 8) {
+                    if isRequesting {
+                        ProgressView()
+                            .tint(AppConstants.Colors.background)
+                    }
+                    Text("Enable Access")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(AppConstants.Colors.text)
+                .foregroundColor(AppConstants.Colors.background)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .disabled(isRequesting)
+
+            Text("Or go to **Settings → Screen Time → Intent** to enable manually.")
+                .font(.caption)
+                .foregroundColor(AppConstants.Colors.textSecondary.opacity(0.7))
+                .multilineTextAlignment(.center)
+        }
+        .padding(20)
+        .background(AppConstants.Colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(AppConstants.Colors.textSecondary.opacity(0.15), lineWidth: 1)
+        )
+    }
+}
+
 /// Individual quick action card
 private struct QuickActionCard: View {
     let title: String
@@ -360,6 +453,7 @@ private struct QuickActionCard: View {
     let icon: String
     let color: Color
     let isReady: Bool
+    let isRunning: Bool
     let onTap: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
@@ -396,11 +490,15 @@ private struct QuickActionCard: View {
         .accessibilityLabel("\(title), \(subtitle)")
         .accessibilityHint(isReady ? "Double tap to start session" : "Screen Time not ready")
         .contextMenu {
-            Button(action: onEdit) {
-                Label("Edit", systemImage: "pencil")
-            }
-            Button(role: .destructive, action: onDelete) {
-                Label("Delete", systemImage: "trash")
+            if isRunning {
+                Label("Session in progress", systemImage: "lock.fill")
+            } else {
+                Button(action: onEdit) {
+                    Label("Edit", systemImage: "pencil")
+                }
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
             }
         }
     }

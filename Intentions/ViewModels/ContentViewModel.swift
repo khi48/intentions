@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 @preconcurrency import FamilyControls
+@preconcurrency import ManagedSettings
 import WidgetKit
 import OSLog
 
@@ -146,7 +147,16 @@ final class ContentViewModel: Sendable {
         setupNotificationObservers()
 
         await withLoading {
-            authorizationStatus = await screenTimeService.authorizationStatus()
+            // On cold launch the system may transiently report .notDetermined before
+            // settling to the real status. Retry once so we don't mis-classify a
+            // revoked-auth launch as "transient".
+            var status = await screenTimeService.authorizationStatus()
+            if status == .notDetermined {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                let retried = await screenTimeService.authorizationStatus()
+                if retried != .notDetermined { status = retried }
+            }
+            authorizationStatus = status
 
             // Request notification permissions in background
             Task {
@@ -162,6 +172,7 @@ final class ContentViewModel: Sendable {
 
             // Pre-load quick actions so the home view doesn't flash the empty state
             await sharedQuickActionsViewModel.loadData()
+            await feedKnownAppTokens()
 
             await loadScheduleSettings()
             await loadActiveSession()
@@ -253,6 +264,12 @@ final class ContentViewModel: Sendable {
         // Also save to UserDefaults for DeviceActivityMonitor extension
         saveWeeklyScheduleToUserDefaults(schedule)
 
+        // If blocking was disabled and there's an active session, cancel it —
+        // session exists to manage blocking, so no blocking means no session.
+        if !schedule.isEnabled, let session = activeSession, session.isActive {
+            await cancelActiveSessionForDisable()
+        }
+
         // Apply blocking based on new schedule
         if authorizationStatus == .approved {
             await applyDefaultBlocking()
@@ -289,6 +306,22 @@ final class ContentViewModel: Sendable {
     var isAppReady: Bool {
         return authorizationStatus == .approved
     }
+
+    /// Re-request Screen Time authorization (e.g. after revocation) and re-initialise if granted.
+    func requestReauthorization() async {
+        let success = await screenTimeService.requestAuthorization()
+        if success {
+            authorizationStatus = .approved
+            await setupCoordinator.validateSetupRequirements(
+                cachedAuthStatus: .approved,
+                forceAuthUpdate: true
+            )
+            screenTimeState = .uninitialized
+            await initializeScreenTimeServiceAfterSetup()
+        } else {
+            authorizationStatus = await screenTimeService.authorizationStatus()
+        }
+    }
     
     // MARK: - Navigation Actions
     
@@ -311,14 +344,16 @@ final class ContentViewModel: Sendable {
     func startSession(_ session: IntentionSession) async {
         await withLoading {
             do {
-                // If there's an existing active session, cancel its timers and complete it
+                // If there's an existing active session, cancel its timers and complete it.
+                // Don't call blockAllApps() here — allowApps() already clears all
+                // shields before applying. Extra mutations can leave stale exceptions.
                 if let existingSession = activeSession, existingSession.isActive {
                     await screenTimeService.cancelSessionTimers()
+                    await NotificationService.shared.cancelSessionNotifications()
                     existingSession.complete()
                     try await dataService.saveIntentionSession(existingSession)
                     activeSession = nil
                     currentlyAppliedSessionId = nil
-                    try await screenTimeService.blockAllApps()
                 }
 
                 try await dataService.saveIntentionSession(session)
@@ -408,6 +443,39 @@ final class ContentViewModel: Sendable {
         }
     }
     
+    /// Cancel the active session because the user disabled blocking entirely
+    private func cancelActiveSessionForDisable() async {
+        guard let session = activeSession, session.isActive else { return }
+
+        do {
+            await screenTimeService.cancelSessionTimers()
+            session.cancel()
+            try await dataService.saveIntentionSession(session)
+            activeSession = nil
+            currentlyAppliedSessionId = nil
+
+            if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
+                sharedDefaults.removeObject(forKey: AppConstants.Keys.currentSessionId)
+                sharedDefaults.synchronize()
+            }
+
+            await NotificationService.shared.cancelSessionNotifications()
+            clearWidgetSessionData()
+        } catch {
+            logger.error("Failed to cancel session on blocking disable: \(error.localizedDescription)")
+        }
+    }
+
+    /// Aggregate all app tokens from QuickActions and feed them to ScreenTimeService
+    /// so it can use `shield.applications` as a second blocking layer.
+    private func feedKnownAppTokens() async {
+        let allTokens = sharedQuickActionsViewModel.quickActions
+            .reduce(into: Set<ApplicationToken>()) { $0.formUnion($1.individualApplications) }
+        if !allTokens.isEmpty {
+            await screenTimeService.updateKnownAppTokens(allTokens)
+        }
+    }
+
     /// Clean up stale sessions and ManagedSettingsStore before applying blocking
     private func cleanupOldSessionsBeforeBlocking() async {
         do {
@@ -465,9 +533,42 @@ final class ContentViewModel: Sendable {
         }
     }
     
-    /// Called when the app becomes active. Re-applies the blocking state so the physical
-    /// shield matches the schedule even if iOS has been sitting on a stale state while backgrounded.
+    /// Called when the app becomes active. Re-checks authorization (the user may have
+    /// revoked Family Controls in iOS Settings while backgrounded) and re-applies blocking.
     func reconcileBlockingOnForeground() async {
+        let freshStatus = await screenTimeService.authorizationStatus()
+        let previousStatus = authorizationStatus
+        authorizationStatus = freshStatus
+
+        if previousStatus == .approved && freshStatus != .approved {
+            // Authorization was confirmed revoked at runtime — not a cold-launch transient.
+            // Cancel active session (can't manage blocking without auth) and reset service state.
+            if let session = activeSession, session.isActive {
+                await cancelActiveSessionForDisable()
+            }
+            screenTimeState = .uninitialized
+
+            // Re-request authorization immediately — shows the system dialog
+            let reauthorized = await screenTimeService.requestAuthorization()
+            if reauthorized {
+                authorizationStatus = .approved
+                await setupCoordinator.validateSetupRequirements(
+                    cachedAuthStatus: .approved,
+                    forceAuthUpdate: true
+                )
+                await initializeScreenTimeServiceAfterSetup()
+            } else {
+                // User denied re-auth — update state but stay on home screen.
+                // The ScreenTimeAccessBanner handles the UI from here.
+                authorizationStatus = await screenTimeService.authorizationStatus()
+                await setupCoordinator.validateSetupRequirements(
+                    cachedAuthStatus: authorizationStatus,
+                    forceAuthUpdate: true
+                )
+            }
+            return
+        }
+
         await applyDefaultBlocking()
     }
 
@@ -507,15 +608,19 @@ final class ContentViewModel: Sendable {
         // Validate setup state using the coordinator (pass cached auth status to avoid redundant check)
         await setupCoordinator.validateSetupRequirements(cachedAuthStatus: authorizationStatus)
 
-        // Only show setup flow when setup is genuinely incomplete (not just version-outdated),
-        // and there's no active session
         let setupState = setupCoordinator.setupState
-        let needsSetup = setupState?.isSetupSufficient != true && activeSession == nil
+
+        // Only show setup flow for genuine first-time setup. If the user already
+        // completed the intention quote step, setup was finished at least once —
+        // a later auth revocation is handled by the home-screen banner, not by
+        // re-running the entire setup flow.
+        let neverCompletedSetup = setupState?.intentionQuoteCompleted != true
+        let needsSetup = setupState?.isSetupSufficient != true && neverCompletedSetup && activeSession == nil
 
         if needsSetup {
             showingSetupFlow = true
         } else {
-            // Setup is complete - initialize ScreenTimeService if needed
+            // Setup was completed before — initialize ScreenTimeService if possible
             await initializeScreenTimeServiceAfterSetup()
         }
     }
