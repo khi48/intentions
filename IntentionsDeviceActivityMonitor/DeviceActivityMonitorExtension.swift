@@ -11,6 +11,8 @@ import DeviceActivity
 import ManagedSettings
 import FamilyControls
 import WidgetKit
+import BackgroundTasks
+import UserNotifications
 import OSLog
 
 /// Monitor extension that handles session expiration events
@@ -210,9 +212,19 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     // MARK: - Helper Methods
 
-    /// Restore default blocking - remove session exceptions to block all apps again
+    /// Restore default blocking - either re-apply full blocking (if we're inside
+    /// protected hours) OR clear shields (if the user is currently in a free
+    /// window / has disabled the schedule entirely).
+    ///
     /// - Parameter activitySessionId: The session ID extracted from the activity name
     /// - Note: This method assumes ALL validations have already been performed by the caller
+    ///
+    /// Why the branch matters: when blocking is disabled and a session ends, iOS
+    /// will NOT re-render the springboard shield layer if only this extension
+    /// process writes shield removal to the shared store (Apple DTS 807934). We
+    /// therefore also (a) raise a shared marker, (b) submit a BGAppRefresh task
+    /// so the main app can clear shields from its own process, and (c) schedule
+    /// a user-tap fallback notification.
     private func restoreDefaultBlocking(activitySessionId: String) {
         let timestamp = Date()
         logger.notice("🔒 RESTORE BLOCKING: Starting at \(timestamp, privacy: .public)")
@@ -259,6 +271,10 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             store.shield.webDomainCategories = nil
             store.webContent.blockedByFilter = .all()
         } else {
+            // Session ended OUTSIDE protected hours — clear shields and hand off
+            // to the main app. Extension-only writes to ManagedSettingsStore do
+            // NOT cause the springboard shield layer to re-render (Apple DTS 807934);
+            // only the main app process writing does.
             logger.notice("🔒 RESTORE BLOCKING: Clearing all shields (schedule disabled or free time)")
             store.shield.applications = nil
             store.shield.applicationCategories = nil
@@ -266,6 +282,18 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             store.shield.webDomainCategories = nil
             store.webContent.blockedByFilter = nil
             store.clearAllSettings()
+
+            // Write the shared marker so the app can honor it on foreground reconcile too.
+            sharedDefaults.set(true, forKey: "intentions.shieldClear.pending")
+            sharedDefaults.set(timestamp, forKey: "intentions.shieldClear.requestedAt")
+
+            // Wake the main app via BGAppRefresh so it can clear the store from its own
+            // process — the only write that actually re-renders the springboard.
+            submitShieldClearBackgroundTask()
+
+            // Schedule a user-tap fallback notification. If the BGTask fires
+            // within its grace period, the app cancels this pending request.
+            scheduleShieldClearFallbackNotification()
         }
 
         // Set widget blocking status based on schedule
@@ -273,6 +301,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         sharedDefaults.set(timestamp, forKey: "intentions.widget.lastUpdate")
         sharedDefaults.synchronize()
 
+        WidgetCenter.shared.reloadAllTimelines()
         logger.notice("✅ RESTORE BLOCKING: Applied post-session state, widgetBlocking=\(shouldBeBlocking)")
 
         // Notification is handled by the app-scheduled UNTimeIntervalNotificationTrigger
@@ -280,6 +309,50 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         // Scheduling a second notification here produced duplicates.
 
         logger.notice("🎉 RESTORE BLOCKING: Complete!")
+    }
+
+    /// Submit a BGAppRefreshTaskRequest so iOS can wake the main app and have
+    /// IT clear shield state from its own process. Extension-only store
+    /// writes do NOT cause the springboard shield layer to re-render.
+    private func submitShieldClearBackgroundTask() {
+        let request = BGAppRefreshTaskRequest(identifier: "oh.Intent.shieldClear")
+        // earliestBeginDate = nil runs ASAP subject to iOS discretion.
+        request.earliestBeginDate = nil
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            logger.info("🌀 BGTASK: Submitted oh.Intent.shieldClear request")
+        } catch {
+            // Extension still cleared the store; nothing more to do if submit
+            // fails. The foreground reconcile marker + fallback notification
+            // still cover this case.
+            logger.error("❌ BGTASK: submit failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Schedule a visible fallback notification. If the BGTask runs first,
+    /// the app cancels this request before it fires.
+    private func scheduleShieldClearFallbackNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Apps unlocked"
+        content.body = "Tap to finish clearing the lock screen."
+        content.sound = nil
+        content.interruptionLevel = .active
+
+        // 30s gives BGTask a chance to run first under normal device conditions.
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 30.0, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "shield_clear_fallback",
+            content: content,
+            trigger: trigger
+        )
+
+        UNUserNotificationCenter.current().add(request) { [logger] error in
+            if let error = error {
+                logger.error("Failed to schedule shield-clear fallback notification: \(error.localizedDescription, privacy: .public)")
+            } else {
+                logger.info("🛎️ FALLBACK: Scheduled shield-clear fallback notification")
+            }
+        }
     }
 
     /// Check if blocking should be active based on schedule settings.
