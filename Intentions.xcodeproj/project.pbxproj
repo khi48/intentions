@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		20260419AAAA0000BBBB0001 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2092FF052DF1921C0055A01D /* FamilyControls.framework */; };
+		20260419AAAA0000BBBB0002 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E14552E90881E00730900 /* ManagedSettings.framework */; };
+		20260419AAAA0000EEEE0001 /* ComputeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20260419AAAA0000DDDD0001 /* ComputeTests.swift */; };
 		206592142DFF50FD00B93819 /* ScreenTimeStatusInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 206592132DFF50FD00B93819 /* ScreenTimeStatusInfoTests.swift */; };
 		2071C4AF2DE43AC800DF737F /* IntentionsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4AE2DE43AC800DF737F /* IntentionsUITests.swift */; };
 		2071C4B12DE43AC800DF737F /* IntentionsUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071C4B02DE43AC800DF737F /* IntentionsUITestsLaunchTests.swift */; };
@@ -16,8 +19,6 @@
 		207E146A2E90883400730900 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E14552E90881E00730900 /* ManagedSettings.framework */; };
 		207E14722E90883400730900 /* IntentionsShieldAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 207E14692E90883300730900 /* IntentionsShieldAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		207E148B2E9F5D8500730900 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E148A2E9F5D8500730900 /* DeviceActivity.framework */; };
-		20260419AAAA0000BBBB0001 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2092FF052DF1921C0055A01D /* FamilyControls.framework */; };
-		20260419AAAA0000BBBB0002 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E14552E90881E00730900 /* ManagedSettings.framework */; };
 		207E14932E9F5D8600730900 /* IntentionsDeviceActivityMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 207E14892E9F5D8500730900 /* IntentionsDeviceActivityMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2085A8ED2DF55F7A0011EB9A /* IntentionSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8EC2DF55F7A0011EB9A /* IntentionSessionTests.swift */; };
 		2085A8F12DF55F980011EB9A /* WeekdayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8F02DF55F980011EB9A /* WeekdayTests.swift */; };
@@ -119,6 +120,7 @@
 		2085A8F02DF55F980011EB9A /* WeekdayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekdayTests.swift; sourceTree = "<group>"; };
 		2085A8F22DF55FAF0011EB9A /* AppErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppErrorTests.swift; sourceTree = "<group>"; };
 		2085A9062DF6D5D20011EB9A /* ScreenTimeServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeServiceTests.swift; sourceTree = "<group>"; };
+		20260419AAAA0000DDDD0001 /* ComputeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComputeTests.swift; sourceTree = "<group>"; };
 		2085A90B2DFACD350011EB9A /* MockScreenTimeServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockScreenTimeServiceTests.swift; sourceTree = "<group>"; };
 		2092FF052DF1921C0055A01D /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 		20A359A92F8B9B2700535175 /* QuickActionsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsViewModelTests.swift; sourceTree = "<group>"; };
@@ -321,6 +323,7 @@
 				2085A90A2DFACD310011EB9A /* Mocks */,
 				2085A9052DF6D5C10011EB9A /* Services */,
 				2085A9042DF6D5B30011EB9A /* ModelTests */,
+				20260419AAAA0000CCCC0001 /* ShieldState */,
 			);
 			path = IntentionsTests;
 			sourceTree = "<group>";
@@ -363,6 +366,14 @@
 				2085A90B2DFACD350011EB9A /* MockScreenTimeServiceTests.swift */,
 			);
 			path = Mocks;
+			sourceTree = "<group>";
+		};
+		20260419AAAA0000CCCC0001 /* ShieldState */ = {
+			isa = PBXGroup;
+			children = (
+				20260419AAAA0000DDDD0001 /* ComputeTests.swift */,
+			);
+			path = ShieldState;
 			sourceTree = "<group>";
 		};
 		2092FF042DF1921C0055A01D /* Frameworks */ = {
@@ -653,6 +664,7 @@
 		2071C49C2DE43AC800DF737F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+				20260419AAAA0000EEEE0001 /* ComputeTests.swift in Sources */,
 				2085A8F12DF55F980011EB9A /* WeekdayTests.swift in Sources */,
 				20EB268B2E258CE600FC4BE4 /* SettingsIntegrationTests.swift in Sources */,
 				20EB26882E258CDB00FC4BE4 /* SettingsViewModelTests.swift in Sources */,
