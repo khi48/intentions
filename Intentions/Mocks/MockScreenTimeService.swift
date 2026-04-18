@@ -205,4 +205,9 @@ actor MockScreenTimeService: ScreenTimeManaging {
         
         print("Mock: All resources cleaned up - service remains initialized")
     }
+
+    func clearAllShields() async {
+        mockCurrentlyAllowedApps.removeAll()
+        print("Mock: clearAllShields — all shield entries flushed")
+    }
 }

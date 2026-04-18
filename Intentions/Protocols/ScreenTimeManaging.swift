@@ -73,4 +73,10 @@ protocol ScreenTimeManaging: Sendable {
     /// Used as a second blocking layer via `shield.applications` to catch apps that
     /// escape category-based blocking.
     func updateKnownAppTokens(_ tokens: Set<ApplicationToken>) async
+
+    /// Clear all shield-related ManagedSettings entries from the main app process.
+    /// Needed to force the springboard to re-render its shield layer after the
+    /// DeviceActivity extension alone writes removal (which is ignored — Apple
+    /// DTS 807934). Does NOT cancel DeviceActivity schedules or session timers.
+    func clearAllShields() async
 }

@@ -409,6 +409,24 @@ actor ScreenTimeService: ScreenTimeManaging {
     func clearEssentialSystemApps() async {
         essentialSystemApps.removeAll()
     }
+
+    /// Clear all shield-related ManagedSettings entries from the main app
+    /// process so the springboard re-renders. Per the note in
+    /// `project_stale_shield_state.md`, always call `clearAllSettings()`
+    /// before setting individual keys to nil — the cache can otherwise stay
+    /// stale. Does not touch DeviceActivity schedules; caller owns the
+    /// session lifecycle.
+    func clearAllShields() async {
+        logger.notice("🧹 CLEAR ALL SHIELDS: flushing store from main app process")
+        managedSettingsStore.clearAllSettings()
+        managedSettingsStore.shield.applications = nil
+        managedSettingsStore.shield.applicationCategories = nil
+        managedSettingsStore.shield.webDomains = nil
+        managedSettingsStore.shield.webDomainCategories = nil
+        managedSettingsStore.webContent.blockedByFilter = nil
+        currentlyAllowedApps.removeAll()
+        updateWidgetBlockingStatus(isBlocking: false)
+    }
     
     /// Get detailed status information for debugging
     func getStatusInfo() async -> ScreenTimeStatusInfo {
