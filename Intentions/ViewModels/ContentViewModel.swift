@@ -361,6 +361,16 @@ final class ContentViewModel: Sendable {
                 }
 
                 try await dataService.saveIntentionSession(session)
+
+                // Reset the extension's cross-call dedupe flag so intervalDidEnd
+                // for THIS session isn't suppressed by a previous session's
+                // "already handled" marker.
+                if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
+                    sharedDefaults.set(false, forKey: AppConstants.Keys.sessionExpired)
+                    sharedDefaults.removeObject(forKey: AppConstants.Keys.sessionExpiredBy)
+                    sharedDefaults.synchronize()
+                }
+
                 await applySessionBlocking(for: session)
                 activeSession = session
                 updateWidgetSessionData(session)

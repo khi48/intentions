@@ -31,12 +31,16 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         logger.notice("🟢 MONITOR EXTENSION: intervalDidStart called at \(timestamp, privacy: .public)")
         logger.notice("🟢 MONITOR EXTENSION: Activity name: \(activity.rawValue, privacy: .public)")
 
-        // Log to shared UserDefaults for debugging
+        // Log to shared UserDefaults for debugging + clear stale end-of-previous-session
+        // flags so the NEW session's intervalDidEnd is not suppressed by the
+        // "already handled" dedupe guard.
         if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") {
             sharedDefaults.set(timestamp, forKey: "intentions.lastIntervalStart")
             sharedDefaults.set(activity.rawValue, forKey: "intentions.lastIntervalStartActivity")
+            sharedDefaults.set(false, forKey: "intentions.session.expired")
+            sharedDefaults.removeObject(forKey: "intentions.session.expiredBy")
             sharedDefaults.synchronize()
-            logger.info("🟢 MONITOR EXTENSION: Logged start to UserDefaults")
+            logger.info("🟢 MONITOR EXTENSION: Logged start to UserDefaults; cleared dedupe flag")
         }
     }
 
@@ -265,6 +269,10 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
         if shouldBeBlocking {
             logger.notice("🔒 RESTORE BLOCKING: In protected hours - blocking all apps")
+            // clearAllSettings() flushes the previous session's cached
+            // `.all(except: tokens)` — without it, stale exceptions persist
+            // and the previously-allowed apps keep unlocking after expiry.
+            store.clearAllSettings()
             store.shield.applications = nil
             store.shield.applicationCategories = .all()
             store.shield.webDomains = nil
