@@ -66,6 +66,12 @@ enum AppConstants {
         /// the DeviceActivity extension alongside the BGTask submission.
         /// The app cancels it on successful BGTask/foreground reconcile.
         static let shieldClearFallbackNotificationId = "shield_clear_fallback"
+
+        /// Darwin notification name the extension posts to wake the main app
+        /// process when it's backgrounded but still in memory. iOS delivers
+        /// this cross-process immediately (no scheduling), so it's much
+        /// faster and more reliable than BGAppRefresh for the common case.
+        static let shieldReconcileDarwinName = "oh.Intent.shieldReconcile"
     }
     
     // MARK: - Session Management

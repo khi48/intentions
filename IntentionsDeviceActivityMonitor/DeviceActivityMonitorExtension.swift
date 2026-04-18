@@ -273,12 +273,20 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
         // Hand off to the main app — this is what actually updates the
         // springboard shield layer. `shieldClear.pending` is the existing
-        // marker the app drains; its app-side drain calls clearAllShields()
-        // followed by applyDefaultBlocking() which re-applies block-all when
-        // the schedule says so, so the same marker works for both branches.
+        // marker the app drains; its app-side drain calls applyDefaultBlocking()
+        // which picks block-all or clear based on schedule, so the same marker
+        // works for both branches.
         sharedDefaults.set(true, forKey: "intentions.shieldClear.pending")
         sharedDefaults.set(timestamp, forKey: "intentions.shieldClear.requestedAt")
+
+        // Three wake paths, fastest-first:
+        // 1. Darwin notification — instant if app process is still in memory.
+        postShieldReconcileDarwinNotification()
+        // 2. BGAppRefresh — wakes the app if iOS decides to. Unreliable
+        //    timing (can be minutes to hours), so it's a middle-ground.
         submitShieldClearBackgroundTask()
+        // 3. User-tap visible notification — final fallback at +30s if
+        //    neither path 1 nor path 2 fired in time.
         scheduleShieldClearFallbackNotification()
 
         // App-side bookkeeping for the reconcile-on-foreground path.
@@ -300,6 +308,24 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         // Scheduling a second notification here produced duplicates.
 
         logger.notice("🎉 RESTORE BLOCKING: Complete!")
+    }
+
+    /// Post a Darwin notification (system-wide, cross-process) so that if the
+    /// main app process is in memory its observer fires immediately. This is
+    /// the fastest wake path — BGAppRefresh can take minutes, the visible
+    /// notification requires a user tap. Darwin is instant when the app is
+    /// alive. Delivery is best-effort (no confirmation from iOS).
+    private func postShieldReconcileDarwinNotification() {
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        let name = "oh.Intent.shieldReconcile" as CFString
+        CFNotificationCenterPostNotification(
+            center,
+            CFNotificationName(name),
+            nil,
+            nil,
+            true
+        )
+        logger.info("📡 DARWIN: Posted shieldReconcile notification")
     }
 
     /// Submit a BGAppRefreshTaskRequest so iOS can wake the main app and have
