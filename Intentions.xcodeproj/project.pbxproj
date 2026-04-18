@@ -16,6 +16,8 @@
 		207E146A2E90883400730900 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E14552E90881E00730900 /* ManagedSettings.framework */; };
 		207E14722E90883400730900 /* IntentionsShieldAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 207E14692E90883300730900 /* IntentionsShieldAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		207E148B2E9F5D8500730900 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E148A2E9F5D8500730900 /* DeviceActivity.framework */; };
+		20260419AAAA0000BBBB0001 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2092FF052DF1921C0055A01D /* FamilyControls.framework */; };
+		20260419AAAA0000BBBB0002 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 207E14552E90881E00730900 /* ManagedSettings.framework */; };
 		207E14932E9F5D8600730900 /* IntentionsDeviceActivityMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 207E14892E9F5D8500730900 /* IntentionsDeviceActivityMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2085A8ED2DF55F7A0011EB9A /* IntentionSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8EC2DF55F7A0011EB9A /* IntentionSessionTests.swift */; };
 		2085A8F12DF55F980011EB9A /* WeekdayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085A8F02DF55F980011EB9A /* WeekdayTests.swift */; };
@@ -183,6 +185,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		20260419AAAA0000AAAA0001 /* ShieldState */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ShieldState;
+			sourceTree = "<group>";
+		};
 		207E14592E90881E00730900 /* IntentionsShieldConfiguration */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -260,6 +267,8 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				207E148B2E9F5D8500730900 /* DeviceActivity.framework in Frameworks */,
+				20260419AAAA0000BBBB0001 /* FamilyControls.framework in Frameworks */,
+				20260419AAAA0000BBBB0002 /* ManagedSettings.framework in Frameworks */,
 			);
 		};
 		20EB27102E6C057700FC4BE4 /* Frameworks */ = {
@@ -283,6 +292,7 @@
 				207E14592E90881E00730900 /* IntentionsShieldConfiguration */,
 				207E146B2E90883400730900 /* IntentionsShieldAction */,
 				207E148C2E9F5D8500730900 /* IntentionsDeviceActivityMonitor */,
+				20260419AAAA0000AAAA0001 /* ShieldState */,
 				2071C4912DE43AC600DF737F /* Products */,
 				2092FF042DF1921C0055A01D /* Frameworks */,
 			);
@@ -418,6 +428,7 @@
 				207E14922E9F5D8600730900 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
+				20260419AAAA0000AAAA0001 /* ShieldState */,
 				20A35A502F8BAB5700535175 /* Intentions */,
 			);
 			name = Intentions;
@@ -508,6 +519,7 @@
 			buildRules = (
 			);
 			fileSystemSynchronizedGroups = (
+				20260419AAAA0000AAAA0001 /* ShieldState */,
 				207E148C2E9F5D8500730900 /* IntentionsDeviceActivityMonitor */,
 			);
 			name = IntentionsDeviceActivityMonitor;
