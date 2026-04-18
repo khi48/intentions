@@ -526,9 +526,11 @@ final class ContentViewModel: Sendable {
         do {
             let allSessions = try await dataService.loadIntentionSessions()
 
-            // Complete stale active sessions
+            // Complete stale active sessions and drop any pending notifications they
+            // may have left scheduled (could fire as a ghost banner otherwise).
             let staleSessions = allSessions.filter { $0.isActive && $0.id != activeSession?.id }
             for staleSession in staleSessions {
+                await NotificationService.shared.cancelAllSessionNotifications(sessionId: staleSession.id)
                 staleSession.complete()
                 try await dataService.saveIntentionSession(staleSession)
             }
