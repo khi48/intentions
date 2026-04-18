@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 @preconcurrency import FamilyControls
 @preconcurrency import ManagedSettings
+import UserNotifications
 import WidgetKit
 import OSLog
 
@@ -617,6 +618,57 @@ final class ContentViewModel: Sendable {
             return
         }
 
+        // Belt-and-braces: honor the shared shield-clear marker in case the
+        // BGTask hand-off didn't fire (iOS throttled it, device was under
+        // memory pressure, etc.). Runs before applyDefaultBlocking so we
+        // don't race our own re-blocking path.
+        await drainPendingShieldClearIfNeeded()
+
+        await applyDefaultBlocking()
+    }
+
+    /// Handle a shield-clear hand-off triggered by the DeviceActivity
+    /// extension. Called by the BGTask registered in IntentionsApp AND by
+    /// `reconcileBlockingOnForeground` as a fallback.
+    ///
+    /// Flow:
+    /// 1. Consume the shared marker (flip pending flag off).
+    /// 2. Clear ManagedSettings from the main app process — this is what
+    ///    forces the springboard shield layer to re-render (DTS 807934).
+    /// 3. Re-apply default blocking based on current schedule/session.
+    /// 4. Cancel the fallback notification so the user doesn't see it.
+    func handleShieldClearBackgroundTask() async {
+        logger.notice("🌀 BGTASK HANDLER: running shield-clear hand-off")
+        await drainPendingShieldClearIfNeeded(forceClear: true)
+    }
+
+    /// Drain any pending shield-clear hand-off. No-op if neither the marker
+    /// is set nor `forceClear` is requested.
+    private func drainPendingShieldClearIfNeeded(forceClear: Bool = false) async {
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId)
+        let markerSet = sharedDefaults?.bool(forKey: AppConstants.Keys.shieldClearPending) ?? false
+
+        guard markerSet || forceClear else { return }
+        guard screenTimeService.isReady else {
+            logger.warning("drainPendingShieldClear: service not ready, deferring")
+            return
+        }
+
+        logger.info("drainPendingShieldClear: marker=\(markerSet, privacy: .public) forceClear=\(forceClear, privacy: .public)")
+
+        // Clear shields from the app process so springboard re-renders.
+        await screenTimeService.clearAllShields()
+
+        // Reset the marker + cancel fallback notification.
+        sharedDefaults?.removeObject(forKey: AppConstants.Keys.shieldClearPending)
+        sharedDefaults?.removeObject(forKey: AppConstants.Keys.shieldClearRequestedAt)
+        sharedDefaults?.synchronize()
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [AppConstants.BackgroundTasks.shieldClearFallbackNotificationId]
+        )
+
+        // Re-apply default blocking (which may also be .allowAllAccess if the
+        // schedule currently has us in a free window).
         await applyDefaultBlocking()
     }
 
