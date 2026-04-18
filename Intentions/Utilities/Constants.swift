@@ -43,6 +43,29 @@ enum AppConstants {
         // Activity naming
         static let sessionActivityPrefix = "intentions.session."
         static let sessionThresholdEvent = "intentions.session.threshold"
+
+        // Shield-clear hand-off (extension → app)
+        /// Set to true by the DeviceActivity extension when it detected the session
+        /// expired outside protected hours and the app should re-evaluate + clear
+        /// shields from its own process (springboard will only honor clears coming
+        /// from the main app, not the extension).
+        static let shieldClearPending = "intentions.shieldClear.pending"
+        /// When the shield-clear request was raised.
+        static let shieldClearRequestedAt = "intentions.shieldClear.requestedAt"
+    }
+
+    // MARK: - Background Tasks
+    enum BackgroundTasks {
+        /// Identifier for the BGAppRefresh task that wakes the app so it can
+        /// clear shield state from its own process after a session expires.
+        /// Must match the entry in Info.plist under
+        /// BGTaskSchedulerPermittedIdentifiers.
+        static let shieldClearIdentifier = "oh.Intent.shieldClear"
+
+        /// Identifier for the user-visible fallback notification scheduled by
+        /// the DeviceActivity extension alongside the BGTask submission.
+        /// The app cancels it on successful BGTask/foreground reconcile.
+        static let shieldClearFallbackNotificationId = "shield_clear_fallback"
     }
     
     // MARK: - Session Management
