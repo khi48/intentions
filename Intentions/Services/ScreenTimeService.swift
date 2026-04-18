@@ -182,18 +182,24 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Cancel any DeviceActivity schedule
         cancelDeviceActivitySchedule()
 
-        // Overwrite shield properties directly — do NOT clearAllSettings() first.
-        // clearAllSettings() creates a brief "no shields" window that detaches the
-        // ShieldConfiguration extension, causing the default iOS shield to appear
-        // instead of our custom one. Direct overwrites are atomic from the system's
-        // perspective and preserve the extension binding.
-        logger.info("🚫 BLOCK ALL: Overwriting shields directly")
+        // Per project_stale_shield_state.md: a previous session's
+        // `.all(except: tokens)` can persist in the system cache, causing a fresh
+        // `.all()` to silently fail to re-block the previously-allowed apps. Nil
+        // each shield key first and then flush with clearAllSettings() before
+        // re-applying blocking. The brief "no shields" window is a smaller
+        // regression than the cache-staleness failure this protects against.
+        logger.info("🚫 BLOCK ALL: Flushing stale shield state before re-applying")
+        managedSettingsStore.shield.applications = nil
+        managedSettingsStore.shield.applicationCategories = nil
+        managedSettingsStore.shield.webDomains = nil
+        managedSettingsStore.shield.webDomainCategories = nil
+        managedSettingsStore.webContent.blockedByFilter = nil
+        managedSettingsStore.clearAllSettings()
+
+        logger.info("🚫 BLOCK ALL: Applying blocking (categories + known tokens + web)")
         managedSettingsStore.shield.applications = knownAppTokens.isEmpty ? nil : knownAppTokens
         managedSettingsStore.shield.applicationCategories = .all()
         managedSettingsStore.webContent.blockedByFilter = .all()
-        // Clear any stale web domain exceptions from previous sessions
-        managedSettingsStore.shield.webDomains = nil
-        managedSettingsStore.shield.webDomainCategories = nil
 
         logger.notice("✅ BLOCK ALL: Blocking applied (categories + \(self.knownAppTokens.count) known tokens + web)")
     }

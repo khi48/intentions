@@ -244,15 +244,18 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         logger.notice("🔒 RESTORE BLOCKING: Schedule check - shouldBeBlocking = \(shouldBeBlocking)")
 
         if shouldBeBlocking {
-            // Re-block path must always run. Direct overwrite replaces the session's
-            // `.all(except: tokens)` with `.all()`. Do NOT call clearAllSettings()
-            // here — it creates a brief no-shields window that detaches the custom
-            // ShieldConfiguration extension binding.
+            // Per project_stale_shield_state.md: the session's `.all(except: tokens)`
+            // can persist in the system cache even after overwriting with `.all()`,
+            // leaving previously-allowed apps silently unblocked. Nil each shield key
+            // and flush with clearAllSettings() before re-applying.
             logger.notice("🔒 RESTORE BLOCKING: In protected hours - blocking all apps")
             store.shield.applications = nil
-            store.shield.applicationCategories = .all()
+            store.shield.applicationCategories = nil
             store.shield.webDomains = nil
             store.shield.webDomainCategories = nil
+            store.webContent.blockedByFilter = nil
+            store.clearAllSettings()
+            store.shield.applicationCategories = .all()
             store.webContent.blockedByFilter = .all()
         } else {
             // Session ended OUTSIDE protected hours — clear shields and hand off
