@@ -243,12 +243,16 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         let shouldBeBlocking = isCurrentlyInProtectedHours(sharedDefaults: sharedDefaults)
         logger.notice("🔒 RESTORE BLOCKING: Schedule check - shouldBeBlocking = \(shouldBeBlocking)")
 
+        // Best-effort extension-side write. Verified on-device 2026-04-19: even
+        // shield ADDITION from the extension process does NOT propagate to the
+        // springboard shield layer — the memory file was wrong about this, the
+        // behavior is the same as shield removal (Apple DTS 807934). The store
+        // write may succeed, but the springboard only re-renders when the MAIN
+        // APP process writes. So in both branches below we (a) do the best-effort
+        // extension write, (b) write a marker, (c) wake the app via BGTask, and
+        // (d) schedule a user-tap fallback notification.
         if shouldBeBlocking {
-            // Per project_stale_shield_state.md: the session's `.all(except: tokens)`
-            // can persist in the system cache even after overwriting with `.all()`,
-            // leaving previously-allowed apps silently unblocked. Nil each shield key
-            // and flush with clearAllSettings() before re-applying.
-            logger.notice("🔒 RESTORE BLOCKING: In protected hours - blocking all apps")
+            logger.notice("🔒 RESTORE BLOCKING: In protected hours - best-effort re-block from extension")
             store.shield.applications = nil
             store.shield.applicationCategories = nil
             store.shield.webDomains = nil
@@ -258,30 +262,24 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             store.shield.applicationCategories = .all()
             store.webContent.blockedByFilter = .all()
         } else {
-            // Session ended OUTSIDE protected hours — clear shields and hand off
-            // to the main app. Extension-only writes to ManagedSettingsStore do
-            // NOT cause the springboard shield layer to re-render (Apple DTS 807934);
-            // only the main app process writing does.
-            logger.notice("🔒 RESTORE BLOCKING: Clearing all shields (schedule disabled or free time)")
+            logger.notice("🔒 RESTORE BLOCKING: Free time window - best-effort clear from extension")
             store.shield.applications = nil
             store.shield.applicationCategories = nil
             store.shield.webDomains = nil
             store.shield.webDomainCategories = nil
             store.webContent.blockedByFilter = nil
             store.clearAllSettings()
-
-            // Write the shared marker so the app can honor it on foreground reconcile too.
-            sharedDefaults.set(true, forKey: "intentions.shieldClear.pending")
-            sharedDefaults.set(timestamp, forKey: "intentions.shieldClear.requestedAt")
-
-            // Wake the main app via BGAppRefresh so it can clear the store from its own
-            // process — the only write that actually re-renders the springboard.
-            submitShieldClearBackgroundTask()
-
-            // Schedule a user-tap fallback notification. If the BGTask fires
-            // within its grace period, the app cancels this pending request.
-            scheduleShieldClearFallbackNotification()
         }
+
+        // Hand off to the main app — this is what actually updates the
+        // springboard shield layer. `shieldClear.pending` is the existing
+        // marker the app drains; its app-side drain calls clearAllShields()
+        // followed by applyDefaultBlocking() which re-applies block-all when
+        // the schedule says so, so the same marker works for both branches.
+        sharedDefaults.set(true, forKey: "intentions.shieldClear.pending")
+        sharedDefaults.set(timestamp, forKey: "intentions.shieldClear.requestedAt")
+        submitShieldClearBackgroundTask()
+        scheduleShieldClearFallbackNotification()
 
         // App-side bookkeeping for the reconcile-on-foreground path.
         sharedDefaults.set(true, forKey: "intentions.session.expired")
