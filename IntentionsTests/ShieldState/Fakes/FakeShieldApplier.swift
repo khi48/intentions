@@ -10,4 +10,9 @@ final class FakeShieldApplier: ShieldApplying, @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         calls.append(config)
     }
+
+    func reset() {
+        lock.lock(); defer { lock.unlock() }
+        calls.removeAll(keepingCapacity: false)
+    }
 }
