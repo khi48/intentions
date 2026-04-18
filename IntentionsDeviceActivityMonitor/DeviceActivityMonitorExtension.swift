@@ -239,40 +239,16 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             return
         }
 
-        // Check if another mechanism already handled this session's expiry.
-        // Both intervalDidEnd and eventDidReachThreshold call this method —
-        // only the first should send a notification and apply state changes.
-        let alreadyHandled = sharedDefaults.bool(forKey: "intentions.session.expired")
-        if alreadyHandled {
-            logger.notice("🔒 RESTORE BLOCKING: Session already handled by previous call — skipping")
-            return
-        }
-
-        // Mark as handled FIRST to prevent the other mechanism from duplicating.
-        sharedDefaults.set(true, forKey: "intentions.session.expired")
-        sharedDefaults.set(timestamp, forKey: "intentions.session.expirationTime")
-        sharedDefaults.set("DeviceActivityMonitor", forKey: "intentions.session.expiredBy")
-
-        // Clear currentSessionId so the other expiration mechanism
-        // won't pass validation either.
-        sharedDefaults.removeObject(forKey: "intentions.currentSessionId")
-
-        // Clear session widget data
-        sharedDefaults.removeObject(forKey: "intentions.widget.sessionTitle")
-        sharedDefaults.removeObject(forKey: "intentions.widget.sessionEndTime")
-
-        sharedDefaults.synchronize()
-
         // Check schedule to determine correct post-session state
         let shouldBeBlocking = isCurrentlyInProtectedHours(sharedDefaults: sharedDefaults)
         logger.notice("🔒 RESTORE BLOCKING: Schedule check - shouldBeBlocking = \(shouldBeBlocking)")
 
         if shouldBeBlocking {
+            // Re-block path must always run. Direct overwrite replaces the session's
+            // `.all(except: tokens)` with `.all()`. Do NOT call clearAllSettings()
+            // here — it creates a brief no-shields window that detaches the custom
+            // ShieldConfiguration extension binding.
             logger.notice("🔒 RESTORE BLOCKING: In protected hours - blocking all apps")
-            // clearAllSettings() flushes the previous session's cached
-            // `.all(except: tokens)` — without it, stale exceptions persist
-            // and the previously-allowed apps keep unlocking after expiry.
-            store.clearAllSettings()
             store.shield.applications = nil
             store.shield.applicationCategories = .all()
             store.shield.webDomains = nil
@@ -304,7 +280,13 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             scheduleShieldClearFallbackNotification()
         }
 
-        // Set widget blocking status based on schedule
+        // App-side bookkeeping for the reconcile-on-foreground path.
+        sharedDefaults.set(true, forKey: "intentions.session.expired")
+        sharedDefaults.set(timestamp, forKey: "intentions.session.expirationTime")
+        sharedDefaults.set("DeviceActivityMonitor", forKey: "intentions.session.expiredBy")
+        sharedDefaults.removeObject(forKey: "intentions.currentSessionId")
+        sharedDefaults.removeObject(forKey: "intentions.widget.sessionTitle")
+        sharedDefaults.removeObject(forKey: "intentions.widget.sessionEndTime")
         sharedDefaults.set(shouldBeBlocking, forKey: "intentions.widget.blockingStatus")
         sharedDefaults.set(timestamp, forKey: "intentions.widget.lastUpdate")
         sharedDefaults.synchronize()
