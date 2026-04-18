@@ -344,12 +344,15 @@ final class ContentViewModel: Sendable {
     func startSession(_ session: IntentionSession) async {
         await withLoading {
             do {
-                // If there's an existing active session, cancel its timers and complete it.
+                // If there's an existing active session, this is a replace flow.
+                // Cancel all pending notifications for the OLD session BEFORE any
+                // state change so the old pre-scheduled completion cannot leak.
                 // Don't call blockAllApps() here — allowApps() already clears all
                 // shields before applying. Extra mutations can leave stale exceptions.
                 if let existingSession = activeSession, existingSession.isActive {
+                    let oldSessionId = existingSession.id
+                    await NotificationService.shared.cancelAllSessionNotifications(sessionId: oldSessionId)
                     await screenTimeService.cancelSessionTimers()
-                    await NotificationService.shared.cancelSessionNotifications()
                     existingSession.complete()
                     try await dataService.saveIntentionSession(existingSession)
                     activeSession = nil
@@ -371,16 +374,17 @@ final class ContentViewModel: Sendable {
     func endCurrentSession() async {
         guard activeSession != nil else { return }
         await withLoading {
-            await finalizeSession(notify: false)
+            await finalizeSession(cause: .endedManually)
         }
     }
 
-    /// Handle automatic session expiration (called by ScreenTimeService in-app timer).
-    /// Never sends a notification — the DeviceActivityMonitor extension handles that.
-    /// If the user is looking at the app, they see the UI update directly.
+    /// Handle automatic session expiration (called by ScreenTimeService in-app timer
+    /// when the app is foregrounded at expiration time). The authoritative end-time
+    /// notification is the pre-scheduled `session_completion_<id>` trigger — this
+    /// path only posts a fallback if that pre-scheduled notification did not deliver.
     private func handleSessionExpiration() async {
         guard activeSession != nil else { return }
-        await finalizeSession(notify: false)
+        await finalizeSession(cause: .naturalCompletion)
     }
 
     /// Extend the current session by additional time
@@ -389,6 +393,7 @@ final class ContentViewModel: Sendable {
 
         await withLoading {
             do {
+                let sessionId = session.id
                 // Extend the session duration
                 session.duration += extensionTime
                 try await dataService.saveIntentionSession(session)
@@ -398,8 +403,10 @@ final class ContentViewModel: Sendable {
                 currentlyAppliedSessionId = nil // Force re-application
                 await applySessionBlocking(for: session)
 
-                // Reschedule notifications for the new remaining time
-                await NotificationService.shared.cancelSessionNotifications()
+                // Reschedule notifications for the new remaining time. Cancel ONLY
+                // this session's pending warnings + completion before rescheduling,
+                // so unrelated notifications (there shouldn't be any) stay untouched.
+                await NotificationService.shared.cancelAllSessionNotifications(sessionId: sessionId)
                 await NotificationService.shared.scheduleSessionNotifications(for: session)
 
                 updateWidgetSessionData(session)
@@ -409,9 +416,14 @@ final class ContentViewModel: Sendable {
         }
     }
     
-    /// Cancel the active session because the user disabled blocking entirely
+    /// Cancel the active session because the user disabled blocking entirely.
+    /// Treated as a manual end — cancels all pending session notifications.
     private func cancelActiveSessionForDisable() async {
         guard let session = activeSession, session.isActive else { return }
+        let sessionId = session.id
+        // Cancel pending notifications BEFORE mutating session state so the
+        // pre-scheduled completion trigger cannot fire in the racing window.
+        await NotificationService.shared.cancelAllSessionNotifications(sessionId: sessionId)
         await screenTimeService.cancelSessionTimers()
         session.cancel()
         try? await dataService.saveIntentionSession(session)
@@ -421,11 +433,33 @@ final class ContentViewModel: Sendable {
     // MARK: - Session Teardown Helpers
 
     /// Single path for ending a session: complete it, tear down state, apply schedule-based blocking.
-    /// - Parameter notify: Whether to send "Session Expired" notification (true for auto-expiration, false for manual end)
-    private func finalizeSession(notify: Bool) async {
+    ///
+    /// Notification behavior by cause:
+    /// - `.naturalCompletion`: the pre-scheduled `session_completion_<id>` trigger is
+    ///   authoritative and fires at the real end time. We cancel only the warning
+    ///   notifications; the completion one is left to fire (or already fired). If the
+    ///   pre-scheduled notification was never delivered (e.g. permissions changed after
+    ///   scheduling), a fallback `sendSessionExpiredNotification` is posted.
+    /// - `.endedManually` / `.replaced`: all pending session notifications are cancelled
+    ///   before any state change so the pre-scheduled completion cannot leak. No
+    ///   notification is posted.
+    private func finalizeSession(cause: SessionEndCause) async {
         guard let session = activeSession else { return }
+        let sessionId = session.id
 
-        logger.notice("🏁 finalizeSession: ending session \(session.id), notify=\(notify)")
+        logger.notice("🏁 finalizeSession: ending session \(sessionId), cause=\(String(describing: cause))")
+
+        // Cancel pending notifications FIRST so manual/replaced paths cannot
+        // accidentally deliver the pre-scheduled completion between now and
+        // the session-state mutation.
+        switch cause {
+        case .endedManually, .replaced:
+            await NotificationService.shared.cancelAllSessionNotifications(sessionId: sessionId)
+        case .naturalCompletion:
+            // Leave the completion trigger alone — it is the authoritative end-time
+            // notification. Warnings are stale now that the session is over.
+            await NotificationService.shared.cancelSessionWarnings(sessionId: sessionId)
+        }
 
         do {
             session.complete()
@@ -445,18 +479,30 @@ final class ContentViewModel: Sendable {
             sharedDefaults.synchronize()
         }
 
-        if notify {
-            await NotificationService.shared.sendSessionExpiredNotification()
+        // Fallback notification for natural completion: only post if the
+        // pre-scheduled completion did not deliver (e.g. permissions changed,
+        // or the trigger was cleared by some other path). Dedupe guard prevents
+        // a second banner when the pre-scheduled already fired.
+        if cause == .naturalCompletion {
+            let alreadyDelivered = await NotificationService.shared
+                .hasDeliveredCompletionNotification(sessionId: sessionId)
+            if !alreadyDelivered {
+                logger.notice("🏁 finalizeSession: pre-scheduled completion not delivered, posting fallback")
+                await NotificationService.shared.sendSessionExpiredNotification()
+            } else {
+                logger.info("🏁 finalizeSession: completion already delivered, skipping fallback")
+            }
         }
     }
 
-    /// Clear session-related transient state (notifications, widget, tracking vars).
+    /// Clear session-related transient state (widget, tracking vars, expired flag).
+    /// Notifications are handled by the caller per-cause — this helper does NOT touch
+    /// pending notifications.
     /// Does NOT complete/cancel the session model, apply blocking, or clear currentSessionId.
     private func teardownSessionState() async {
         activeSession = nil
         currentlyAppliedSessionId = nil
 
-        await NotificationService.shared.cancelSessionNotifications()
         clearWidgetSessionData()
 
         if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
@@ -592,8 +638,14 @@ final class ContentViewModel: Sendable {
             // cleared the shared ManagedSettingsStore. We just need to update the
             // app's data model (mark session complete, clear UI state) then fall
             // through to schedule-based blocking to ensure consistency.
+            // This is a .naturalCompletion — the pre-scheduled notification has
+            // already delivered (or will deliver) at the true end time.
             if let activeSession = activeSession, activeSession.isActive, activeSession.isExpired {
-                logger.notice("🔄 applyDefaultBlocking: found expired session \(activeSession.id), completing")
+                let expiredId = activeSession.id
+                logger.notice("🔄 applyDefaultBlocking: found expired session \(expiredId), completing")
+                // Cancel only warnings — the completion trigger is either already
+                // fired (user saw the banner) or pending for delivery at end time.
+                await NotificationService.shared.cancelSessionWarnings(sessionId: expiredId)
                 activeSession.complete()
                 try? await dataService.saveIntentionSession(activeSession)
                 await teardownSessionState()

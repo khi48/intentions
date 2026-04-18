@@ -12,6 +12,24 @@ import Foundation
 import FamilyControls
 import ManagedSettings
 
+// MARK: - Session End Cause
+
+/// Why a session is ending. Different causes imply different notification behavior.
+///
+/// - `.naturalCompletion`: session ran to its scheduled end time. The pre-scheduled
+///   `UNTimeIntervalNotificationTrigger` ("session_completion_<id>") is authoritative
+///   and fires at the real end time regardless of app state. Only warning notifications
+///   are cancelled on this path; the completion notification is left to fire.
+/// - `.endedManually`: user tapped "End Session". All pending session notifications
+///   (including the pre-scheduled completion) are cancelled; nothing is posted.
+/// - `.replaced`: another session replaced this one via the replace-session flow.
+///   Same behavior as `.endedManually`: cancel all pending notifications.
+enum SessionEndCause: Sendable, Equatable {
+    case naturalCompletion
+    case endedManually
+    case replaced
+}
+
 // MARK: - Session State
 enum SessionState: Codable, Sendable {
     case active(startedAt: Date)

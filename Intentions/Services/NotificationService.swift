@@ -259,6 +259,8 @@ final class NotificationService: NSObject, Sendable {
 
     // MARK: - Notification Cancellation
 
+    /// Cancel ALL pending session notifications for any session.
+    /// Used when notifications get disabled globally.
     func cancelSessionNotifications() async {
         let pendingRequests = await notificationCenter.pendingNotificationRequests()
         let sessionIdentifiers = pendingRequests
@@ -266,6 +268,71 @@ final class NotificationService: NSObject, Sendable {
             .filter { $0.contains("session_warning_") || $0.contains("session_completion_") || $0.hasPrefix("session_expired") }
 
         notificationCenter.removePendingNotificationRequests(withIdentifiers: sessionIdentifiers)
+    }
+
+    /// Cancel every pending notification tied to a specific session — warnings AND
+    /// the pre-scheduled completion trigger. Use for manual-end and replace flows
+    /// where we explicitly do NOT want the "Session Complete" banner to fire.
+    func cancelAllSessionNotifications(sessionId: UUID) async {
+        let sessionIdString = sessionId.uuidString
+        let pendingRequests = await notificationCenter.pendingNotificationRequests()
+        let identifiers = pendingRequests
+            .map { $0.identifier }
+            .filter { id in
+                // Session-specific identifiers end with the session UUID (warnings
+                // also include a "_<N>min" suffix). Also sweep the generic
+                // "session_expired" fallback identifier to be safe.
+                id.contains("session_warning_\(sessionIdString)")
+                    || id == "session_completion_\(sessionIdString)"
+                    || id == "session_expired"
+            }
+
+        if !identifiers.isEmpty {
+            notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
+            Self.log.info("Cancelled \(identifiers.count) session notifications for \(sessionIdString)")
+        }
+    }
+
+    /// Cancel only the warning notifications for a session. Leaves the pre-scheduled
+    /// completion trigger in place so it can fire at the real end time — this is the
+    /// natural-completion path.
+    func cancelSessionWarnings(sessionId: UUID) async {
+        let sessionIdString = sessionId.uuidString
+        let pendingRequests = await notificationCenter.pendingNotificationRequests()
+        let identifiers = pendingRequests
+            .map { $0.identifier }
+            .filter { $0.contains("session_warning_\(sessionIdString)") }
+
+        if !identifiers.isEmpty {
+            notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
+            Self.log.info("Cancelled \(identifiers.count) session warnings for \(sessionIdString)")
+        }
+    }
+
+    /// Check if the pre-scheduled completion notification for a session has already
+    /// been delivered OR is still pending delivery. Used as a dedupe guard: if the
+    /// banner has already appeared (or is about to in the next fraction of a second),
+    /// the fallback `sendSessionExpiredNotification` should not be posted.
+    ///
+    /// Checks both:
+    /// 1. `deliveredNotifications` — trigger has fired, banner shown.
+    /// 2. `pendingNotificationRequests` — trigger is still armed and will fire soon.
+    ///    This catches the race where the in-app timer finalises milliseconds before
+    ///    the `UNTimeIntervalNotificationTrigger` delivery.
+    func hasDeliveredCompletionNotification(sessionId: UUID) async -> Bool {
+        let identifier = "session_completion_\(sessionId.uuidString)"
+
+        let delivered = await notificationCenter.deliveredNotifications()
+        if delivered.contains(where: { $0.request.identifier == identifier }) {
+            return true
+        }
+
+        let pending = await notificationCenter.pendingNotificationRequests()
+        if pending.contains(where: { $0.identifier == identifier }) {
+            return true
+        }
+
+        return false
     }
 
     func cancelAllNotifications() async {
