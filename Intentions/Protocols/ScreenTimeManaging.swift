@@ -68,4 +68,9 @@ protocol ScreenTimeManaging: Sendable {
     /// Clean up all resources and reset service state
     /// Cancels running tasks, clears settings, and resets internal state
     func cleanup() async
+
+    /// Update the set of all app tokens the user has ever selected across QuickActions.
+    /// Used as a second blocking layer via `shield.applications` to catch apps that
+    /// escape category-based blocking.
+    func updateKnownAppTokens(_ tokens: Set<ApplicationToken>) async
 }

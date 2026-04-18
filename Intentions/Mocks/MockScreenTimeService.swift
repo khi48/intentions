@@ -188,6 +188,10 @@ actor MockScreenTimeService: ScreenTimeManaging {
         print("Mock: Session timers cancelled")
     }
 
+    func updateKnownAppTokens(_ tokens: Set<ApplicationToken>) async {
+        // No-op for mock
+    }
+
     func cleanup() async {
         // Cancel any running session task
         mockSessionTask?.cancel()

@@ -26,7 +26,7 @@ When working on this project, remember:
 - Maintain `Sendable` compliance for all new types in Swift 6
 - This project uses **folder-based structure** (Xcode 16+) — new files created on disk are automatically discovered by Xcode. No manual adding required.
 - Always try build after code changes to confirm code is still viable
-- See [[cross-project/ios-development|iOS Development]] in the vault for full iOS dev guidelines
+- **Before starting work**, read the iOS development guidelines at `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Mind/knowledge/ios-development.md` — covers simulator management, Screen Time API constraints, Swift 6 concurrency, ManagedSettingsStore best practices, and device deployment
 - **Simulator management**: Only the main conversation thread should run simulator builds/tests. Subagents must NEVER launch simulators (`xcodebuild test`, `xcodebuildmcp simulator build-and-run`, etc.) — multiple concurrent simulators overwhelm the machine. Subagents should use `xcodebuild build` (compile-only) or `xcodebuild build-for-testing` instead.
 - Avoid running multiple sequential simulator builds in quick succession — give the system time to release resources between runs
 

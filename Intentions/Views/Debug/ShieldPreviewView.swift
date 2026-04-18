@@ -38,13 +38,28 @@ struct ShieldPreviewView: View {
                     .lineSpacing(6)
                     .padding(.horizontal, 16)
 
-                Text(subtitleText)
-                    .font(.system(size: 15, weight: .regular))
-                    .foregroundStyle(textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
-                    .padding(.horizontal, 24)
-                    .padding(.top, 28)
+                if let quote = trimmedQuote {
+                    Text("———")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundStyle(textSecondary)
+                        .padding(.top, 28)
+
+                    Text(quote)
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundStyle(textSecondary)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 28)
+                } else {
+                    Text("Be intentional with your energy.\nBe intentional with your time.\nBe intentional with your habits.")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundStyle(textSecondary)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 28)
+                }
 
                 Spacer(minLength: 0)
 
@@ -59,18 +74,17 @@ struct ShieldPreviewView: View {
                                 .fill(buttonBackground)
                         )
                 }
+                .buttonStyle(.plain)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
             }
         }
     }
 
-    private var subtitleText: String {
-        if let quote = intentionQuote?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !quote.isEmpty {
-            return "———\n\n\(quote)"
-        }
-        return "Be intentional with your energy.\nBe intentional with your time.\nBe intentional with your habits."
+    private var trimmedQuote: String? {
+        guard let quote = intentionQuote?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !quote.isEmpty else { return nil }
+        return quote
     }
 }
 

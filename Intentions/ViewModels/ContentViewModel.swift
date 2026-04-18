@@ -339,7 +339,7 @@ final class ContentViewModel: Sendable {
     }
     
     // MARK: - Session Management
-    
+
     /// Start a new intention session
     func startSession(_ session: IntentionSession) async {
         await withLoading {
@@ -366,55 +366,21 @@ final class ContentViewModel: Sendable {
             }
         }
     }
-    
+
     /// End the current session
     func endCurrentSession() async {
-        guard let session = activeSession else { return }
-
+        guard activeSession != nil else { return }
         await withLoading {
-            do {
-                session.complete()
-                try await dataService.saveIntentionSession(session)
-                activeSession = nil
-                currentlyAppliedSessionId = nil
-
-                if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
-                    sharedDefaults.removeObject(forKey: AppConstants.Keys.currentSessionId)
-                    sharedDefaults.synchronize()
-                }
-
-                await NotificationService.shared.cancelSessionNotifications()
-                clearWidgetSessionData()
-                await applyDefaultBlocking()
-            } catch {
-                handleError(error)
-            }
+            await finalizeSession(notify: false)
         }
     }
 
-    /// Handle automatic session expiration (called by ScreenTimeService background task)
+    /// Handle automatic session expiration (called by ScreenTimeService in-app timer).
+    /// Never sends a notification — the DeviceActivityMonitor extension handles that.
+    /// If the user is looking at the app, they see the UI update directly.
     private func handleSessionExpiration() async {
-        guard let session = activeSession else { return }
-
-        do {
-            session.complete()
-            try await dataService.saveIntentionSession(session)
-            activeSession = nil
-            currentlyAppliedSessionId = nil
-
-            if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
-                sharedDefaults.removeObject(forKey: AppConstants.Keys.currentSessionId)
-                sharedDefaults.synchronize()
-            }
-
-            await NotificationService.shared.cancelSessionNotifications()
-            clearWidgetSessionData()
-            await applyDefaultBlocking()
-            await NotificationService.shared.sendSessionExpiredNotification()
-        } catch {
-            logger.error("Error completing expired session: \(error.localizedDescription)")
-            await applyDefaultBlocking()
-        }
+        guard activeSession != nil else { return }
+        await finalizeSession(notify: false)
     }
 
     /// Extend the current session by additional time
@@ -446,23 +412,56 @@ final class ContentViewModel: Sendable {
     /// Cancel the active session because the user disabled blocking entirely
     private func cancelActiveSessionForDisable() async {
         guard let session = activeSession, session.isActive else { return }
+        await screenTimeService.cancelSessionTimers()
+        session.cancel()
+        try? await dataService.saveIntentionSession(session)
+        await teardownSessionState()
+    }
+
+    // MARK: - Session Teardown Helpers
+
+    /// Single path for ending a session: complete it, tear down state, apply schedule-based blocking.
+    /// - Parameter notify: Whether to send "Session Expired" notification (true for auto-expiration, false for manual end)
+    private func finalizeSession(notify: Bool) async {
+        guard let session = activeSession else { return }
+
+        logger.notice("🏁 finalizeSession: ending session \(session.id), notify=\(notify)")
 
         do {
-            await screenTimeService.cancelSessionTimers()
-            session.cancel()
+            session.complete()
             try await dataService.saveIntentionSession(session)
-            activeSession = nil
-            currentlyAppliedSessionId = nil
-
-            if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
-                sharedDefaults.removeObject(forKey: AppConstants.Keys.currentSessionId)
-                sharedDefaults.synchronize()
-            }
-
-            await NotificationService.shared.cancelSessionNotifications()
-            clearWidgetSessionData()
         } catch {
-            logger.error("Failed to cancel session on blocking disable: \(error.localizedDescription)")
+            logger.error("Failed to save completed session: \(error.localizedDescription)")
+        }
+
+        await teardownSessionState()
+        await applyDefaultBlocking()
+
+        // Clear currentSessionId AFTER blocking is applied. The extension needs this
+        // ID to validate — clearing it too early causes the extension to skip
+        // restoreDefaultBlocking when it races with the in-app timer.
+        if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
+            sharedDefaults.removeObject(forKey: AppConstants.Keys.currentSessionId)
+            sharedDefaults.synchronize()
+        }
+
+        if notify {
+            await NotificationService.shared.sendSessionExpiredNotification()
+        }
+    }
+
+    /// Clear session-related transient state (notifications, widget, tracking vars).
+    /// Does NOT complete/cancel the session model, apply blocking, or clear currentSessionId.
+    private func teardownSessionState() async {
+        activeSession = nil
+        currentlyAppliedSessionId = nil
+
+        await NotificationService.shared.cancelSessionNotifications()
+        clearWidgetSessionData()
+
+        if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
+            sharedDefaults.set(false, forKey: AppConstants.Keys.sessionExpired)
+            sharedDefaults.synchronize()
         }
     }
 
@@ -536,6 +535,7 @@ final class ContentViewModel: Sendable {
     /// Called when the app becomes active. Re-checks authorization (the user may have
     /// revoked Family Controls in iOS Settings while backgrounded) and re-applies blocking.
     func reconcileBlockingOnForeground() async {
+        logger.info("👁️ reconcileBlockingOnForeground: app became active, session=\(self.activeSession?.id.uuidString ?? "none")")
         let freshStatus = await screenTimeService.authorizationStatus()
         let previousStatus = authorizationStatus
         authorizationStatus = freshStatus
@@ -572,26 +572,48 @@ final class ContentViewModel: Sendable {
         await applyDefaultBlocking()
     }
 
-    /// Apply default blocking state based on schedule settings
-    /// If a session is active, preserves session blocking
+    /// Apply default blocking state based on schedule settings.
+    /// If a session is active, preserves session blocking.
     private func applyDefaultBlocking() async {
-        guard !isApplyingDefaultBlocking else { return }
-        guard screenTimeService.isReady else { return }
+        guard !isApplyingDefaultBlocking else {
+            logger.info("⏭️ applyDefaultBlocking: skipped (already in progress)")
+            return
+        }
+        guard screenTimeService.isReady else {
+            logger.warning("⏭️ applyDefaultBlocking: skipped (service not ready)")
+            return
+        }
 
         isApplyingDefaultBlocking = true
         defer { isApplyingDefaultBlocking = false }
 
         do {
-            // Preserve active session blocking
-            if let activeSession = activeSession, activeSession.isActive {
+            // Session expired while app was backgrounded — the extension already
+            // cleared the shared ManagedSettingsStore. We just need to update the
+            // app's data model (mark session complete, clear UI state) then fall
+            // through to schedule-based blocking to ensure consistency.
+            if let activeSession = activeSession, activeSession.isActive, activeSession.isExpired {
+                logger.notice("🔄 applyDefaultBlocking: found expired session \(activeSession.id), completing")
+                activeSession.complete()
+                try? await dataService.saveIntentionSession(activeSession)
+                await teardownSessionState()
+                if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
+                    sharedDefaults.removeObject(forKey: AppConstants.Keys.currentSessionId)
+                    sharedDefaults.synchronize()
+                }
+                // Fall through to schedule-based blocking below
+            } else if let activeSession = activeSession, activeSession.isActive {
+                logger.info("🔄 applyDefaultBlocking: active session \(activeSession.id) still running, preserving")
                 await applySessionBlocking(for: activeSession)
                 return
             }
 
             currentlyAppliedSessionId = nil
 
-            // Block or allow based on schedule
-            if weeklySchedule.isBlocking(at: Date()) {
+            let shouldBlock = weeklySchedule.isBlocking(at: Date())
+            logger.notice("🔄 applyDefaultBlocking: schedule.isEnabled=\(self.weeklySchedule.isEnabled), isBlocking=\(shouldBlock)")
+
+            if shouldBlock {
                 try await screenTimeService.blockAllApps()
             } else {
                 try await screenTimeService.allowAllAccess()

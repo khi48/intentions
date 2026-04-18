@@ -26,8 +26,26 @@ struct DisableBlockingConfirmationView: View {
     @State private var countdownCancellable: AnyCancellable?
     @FocusState private var isTextFieldFocused: Bool
 
-    private let minimumCharacters = 15
     private let countdownDuration: Double = 10.0
+
+    /// Whether the user must type their intention quote exactly to confirm
+    private var requiresQuoteMatch: Bool {
+        intentionQuote != nil && !intentionQuote!.isEmpty
+    }
+
+    private var textMatchesQuote: Bool {
+        guard let quote = intentionQuote else { return false }
+        return reasonText.trimmingCharacters(in: .whitespaces)
+            .caseInsensitiveCompare(quote.trimmingCharacters(in: .whitespaces)) == .orderedSame
+    }
+
+    private var textRequirementMet: Bool {
+        if requiresQuoteMatch {
+            return textMatchesQuote
+        } else {
+            return reasonText.count >= 15
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -135,21 +153,21 @@ struct DisableBlockingConfirmationView: View {
 
     private var actionSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Why unlock?")
+            Text(requiresQuoteMatch ? "Type your intention to confirm" : "Why unlock?")
                 .font(.title3)
                 .fontWeight(.semibold)
                 .foregroundColor(AppConstants.Colors.text)
                 .padding(.bottom, 14)
 
-            TextField("Write your reason...", text: $reasonText)
+            TextField(requiresQuoteMatch ? "Type it here..." : "Write your reason...", text: $reasonText)
                 .font(.body)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.sentences)
                 .focused($isTextFieldFocused)
                 .submitLabel(.done)
                 .onSubmit { isTextFieldFocused = false }
-                .onChange(of: reasonText) { _, newValue in
-                    if newValue.count >= minimumCharacters && !isCountdownActive {
+                .onChange(of: reasonText) { _, _ in
+                    if textRequirementMet && !isCountdownActive {
                         startCountdown()
                     }
                 }
@@ -160,11 +178,23 @@ struct DisableBlockingConfirmationView: View {
                         .frame(height: 0.5)
                 }
 
-            Text("\(reasonText.count)/\(minimumCharacters)")
-                .font(.caption)
-                .foregroundColor(AppConstants.Colors.textSecondary.opacity(0.5))
-                .padding(.top, 6)
-                .padding(.bottom, 20)
+            Group {
+                if requiresQuoteMatch {
+                    if textMatchesQuote {
+                        Text("Matched")
+                            .foregroundColor(AppConstants.Colors.text.opacity(0.5))
+                    } else {
+                        Text("\(reasonText.count)/\(intentionQuote?.count ?? 0)")
+                            .foregroundColor(AppConstants.Colors.textSecondary.opacity(0.5))
+                    }
+                } else {
+                    Text("\(reasonText.count)/15")
+                        .foregroundColor(AppConstants.Colors.textSecondary.opacity(0.5))
+                }
+            }
+            .font(.caption)
+            .padding(.top, 6)
+            .padding(.bottom, 20)
         }
     }
 
@@ -210,7 +240,7 @@ struct DisableBlockingConfirmationView: View {
     // MARK: - Computed Properties
 
     private var isConfirmEnabled: Bool {
-        reasonText.count >= minimumCharacters && countdownSecondsRemaining <= 0
+        textRequirementMet && countdownSecondsRemaining <= 0
     }
 
     private var progressFraction: CGFloat {

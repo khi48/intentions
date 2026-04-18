@@ -10,7 +10,6 @@ import Foundation
 import DeviceActivity
 import ManagedSettings
 import FamilyControls
-import UserNotifications
 import WidgetKit
 import OSLog
 
@@ -219,86 +218,68 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         logger.notice("🔒 RESTORE BLOCKING: Starting at \(timestamp, privacy: .public)")
         logger.notice("🔒 RESTORE BLOCKING: Activity session ID = \(activitySessionId, privacy: .public)")
 
-        // During session, we used .all(except:tokens) to allow specific apps
-        // Now we just need to remove the exception and restore full .all() blocking
-        // No need to clear - ManagedSettingsStore is cumulative
-
-        // Block all web content
-        logger.info("🔒 RESTORE BLOCKING: Setting webContent.blockedByFilter to .all()")
-        store.webContent.blockedByFilter = .all()
-        logger.info("🔒 RESTORE BLOCKING: Web content blocking applied")
-
-        // Block all app categories (removing any session exceptions)
-        logger.info("🔒 RESTORE BLOCKING: Setting shield.applicationCategories to .all()")
-        store.shield.applicationCategories = .all()
-        logger.info("🔒 RESTORE BLOCKING: App category blocking applied")
-
-        logger.notice("✅ RESTORE BLOCKING: Default blocking fully restored at \(timestamp, privacy: .public)")
-
-        // Update shared UserDefaults to notify the main app that the session ended
-        // This allows the app to update its UI when reopened
-        if let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") {
-            sharedDefaults.set(true, forKey: "intentions.session.expired")
-            sharedDefaults.set(timestamp, forKey: "intentions.session.expirationTime")
-            sharedDefaults.set("DeviceActivityMonitor", forKey: "intentions.session.expiredBy")
-
-            // CRITICAL: Update widget to show correct state based on schedule
-            // Clear session data
-            sharedDefaults.removeObject(forKey: "intentions.widget.sessionTitle")
-            sharedDefaults.removeObject(forKey: "intentions.widget.sessionEndTime")
-
-            // Determine if we should be blocking based on schedule settings
-            let shouldBeBlocking = isCurrentlyInProtectedHours(sharedDefaults: sharedDefaults)
-            logger.info("📱 WIDGET UPDATE: Schedule check - shouldBeBlocking = \(shouldBeBlocking)")
-
-            // Set widget blocking status based on schedule
-            sharedDefaults.set(shouldBeBlocking, forKey: "intentions.widget.blockingStatus")
-            sharedDefaults.set(timestamp, forKey: "intentions.widget.lastUpdate")
-
-            sharedDefaults.synchronize()
-            logger.info("✅ RESTORE BLOCKING: Notified main app via UserDefaults")
-            logger.info("✅ RESTORE BLOCKING: Updated widget to show blocked state")
-
-            // Reload widget timelines to immediately reflect session expiration
-            WidgetCenter.shared.reloadAllTimelines()
-            logger.info("📱 WIDGET UPDATE: Reloaded widget timelines after session expiration")
-
-            // Log current state for debugging
-            let expiredFlag = sharedDefaults.bool(forKey: "intentions.session.expired")
-            let blockingStatus = sharedDefaults.bool(forKey: "intentions.widget.blockingStatus")
-            logger.info("✅ RESTORE BLOCKING: Verified UserDefaults - expired flag: \(expiredFlag), blocking: \(blockingStatus)")
-        } else {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.oh.Intent") else {
             logger.error("❌ RESTORE BLOCKING: Failed to access shared UserDefaults!")
+            return
         }
+
+        // Check if another mechanism already handled this session's expiry.
+        // Both intervalDidEnd and eventDidReachThreshold call this method —
+        // only the first should send a notification and apply state changes.
+        let alreadyHandled = sharedDefaults.bool(forKey: "intentions.session.expired")
+        if alreadyHandled {
+            logger.notice("🔒 RESTORE BLOCKING: Session already handled by previous call — skipping")
+            return
+        }
+
+        // Mark as handled FIRST to prevent the other mechanism from duplicating.
+        sharedDefaults.set(true, forKey: "intentions.session.expired")
+        sharedDefaults.set(timestamp, forKey: "intentions.session.expirationTime")
+        sharedDefaults.set("DeviceActivityMonitor", forKey: "intentions.session.expiredBy")
+
+        // Clear currentSessionId so the other expiration mechanism
+        // won't pass validation either.
+        sharedDefaults.removeObject(forKey: "intentions.currentSessionId")
+
+        // Clear session widget data
+        sharedDefaults.removeObject(forKey: "intentions.widget.sessionTitle")
+        sharedDefaults.removeObject(forKey: "intentions.widget.sessionEndTime")
+
+        sharedDefaults.synchronize()
+
+        // Check schedule to determine correct post-session state
+        let shouldBeBlocking = isCurrentlyInProtectedHours(sharedDefaults: sharedDefaults)
+        logger.notice("🔒 RESTORE BLOCKING: Schedule check - shouldBeBlocking = \(shouldBeBlocking)")
+
+        if shouldBeBlocking {
+            logger.notice("🔒 RESTORE BLOCKING: In protected hours - blocking all apps")
+            store.shield.applications = nil
+            store.shield.applicationCategories = .all()
+            store.shield.webDomains = nil
+            store.shield.webDomainCategories = nil
+            store.webContent.blockedByFilter = .all()
+        } else {
+            logger.notice("🔒 RESTORE BLOCKING: Clearing all shields (schedule disabled or free time)")
+            store.shield.applications = nil
+            store.shield.applicationCategories = nil
+            store.shield.webDomains = nil
+            store.shield.webDomainCategories = nil
+            store.webContent.blockedByFilter = nil
+            store.clearAllSettings()
+        }
+
+        // Set widget blocking status based on schedule
+        sharedDefaults.set(shouldBeBlocking, forKey: "intentions.widget.blockingStatus")
+        sharedDefaults.set(timestamp, forKey: "intentions.widget.lastUpdate")
+        sharedDefaults.synchronize()
+
+        logger.notice("✅ RESTORE BLOCKING: Applied post-session state, widgetBlocking=\(shouldBeBlocking)")
+
+        // Notification is handled by the app-scheduled UNTimeIntervalNotificationTrigger
+        // (`session_completion_<id>`) which fires reliably at the exact expire time.
+        // Scheduling a second notification here produced duplicates.
 
         logger.notice("🎉 RESTORE BLOCKING: Complete!")
-
-        // Notify the user that their session has expired
-        sendSessionExpiredNotification()
-    }
-
-    /// Send a local notification informing the user their session has ended
-    private func sendSessionExpiredNotification() {
-        let content = UNMutableNotificationContent()
-        content.title = "Session Expired"
-        content.body = "Your session has ended. Apps are now blocked again."
-        content.sound = .default
-        content.interruptionLevel = .timeSensitive
-
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
-        let request = UNNotificationRequest(
-            identifier: "session_expired_\(UUID().uuidString)",
-            content: content,
-            trigger: trigger
-        )
-
-        UNUserNotificationCenter.current().add(request) { [logger] error in
-            if let error = error {
-                logger.error("Failed to send session expired notification from extension: \(error.localizedDescription)")
-            } else {
-                logger.info("✅ Session expired notification scheduled from extension")
-            }
-        }
     }
 
     /// Check if blocking should be active based on schedule settings.
@@ -307,13 +288,13 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     private func isCurrentlyInProtectedHours(sharedDefaults: UserDefaults) -> Bool {
         let isEnabled = sharedDefaults.bool(forKey: "intentions.schedule.isEnabled")
         guard isEnabled else {
-            logger.info("📅 SCHEDULE CHECK: Schedule is disabled - not blocking")
+            logger.notice("📅 SCHEDULE CHECK: Schedule is disabled (isEnabled=false) - not blocking")
             return false
         }
 
         guard let data = sharedDefaults.data(forKey: "intentions.schedule.intervalsData"),
               let intervals = try? JSONDecoder().decode([FreeTimeIntervalLite].self, from: data) else {
-            logger.info("📅 SCHEDULE CHECK: No intervals data — defaulting to blocking")
+            logger.notice("📅 SCHEDULE CHECK: No intervals data — defaulting to blocking")
             return true
         }
 

@@ -213,6 +213,7 @@ struct QuickActionEditorSheet: View {
                 .padding(.top, 14)
 
             HStack(spacing: 5) {
+                durationPill("1m", 1 * 60)
                 durationPill("5m", 5 * 60)
                 durationPill("15m", 15 * 60)
                 durationPill("30m", 30 * 60)

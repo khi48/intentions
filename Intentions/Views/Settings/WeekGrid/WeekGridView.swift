@@ -26,9 +26,10 @@ struct WeekGridView: View {
                     Color.clear.frame(width: hourColWidth, height: labelHeight)
                     HStack(spacing: 4) {
                         ForEach(Self.days, id: \.self) { day in
+                            let isToday = day == Weekday.today
                             Text(day.shortName.prefix(1).uppercased())
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(AppConstants.Colors.textSecondary)
+                                .font(.system(size: 14, weight: isToday ? .bold : .semibold))
+                                .foregroundColor(isToday ? AppConstants.Colors.text : AppConstants.Colors.textSecondary)
                                 .frame(maxWidth: .infinity)
                         }
                     }

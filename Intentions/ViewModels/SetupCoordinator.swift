@@ -37,7 +37,10 @@ final class SetupCoordinator: Sendable {
 
     // MARK: - Public API
 
-    func validateSetupRequirements(cachedAuthStatus: AuthorizationStatus? = nil) async {
+    /// - Parameter forceAuthUpdate: When `true`, skip the `.notDetermined` cold-launch guard
+    ///   and trust the reported status. Use when the caller has already confirmed a real
+    ///   revocation (e.g. status transitioned from `.approved` at runtime).
+    func validateSetupRequirements(cachedAuthStatus: AuthorizationStatus? = nil, forceAuthUpdate: Bool = false) async {
         isValidating = true
         errorMessage = nil
         defer { isValidating = false }
@@ -64,9 +67,10 @@ final class SetupCoordinator: Sendable {
         let actualState: SetupState
         if let savedState = savedState {
             // Update saved state to reflect current system reality, but don't downgrade
-            // auth status to false when the system reports .notDetermined on cold launch
+            // auth status to false when the system reports .notDetermined on cold launch —
+            // unless the caller confirmed this is a real revocation (forceAuthUpdate).
             let shouldUpdateAuth = savedState.screenTimeAuthorized != screenTimeAuth
-                && !(savedState.screenTimeAuthorized && authStatus == .notDetermined)
+                && (forceAuthUpdate || !(savedState.screenTimeAuthorized && authStatus == .notDetermined))
             if shouldUpdateAuth {
                 actualState = savedState.withScreenTimeAuthorized(screenTimeAuth)
                 await stateManager.saveSetupState(actualState)

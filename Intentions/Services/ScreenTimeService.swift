@@ -38,6 +38,11 @@ actor ScreenTimeService: ScreenTimeManaging {
 
     /// Essential system apps that should never be blocked
     private var essentialSystemApps: Set<ApplicationToken> = []
+
+    /// All app tokens the user has ever selected across QuickActions.
+    /// Used as a belt-and-suspenders layer: `shield.applications` catches apps that
+    /// slip through category-based blocking (`.all()` has known gaps).
+    private var knownAppTokens: Set<ApplicationToken> = []
     
     /// Track initialization state. Uses Atomic for safe nonisolated reads.
     private let _isInitialized = Atomic<Bool>(false)
@@ -177,38 +182,20 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Cancel any DeviceActivity schedule
         cancelDeviceActivitySchedule()
 
-        // INTENTIONS CORE CONCEPT: Block everything by default during protected hours
-        // IMPORTANT: ManagedSettingsStore is cumulative, so we must explicitly clear
-        // any previously set shields from sessions BEFORE applying new blocking
-
-        // CRITICAL: Clear ALL shields first to remove any session exceptions
-        logger.info("🚫 BLOCK ALL: Step 1 - Clearing ALL existing shields to remove session exceptions")
-        managedSettingsStore.shield.applications = nil
-        managedSettingsStore.shield.applicationCategories = nil
+        // Overwrite shield properties directly — do NOT clearAllSettings() first.
+        // clearAllSettings() creates a brief "no shields" window that detaches the
+        // ShieldConfiguration extension, causing the default iOS shield to appear
+        // instead of our custom one. Direct overwrites are atomic from the system's
+        // perspective and preserve the extension binding.
+        logger.info("🚫 BLOCK ALL: Overwriting shields directly")
+        managedSettingsStore.shield.applications = knownAppTokens.isEmpty ? nil : knownAppTokens
+        managedSettingsStore.shield.applicationCategories = .all()
+        managedSettingsStore.webContent.blockedByFilter = .all()
+        // Clear any stale web domain exceptions from previous sessions
         managedSettingsStore.shield.webDomains = nil
         managedSettingsStore.shield.webDomainCategories = nil
-        managedSettingsStore.webContent.blockedByFilter = nil
 
-        // COMPREHENSIVE BLOCKING STRATEGY:
-        // We use a multi-layered approach to ensure ALL apps are blocked:
-        // 1. Category-based blocking (.all()) - blocks most apps by category
-        // 2. Web content blocking (.all()) - blocks browsers and web-based apps
-
-        logger.info("🚫 BLOCK ALL: Step 2 - Applying category-based blocking (.all())")
-        managedSettingsStore.shield.applicationCategories = .all()
-
-        logger.info("🚫 BLOCK ALL: Step 3 - Applying web content blocking (.all())")
-        managedSettingsStore.webContent.blockedByFilter = .all()
-
-        // DIAGNOSTIC: Verify settings after applying
-        logger.info("🔍 BLOCK ALL: Verification - shield.applicationCategories is set: \(self.managedSettingsStore.shield.applicationCategories != nil)")
-        logger.info("🔍 BLOCK ALL: Verification - webContent.blockedByFilter is set: \(self.managedSettingsStore.webContent.blockedByFilter != nil)")
-        logger.info("🔍 BLOCK ALL: Verification - shield.applications is: \(self.managedSettingsStore.shield.applications?.count ?? 0) apps")
-
-        logger.notice("✅ BLOCK ALL: Comprehensive default blocking applied successfully")
-        logger.info("   - Category blocking: .all()")
-        logger.info("   - Web content blocking: .all()")
-        logger.info("   - Widget was updated at the START to prevent race condition")
+        logger.notice("✅ BLOCK ALL: Blocking applied (categories + \(self.knownAppTokens.count) known tokens + web)")
     }
     
     /// Get all discoverable applications for comprehensive blocking
@@ -239,29 +226,26 @@ actor ScreenTimeService: ScreenTimeManaging {
             throw AppError.validationFailed("applications", reason: "At least one application must be specified")
         }
 
-        // CRITICAL: Clear previous session's shields to prevent cumulative effects
+        // Accumulate newly seen tokens for blockAllApps() to use later
+        knownAppTokens.formUnion(tokens)
+
+        // Overwrite shield properties directly — no clearAllSettings().
+        // Direct overwrites replace the previous value atomically and preserve
+        // the ShieldConfiguration extension binding. clearAllSettings() creates
+        // a brief "no shields" window that detaches the extension, causing the
+        // default iOS shield to appear instead of our custom one.
         managedSettingsStore.shield.applications = nil
-        managedSettingsStore.shield.applicationCategories = nil
+        managedSettingsStore.shield.applicationCategories = .all(except: tokens)
         managedSettingsStore.shield.webDomains = nil
         managedSettingsStore.shield.webDomainCategories = nil
-        managedSettingsStore.webContent.blockedByFilter = nil
 
-        // Block everything except the apps the user selected for this session
-        managedSettingsStore.shield.applicationCategories = .all(except: tokens)
-
-        // Conditionally allow web content
+        // Web content blocking
         if allowWebsites {
-            managedSettingsStore.shield.webDomains = nil
-            managedSettingsStore.shield.webDomainCategories = nil
             managedSettingsStore.webContent.blockedByFilter = nil
         } else if !webDomains.isEmpty {
-            // Allow only the web domains associated with selected apps/categories
-            managedSettingsStore.shield.webDomains = nil
             managedSettingsStore.shield.webDomainCategories = .all(except: webDomains)
             managedSettingsStore.webContent.blockedByFilter = .all()
         } else {
-            managedSettingsStore.shield.webDomains = nil
-            managedSettingsStore.shield.webDomainCategories = nil
             managedSettingsStore.webContent.blockedByFilter = .all()
         }
 
@@ -320,7 +304,7 @@ actor ScreenTimeService: ScreenTimeManaging {
             throw AppError.screenTimeAuthorizationFailed
         }
 
-        logger.notice("🧹 ALLOW ALL ACCESS: Clearing all settings to remove all restrictions")
+        logger.notice("🧹 ALLOW ALL ACCESS: Clearing all shields and restrictions")
 
         // Cancel session expiration task
         sessionExpirationTask?.cancel()
@@ -332,8 +316,17 @@ actor ScreenTimeService: ScreenTimeManaging {
         // Clear tracking
         currentlyAllowedApps.removeAll()
 
+        // clearAllSettings() alone doesn't reliably clear shield.applicationCategories
+        // when it was set to .all(except:). Explicitly nil out all shield properties.
+        managedSettingsStore.shield.applications = nil
+        managedSettingsStore.shield.applicationCategories = nil
+        managedSettingsStore.shield.webDomains = nil
+        managedSettingsStore.shield.webDomainCategories = nil
+        managedSettingsStore.webContent.blockedByFilter = nil
         managedSettingsStore.clearAllSettings()
         updateWidgetBlockingStatus(isBlocking: false)
+
+        logger.notice("✅ ALLOW ALL ACCESS: All shields cleared, widget updated to unblocked")
     }
     
     /// Clean up all resources and reset service state
@@ -406,6 +399,10 @@ actor ScreenTimeService: ScreenTimeManaging {
             sharedDefaults.removeObject(forKey: AppConstants.Keys.currentSessionId)
             sharedDefaults.synchronize()
         }
+    }
+
+    func updateKnownAppTokens(_ tokens: Set<ApplicationToken>) async {
+        knownAppTokens.formUnion(tokens)
     }
 
     /// Remove all system apps (for testing/reset purposes)

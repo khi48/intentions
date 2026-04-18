@@ -104,19 +104,7 @@ struct WidgetSetupStepView: View {
 private struct LockScreenPreviewCard: View {
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(white: 0.18), Color(white: 0.05)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .overlay(
-                RadialGradient(
-                    colors: [Color.white.opacity(0.10), .clear],
-                    center: UnitPoint(x: 0.3, y: 0.2),
-                    startRadius: 0,
-                    endRadius: 220
-                )
-            )
+            AppConstants.Colors.surface
 
             HStack(spacing: 14) {
                 CircularBlockedPill()
@@ -147,8 +135,8 @@ private struct CircularBlockedPill: View {
         .frame(width: 78, height: 78)
         .background(
             Circle()
-                .fill(.ultraThinMaterial)
-                .overlay(Circle().stroke(Color.white.opacity(0.28), lineWidth: 0.5))
+                .fill(AppConstants.Colors.backgroundSecondary)
+                .overlay(Circle().stroke(AppConstants.Colors.border, lineWidth: 0.5))
         )
     }
 }
@@ -186,10 +174,10 @@ private struct RectangularActiveSessionPill: View {
         .frame(width: 168, height: 78, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 22)
-                .fill(.ultraThinMaterial)
+                .fill(AppConstants.Colors.backgroundSecondary)
                 .overlay(
                     RoundedRectangle(cornerRadius: 22)
-                        .stroke(Color.white.opacity(0.28), lineWidth: 0.5)
+                        .stroke(AppConstants.Colors.border, lineWidth: 0.5)
                 )
         )
     }

@@ -15,6 +15,8 @@ struct DayColumn: View {
     let onEditBlock: (_ intervalID: UUID) -> Void
     let onDeleteBlock: (_ intervalID: UUID) -> Void
 
+    private var isToday: Bool { dayOfWeek == Weekday.today }
+
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .topLeading) {
@@ -23,7 +25,7 @@ struct DayColumn: View {
                     .fill(Color(red: 0x1f/255, green: 0x1f/255, blue: 0x1f/255))
                     .overlay(
                         RoundedRectangle(cornerRadius: 4)
-                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            .stroke(Color.white.opacity(isToday ? 0.45 : 0.18), lineWidth: isToday ? 1.5 : 1)
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .contentShape(Rectangle())

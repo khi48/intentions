@@ -146,6 +146,10 @@ enum Weekday: String, CaseIterable, Codable, Sendable {
     case friday = "Friday"
     case saturday = "Saturday"
     
+    static var today: Weekday {
+        from(calendarWeekday: Calendar.current.component(.weekday, from: Date()))
+    }
+
     static func from(calendarWeekday: Int) -> Weekday {
         switch calendarWeekday {
         case 1: return .sunday

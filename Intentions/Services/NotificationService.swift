@@ -7,7 +7,6 @@
 
 import Foundation
 @preconcurrency import UserNotifications
-import UIKit
 import OSLog
 
 /// Service for managing app notifications including session warnings and completion alerts
@@ -145,7 +144,6 @@ final class NotificationService: NSObject, Sendable {
         if settings.sessionCompletionEnabled {
             await scheduleCompletionNotification(sessionId: sessionId, remainingTime: remainingTime)
         }
-
     }
 
     private func scheduleWarningNotifications(sessionId: String, remainingTime: TimeInterval) async {
@@ -190,7 +188,6 @@ final class NotificationService: NSObject, Sendable {
     }
 
     private func scheduleCompletionNotification(sessionId: String, remainingTime: TimeInterval) async {
-        // Ensure remaining time is at least 1 second to avoid crash
         // UNTimeIntervalNotificationTrigger requires timeInterval >= 1.0
         guard remainingTime >= 1.0 else {
             return
@@ -200,7 +197,7 @@ final class NotificationService: NSObject, Sendable {
 
         let content = UNMutableNotificationContent()
         content.title = "Session Complete"
-        content.body = "Your focused session has ended. Great work!"
+        content.body = "Your focused session has ended. Apps are now blocked again."
         content.sound = .default
         content.categoryIdentifier = NotificationType.sessionCompletion.rawValue
 
@@ -243,9 +240,12 @@ final class NotificationService: NSObject, Sendable {
         content.sound = .default
         content.categoryIdentifier = NotificationType.sessionCompletion.rawValue
 
+        // Use a fixed identifier so duplicate expiration notifications (from in-app
+        // timer, intervalDidEnd, and eventDidReachThreshold) replace each other
+        // instead of stacking.
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
         let request = UNNotificationRequest(
-            identifier: "session_expired_\(UUID().uuidString)",
+            identifier: "session_expired",
             content: content,
             trigger: trigger
         )
@@ -263,7 +263,7 @@ final class NotificationService: NSObject, Sendable {
         let pendingRequests = await notificationCenter.pendingNotificationRequests()
         let sessionIdentifiers = pendingRequests
             .map { $0.identifier }
-            .filter { $0.contains("session_warning_") || $0.contains("session_completion_") || $0.contains("session_expired_") }
+            .filter { $0.contains("session_warning_") || $0.contains("session_completion_") || $0.hasPrefix("session_expired") }
 
         notificationCenter.removePendingNotificationRequests(withIdentifiers: sessionIdentifiers)
     }

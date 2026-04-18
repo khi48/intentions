@@ -7,7 +7,6 @@
 
 import SwiftUI
 @preconcurrency import FamilyControls
-@preconcurrency import ManagedSettings
 
 
 /// Main app content view with navigation and authorization handling
@@ -32,8 +31,7 @@ struct ContentView: View {
             self._initError = State(wrappedValue: "Failed to initialize app: \(error.localizedDescription)")
         }
     }
-    private let managedSettingsStore = ManagedSettingsStore()
-    
+
     var body: some View {
         Group {
             if !viewModel.hasInitialized {

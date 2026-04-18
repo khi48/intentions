@@ -48,14 +48,12 @@ struct SettingsView: View {
     @Environment(NavigationStateManager.self) private var navigationManager
 
     private var isScheduleEditingDisabled: Bool {
-        hasActiveSession || viewModel.weeklySchedule.isBlocking(at: Date())
+        viewModel.weeklySchedule.isEnabled
     }
 
     private var scheduleEditingDisabledReason: String {
-        if hasActiveSession {
-            return "Cannot modify schedule while session is active"
-        } else if viewModel.weeklySchedule.isBlocking(at: Date()) {
-            return "Cannot modify schedule during active protected hours"
+        if viewModel.weeklySchedule.isEnabled {
+            return "Disable blocking to edit free time settings"
         }
         return ""
     }
@@ -192,6 +190,7 @@ struct SettingsView: View {
                     showingDisableConfirmation = false
                     Task {
                         await viewModel.recordDisableAndToggle()
+                        await onScheduleSettingsChanged?(viewModel.weeklySchedule)
                     }
                 },
                 onCancel: { showingDisableConfirmation = false }
@@ -280,6 +279,7 @@ struct SettingsView: View {
                     if newValue {
                         Task {
                             await viewModel.toggleScheduleEnabled()
+                            await onScheduleSettingsChanged?(viewModel.weeklySchedule)
                         }
                     } else {
                         showingDisableConfirmation = true
