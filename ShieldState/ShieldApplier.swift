@@ -4,7 +4,7 @@ import Foundation
 
 /// Write surface for applying a ShieldConfig. Abstracted so we can fake it in tests.
 protocol ShieldApplying: Sendable {
-    func apply(_ config: ShieldConfig)
+    func apply(_ config: ShieldConfig, knownApps: Set<ApplicationToken>, knownDomains: Set<WebDomainToken>)
 }
 
 /// Production implementation that writes directly to ManagedSettingsStore.
@@ -20,8 +20,8 @@ protocol ShieldApplying: Sendable {
 struct ManagedSettingsShieldApplier: ShieldApplying {
     private let store = ManagedSettingsStore()
 
-    func apply(_ config: ShieldConfig) {
-        DebugBreadcrumbs.record(.applierApply, note: "\(config)")
+    func apply(_ config: ShieldConfig, knownApps: Set<ApplicationToken>, knownDomains: Set<WebDomainToken>) {
+        DebugBreadcrumbs.record(.applierApply, note: "\(config) known=\(knownApps.count)a/\(knownDomains.count)d")
         switch config {
         case .none:
             flush()
@@ -31,15 +31,23 @@ struct ManagedSettingsShieldApplier: ShieldApplying {
             store.shield.applicationCategories = .all()
             store.shield.webDomainCategories = .all()
             store.webContent.blockedByFilter = .all()
+            // Belt-and-suspenders: category-policy .all() does NOT reliably
+            // shield every app (iOS 26 Family Controls gap; notably browsers
+            // and previously-session-unlocked apps slip through). Explicit
+            // token list plugs the gap.
+            if !knownApps.isEmpty { store.shield.applications = knownApps }
+            if !knownDomains.isEmpty { store.shield.webDomains = knownDomains }
 
         case .allExcept(let selection):
-            // Direct overwrite is safe here — we're only transitioning
-            // between selection sets within a single "allExcept" regime,
-            // or arriving fresh from the app-launch `.all` state.
-            store.shield.applications = nil
+            // Shield categories except session's picks; shield every known
+            // app token except session's picks so the gap-plugging doesn't
+            // re-shield the user's currently-unlocked apps.
             store.shield.applicationCategories = .all(except: selection.applicationTokens)
-            store.shield.webDomains = nil
             store.shield.webDomainCategories = .all(except: selection.webDomainTokens)
+            let shieldApps = knownApps.subtracting(selection.applicationTokens)
+            let shieldDomains = knownDomains.subtracting(selection.webDomainTokens)
+            store.shield.applications = shieldApps.isEmpty ? nil : shieldApps
+            store.shield.webDomains = shieldDomains.isEmpty ? nil : shieldDomains
         }
     }
 

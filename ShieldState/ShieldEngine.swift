@@ -30,6 +30,10 @@ struct ShieldEngine: Sendable {
 
         var log = store.load()
         log.activeSession = Session(apps: apps, startedAt: now, endsAt: endsAt)
+        // Accumulate every token the user has ever unlocked so `.all` mode
+        // can shield them explicitly (category-only policy has gaps).
+        log.knownApplicationTokens.formUnion(apps.applicationTokens)
+        log.knownWebDomainTokens.formUnion(apps.webDomainTokens)
         store.save(log)
 
         do {
@@ -41,7 +45,7 @@ struct ShieldEngine: Sendable {
 
         let config = compute(log, at: now)
         logger.notice("startSession: applying \(String(describing: config), privacy: .public)")
-        applier.apply(config)
+        applier.apply(config, knownApps: log.knownApplicationTokens, knownDomains: log.knownWebDomainTokens)
     }
 
     func endSession(now: Date = Date()) {
@@ -58,7 +62,7 @@ struct ShieldEngine: Sendable {
 
         let config = compute(log, at: now)
         logger.notice("endSession: applying \(String(describing: config), privacy: .public)")
-        applier.apply(config)
+        applier.apply(config, knownApps: log.knownApplicationTokens, knownDomains: log.knownWebDomainTokens)
     }
 
     func flipDefault(to newDefault: DefaultState, now: Date = Date()) {
@@ -72,7 +76,7 @@ struct ShieldEngine: Sendable {
 
         let config = compute(log, at: now)
         logger.notice("flipDefault: applying \(String(describing: config), privacy: .public)")
-        applier.apply(config)
+        applier.apply(config, knownApps: log.knownApplicationTokens, knownDomains: log.knownWebDomainTokens)
     }
 
     // MARK: - System-driven transitions
@@ -95,7 +99,7 @@ struct ShieldEngine: Sendable {
         store.save(log)
         let config = compute(log, at: now)
         logger.notice("handleExpiry: applying \(String(describing: config), privacy: .public)")
-        applier.apply(config)
+        applier.apply(config, knownApps: log.knownApplicationTokens, knownDomains: log.knownWebDomainTokens)
     }
 
     /// Called by the main app on scenePhase → .active.
@@ -117,7 +121,7 @@ struct ShieldEngine: Sendable {
         store.save(log)
         let config = compute(log, at: now)
         logger.notice("catchUpOnForeground: applying \(String(describing: config), privacy: .public)")
-        applier.apply(config)
+        applier.apply(config, knownApps: log.knownApplicationTokens, knownDomains: log.knownWebDomainTokens)
     }
 
     /// Re-apply the currently-computed shield config without mutating the log.
@@ -132,7 +136,7 @@ struct ShieldEngine: Sendable {
         let log = store.load()
         let config = compute(log, at: now)
         logger.notice("reapplyCurrentState: applying \(String(describing: config), privacy: .public)")
-        applier.apply(config)
+        applier.apply(config, knownApps: log.knownApplicationTokens, knownDomains: log.knownWebDomainTokens)
     }
 }
 
