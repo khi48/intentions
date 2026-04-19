@@ -7,10 +7,13 @@
 
 import SwiftUI
 import BackgroundTasks
+import UserNotifications
 import OSLog
 
 @main
 struct IntentApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     private static let log = Logger(subsystem: "oh.Intent", category: "App")
 
     @Environment(\.scenePhase) private var scenePhase
@@ -38,16 +41,22 @@ struct IntentApp: App {
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
             DebugBreadcrumbs.record(.scenePhaseActive)
-            Self.log.notice("scenePhase → active\n--- breadcrumbs ---\n\(DebugBreadcrumbs.dump(), privacy: .public)\n--- end ---")
+            let dump = DebugBreadcrumbs.dump()
+            Self.log.notice("scenePhase → active\n\(dump, privacy: .public)")
+            print("SHIELDSTATE_BREADCRUMBS_START")
+            print(dump)
+            print("SHIELDSTATE_BREADCRUMBS_END")
             let engine = ShieldEngine.mainApp()
             engine.catchUpOnForeground()
             engine.reapplyCurrentState()
+            // Fallback notification served its purpose if the user tapped
+            // it to foreground us; either way, withdraw any pending copy.
+            UNUserNotificationCenter.current().removePendingNotificationRequests(
+                withIdentifiers: ["shieldstate.session-end-fallback"]
+            )
         }
-        .backgroundTask(.appRefresh("oh.Intent.shieldClear")) {
-            DebugBreadcrumbs.record(.bgtaskHandlerRan)
-            let bgLog = Logger(subsystem: "oh.Intent", category: "App")
-            bgLog.notice("BGTask oh.Intent.shieldClear ran")
-            ShieldEngine.mainApp().reapplyCurrentState()
-        }
+        // BGTask handler is registered in AppDelegate via BGTaskScheduler.register,
+        // which is the only guaranteed-to-work registration point per Apple docs.
+        // The SwiftUI .backgroundTask modifier was unreliable on iOS 26.
     }
 }

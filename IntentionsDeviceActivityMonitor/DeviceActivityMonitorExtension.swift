@@ -1,6 +1,7 @@
 import Foundation
 import DeviceActivity
 import BackgroundTasks
+import UserNotifications
 import OSLog
 
 /// DeviceActivityMonitor extension. Runs in its own process; survives main-app
@@ -53,6 +54,35 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         DarwinWake.post()
         DebugBreadcrumbs.record(.darwinPosted)
         submitMainAppReapplyRequest()
+        scheduleUserTapFallbackNotification()
+    }
+
+    /// Schedule a user-visible notification at +30s. If BGTask or Darwin
+    /// wake the main app first and it cancels this pending request, the
+    /// notification is withdrawn silently. If neither wakes the app, the
+    /// user sees the notification and tapping it foregrounds Intent →
+    /// scenePhase → reapply → shield renders. This is the guaranteed
+    /// fallback path for the iOS 26 extension-write render gap.
+    private func scheduleUserTapFallbackNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Session ended"
+        content.body = "Tap to re-lock your apps."
+        content.sound = nil
+        content.interruptionLevel = .active
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 30.0, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "shieldstate.session-end-fallback",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request) { [logger] error in
+            if let error {
+                logger.error("Fallback notification schedule failed: \(error.localizedDescription, privacy: .public)")
+            } else {
+                logger.notice("Scheduled +30s user-tap fallback notification")
+            }
+        }
     }
 
     private func submitMainAppReapplyRequest() {
