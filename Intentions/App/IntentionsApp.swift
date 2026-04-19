@@ -22,8 +22,17 @@ struct IntentApp: App {
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
-            Self.log.notice("scenePhase → active: ShieldEngine.catchUpOnForeground()")
-            ShieldEngine.mainApp().catchUpOnForeground()
+            Self.log.notice("scenePhase → active: catchUp + reapplyCurrentState")
+            let engine = ShieldEngine.mainApp()
+            // catchUp clears any expired session from the log when DAM
+            // didn't fire (e.g. force-quit case where BGTask was disabled).
+            engine.catchUpOnForeground()
+            // reapply writes the current shield config from the main-app
+            // process so springboard re-renders. This is a no-op for FC
+            // when the cache is already up to date; when DAM wrote from
+            // the extension without rendering, this is what makes the
+            // shield actually appear on screen.
+            engine.reapplyCurrentState()
         }
         // Main-app wake triggered by the DAM extension after session expiry.
         // On iOS 26, extension-process ManagedSettingsStore writes don't
