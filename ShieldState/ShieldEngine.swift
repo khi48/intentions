@@ -28,16 +28,15 @@ struct ShieldEngine: Sendable {
 
         scheduler?.cancel()
 
+        let session = Session(apps: apps, startedAt: now, endsAt: endsAt)
         var log = store.load()
-        log.activeSession = Session(apps: apps, startedAt: now, endsAt: endsAt)
-        // Accumulate every token the user has ever unlocked so `.all` mode
-        // can shield them explicitly (category-only policy has gaps).
+        log.activeSession = session
         log.knownApplicationTokens.formUnion(apps.applicationTokens)
         log.knownWebDomainTokens.formUnion(apps.webDomainTokens)
         store.save(log)
 
         do {
-            try scheduler?.schedule(endsAt: endsAt)
+            try scheduler?.schedule(endsAt: endsAt, sessionId: session.id)
             logger.notice("startSession: DAM scheduled successfully")
         } catch {
             logger.error("startSession: DAM schedule FAILED — \(error.localizedDescription, privacy: .public)")

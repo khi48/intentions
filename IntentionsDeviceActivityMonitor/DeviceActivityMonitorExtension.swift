@@ -29,7 +29,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
         DebugBreadcrumbs.record(.damIntervalDidEnd, note: activity.rawValue)
-        guard activity == DAMScheduler.sessionExpiryName else {
+        guard DAMScheduler.isSessionExpiryActivity(activity) else {
             logger.notice("intervalDidEnd: ignoring unrelated activity \(activity.rawValue, privacy: .public)")
             return
         }
@@ -40,7 +40,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
         super.eventDidReachThreshold(event, activity: activity)
         DebugBreadcrumbs.record(.damEventThreshold, note: "\(event.rawValue)/\(activity.rawValue)")
-        guard activity == DAMScheduler.sessionExpiryName,
+        guard DAMScheduler.isSessionExpiryActivity(activity),
               event == DAMScheduler.thresholdEventName else {
             logger.notice("eventDidReachThreshold: ignoring unrelated event \(event.rawValue, privacy: .public)/\(activity.rawValue, privacy: .public)")
             return
