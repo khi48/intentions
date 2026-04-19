@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import BackgroundTasks
-import UserNotifications
 import OSLog
 
 /// UIApplicationDelegate adapter. Exists specifically so we can register the
@@ -28,10 +27,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             Logger(subsystem: "oh.Intent", category: "AppDelegate")
                 .notice("BGTask oh.Intent.shieldClear fired — reapplying shield")
             ShieldEngine.mainApp().reapplyCurrentState()
-            // Cancel the user-tap fallback notification — we've handled it.
-            UNUserNotificationCenter.current().removePendingNotificationRequests(
-                withIdentifiers: ["shieldstate.session-end-fallback"]
-            )
             task.setTaskCompleted(success: true)
         }
         logger.notice("BGTaskScheduler handler registered for oh.Intent.shieldClear")

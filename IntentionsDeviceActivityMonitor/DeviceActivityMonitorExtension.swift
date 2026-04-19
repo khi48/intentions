@@ -1,7 +1,6 @@
 import Foundation
 import DeviceActivity
 import BackgroundTasks
-import UserNotifications
 import OSLog
 
 /// DeviceActivityMonitor extension. Runs in its own process; survives main-app
@@ -37,52 +36,11 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         handleSessionExpiry()
     }
 
-    override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
-        super.eventDidReachThreshold(event, activity: activity)
-        DebugBreadcrumbs.record(.damEventThreshold, note: "\(event.rawValue)/\(activity.rawValue)")
-        guard DAMScheduler.isSessionExpiryActivity(activity),
-              event == DAMScheduler.thresholdEventName else {
-            logger.notice("eventDidReachThreshold: ignoring unrelated event \(event.rawValue, privacy: .public)/\(activity.rawValue, privacy: .public)")
-            return
-        }
-        logger.notice("eventDidReachThreshold: session expiry (exact-time path)")
-        handleSessionExpiry()
-    }
-
     private func handleSessionExpiry() {
         ShieldEngine.damExtension().handleExpiry()
         DarwinWake.post()
         DebugBreadcrumbs.record(.darwinPosted)
         submitMainAppReapplyRequest()
-        scheduleUserTapFallbackNotification()
-    }
-
-    /// Schedule a user-visible notification at +30s. If BGTask or Darwin
-    /// wake the main app first and it cancels this pending request, the
-    /// notification is withdrawn silently. If neither wakes the app, the
-    /// user sees the notification and tapping it foregrounds Intent →
-    /// scenePhase → reapply → shield renders. This is the guaranteed
-    /// fallback path for the iOS 26 extension-write render gap.
-    private func scheduleUserTapFallbackNotification() {
-        let content = UNMutableNotificationContent()
-        content.title = "Session ended"
-        content.body = "Tap to re-lock your apps."
-        content.sound = nil
-        content.interruptionLevel = .active
-
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 30.0, repeats: false)
-        let request = UNNotificationRequest(
-            identifier: "shieldstate.session-end-fallback",
-            content: content,
-            trigger: trigger
-        )
-        UNUserNotificationCenter.current().add(request) { [logger] error in
-            if let error {
-                logger.error("Fallback notification schedule failed: \(error.localizedDescription, privacy: .public)")
-            } else {
-                logger.notice("Scheduled +30s user-tap fallback notification")
-            }
-        }
     }
 
     private func submitMainAppReapplyRequest() {

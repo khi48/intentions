@@ -3,20 +3,26 @@ import Foundation
 
 /// Thin wrapper over DeviceActivityCenter that schedules session-expiry callbacks.
 ///
-/// iOS imposes a minimum interval length (intervalTooShort) on
-/// DeviceActivitySchedule (~15 min). For shorter sessions we still need
-/// exact-time firing, so we schedule **both**:
-///  - a padded interval so startMonitoring accepts it (intervalDidEnd fires at pad end)
-///  - a threshold event at the actual duration (eventDidReachThreshold fires at real expiry)
+/// iOS imposes a minimum interval length (intervalTooShort, ~15 min). For
+/// shorter sessions we pad the interval so startMonitoring accepts it.
+/// `intervalDidEnd` still fires at the padded end, not the actual duration
+/// — that's fine because the actual user-facing "session ended" signal is
+/// the pre-scheduled local notification that NotificationService registers
+/// at session start for the real endsAt; iOS delivers that reliably even
+/// for fully-suspended apps. intervalDidEnd is cleanup: when it eventually
+/// fires, the extension runs handleExpiry which is idempotent (no-op if the
+/// main app already cleared the session on foreground).
 ///
-/// **Critical:** each session gets a UNIQUE DeviceActivityName
-/// (`shieldstate.session-expiry.<uuid>`). Reusing a single name across
-/// sessions causes iOS to carry over the threshold-counter state — a new
-/// schedule under the same name fires its threshold event *at session
-/// start*, not at the actual duration. Unique names reset the counter.
+/// We do NOT use a DeviceActivityEvent threshold. With an empty
+/// applications/categories/webDomains set the threshold fires immediately
+/// (~700 ms after startMonitoring on iOS 26) — the counter measures
+/// something other than "seconds since interval start" and is effectively
+/// useless for our purpose.
+///
+/// Each session gets a UNIQUE DeviceActivityName (`shieldstate.session-expiry.<uuid>`)
+/// so replace semantics stop the prior schedule cleanly.
 struct DAMScheduler: Sendable {
     static let sessionExpiryPrefix = "shieldstate.session-expiry"
-    static let thresholdEventName = DeviceActivityEvent.Name("threshold")
 
     /// iOS requires monitored intervals to be at least this long. Shorter
     /// schedules throw intervalTooShort from startMonitoring.
@@ -28,19 +34,14 @@ struct DAMScheduler: Sendable {
         DeviceActivityName("\(sessionExpiryPrefix).\(sessionId.uuidString)")
     }
 
-    /// Returns true iff the given activity name is one of ours.
     static func isSessionExpiryActivity(_ activity: DeviceActivityName) -> Bool {
         activity.rawValue.hasPrefix(sessionExpiryPrefix)
     }
 
-    /// Schedule a single-fire session-expiry callback for `endsAt`.
-    /// Throws if authorization is missing or the schedule is otherwise rejected.
     func schedule(endsAt: Date, sessionId: UUID) throws {
         DebugBreadcrumbs.record(.damScheduleAttempted)
         let now = Date()
         let requestedDuration = endsAt.timeIntervalSince(now)
-
-        // Pad the interval end if the requested duration is below the iOS minimum.
         let paddedEnd = now.addingTimeInterval(max(requestedDuration, Self.minimumIntervalSeconds) + 60)
 
         let schedule = DeviceActivitySchedule(
@@ -49,21 +50,9 @@ struct DAMScheduler: Sendable {
             repeats: false
         )
 
-        // Threshold event fires at the ACTUAL requested duration.
-        let threshold = DeviceActivityEvent(
-            applications: [],
-            categories: [],
-            webDomains: [],
-            threshold: DateComponents(second: max(Int(requestedDuration), 1))
-        )
-
         let name = Self.activityName(for: sessionId)
         do {
-            try center.startMonitoring(
-                name,
-                during: schedule,
-                events: [Self.thresholdEventName: threshold]
-            )
+            try center.startMonitoring(name, during: schedule)
             DebugBreadcrumbs.record(.damScheduleSucceeded, note: "duration=\(Int(requestedDuration))s padded=\(Int(paddedEnd.timeIntervalSince(now)))s name=\(name.rawValue)")
         } catch {
             DebugBreadcrumbs.record(.damScheduleFailed, note: "\(error.localizedDescription)")

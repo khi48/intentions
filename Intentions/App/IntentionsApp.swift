@@ -7,7 +7,6 @@
 
 import SwiftUI
 import BackgroundTasks
-import UserNotifications
 import OSLog
 
 @main
@@ -49,11 +48,6 @@ struct IntentApp: App {
             let engine = ShieldEngine.mainApp()
             engine.catchUpOnForeground()
             engine.reapplyCurrentState()
-            // Fallback notification served its purpose if the user tapped
-            // it to foreground us; either way, withdraw any pending copy.
-            UNUserNotificationCenter.current().removePendingNotificationRequests(
-                withIdentifiers: ["shieldstate.session-end-fallback"]
-            )
         }
         // BGTask handler is registered in AppDelegate via BGTaskScheduler.register,
         // which is the only guaranteed-to-work registration point per Apple docs.
