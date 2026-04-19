@@ -15,6 +15,19 @@ struct IntentApp: App {
 
     @Environment(\.scenePhase) private var scenePhase
 
+    init() {
+        // Register a Darwin observer so the DAM extension can wake this
+        // process instantly (when alive in background) and we can write
+        // the shield config from the main-app process for springboard
+        // re-render. Extension-process writes alone don't render on
+        // iOS 26 (Apple DTS 807934).
+        DarwinWake.observe {
+            let bgLog = Logger(subsystem: "oh.Intent", category: "App")
+            bgLog.notice("Darwin wake → ShieldEngine.reapplyCurrentState()")
+            ShieldEngine.mainApp().reapplyCurrentState()
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

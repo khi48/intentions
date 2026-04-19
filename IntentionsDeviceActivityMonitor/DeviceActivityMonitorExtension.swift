@@ -48,6 +48,11 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     private func handleSessionExpiry() {
         ShieldEngine.damExtension().handleExpiry()
+        // Fastest wake path: if the main-app process is still alive in
+        // background, its Darwin observer fires immediately and writes
+        // the shield config from its own process. Under force-quit there's
+        // no listener — the BGTask path below is the next tier.
+        DarwinWake.post()
         submitMainAppReapplyRequest()
     }
 
