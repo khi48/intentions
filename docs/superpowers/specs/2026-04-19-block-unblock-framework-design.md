@@ -1,9 +1,19 @@
 # Block / Unblock Framework — Design Spec
 
-**Status:** draft
+**Status:** draft — revised 2026-04-19 after on-device testing
 **Author:** Kieran Hitchcock (with Claude)
 **Date:** 2026-04-19
 **Scope:** Shield-state model and mechanism for session-based app blocking. No UI, no onboarding, no picker internals — only the state engine and its write path.
+
+## Revision Log
+
+**2026-04-19 (post-impl):** On-device Case A test revealed two spec premises were wrong:
+
+1. **§4.2 was wrong to forbid `clearAllSettings()`.** Direct-overwrite does not reliably transition Family Controls from `.all(except: X)` to `.all()` or `.none` on iOS 26; FC retains the stale except-set. The `apply()` primitive now flushes (nil every property + `clearAllSettings()`) for `.all` and `.none`; `.allExcept` stays as direct overwrite. The brief empty-shield window is the lesser regression.
+
+2. **§4.1 overstated extension-write reliability.** Apple DTS 807934: extension-process `ManagedSettingsStore` writes do NOT re-render the springboard shield layer on iOS 26 — even for shield ADDITION, not only removal. The store is correct, but the springboard keeps its cached render until the MAIN APP process writes. Mechanism now: DAM writes best-effort, then submits a `BGAppRefreshTask` so the main app wakes and calls `reapplyCurrentState()` from its own process. Force-quit still falls back to foreground catch-up (BGTask is disabled post force-quit).
+
+Sections below reflect the corrected design.
 
 ---
 

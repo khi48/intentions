@@ -115,6 +115,20 @@ struct ShieldEngine: Sendable {
         logger.notice("catchUpOnForeground: applying \(String(describing: config), privacy: .public)")
         applier.apply(config)
     }
+
+    /// Re-apply the currently-computed shield config without mutating the log.
+    /// Intended for the main app's BGAppRefreshTask handler: DAM extension
+    /// writes from its own process don't re-render the springboard shield
+    /// layer on iOS 26 (Apple DTS 807934). The extension submits a BGTask;
+    /// this method runs inside the main-app process so the store write
+    /// propagates correctly.
+    func reapplyCurrentState(now: Date = Date()) {
+        logger.notice("reapplyCurrentState called at \(now, privacy: .public)")
+        let log = store.load()
+        let config = compute(log, at: now)
+        logger.notice("reapplyCurrentState: applying \(String(describing: config), privacy: .public)")
+        applier.apply(config)
+    }
 }
 
 // MARK: - Production factories
