@@ -22,6 +22,8 @@ struct ShieldEngine: Sendable {
     // MARK: - User-driven transitions
 
     func startSession(apps: FamilyActivitySelection, endsAt: Date, now: Date = Date()) {
+        DebugBreadcrumbs.reset()
+        DebugBreadcrumbs.record(.engineStartSession, note: "endsAt=\(endsAt.timeIntervalSince(now))s")
         logger.notice("startSession: endsAt=\(endsAt, privacy: .public), apps.count=\(apps.applicationTokens.count, privacy: .public)")
 
         scheduler?.cancel()
@@ -77,6 +79,7 @@ struct ShieldEngine: Sendable {
 
     /// Called by the DAM extension at interval end.
     func handleExpiry(now: Date = Date()) {
+        DebugBreadcrumbs.record(.engineHandleExpiry)
         logger.notice("handleExpiry called at \(now, privacy: .public)")
         var log = store.load()
         guard let session = log.activeSession else {
@@ -98,6 +101,7 @@ struct ShieldEngine: Sendable {
     /// Called by the main app on scenePhase → .active.
     /// Repairs state if DAM silently failed to fire.
     func catchUpOnForeground(now: Date = Date()) {
+        DebugBreadcrumbs.record(.engineCatchUp)
         logger.notice("catchUpOnForeground called at \(now, privacy: .public)")
         var log = store.load()
         guard let session = log.activeSession else {
@@ -123,6 +127,7 @@ struct ShieldEngine: Sendable {
     /// this method runs inside the main-app process so the store write
     /// propagates correctly.
     func reapplyCurrentState(now: Date = Date()) {
+        DebugBreadcrumbs.record(.engineReapply)
         logger.notice("reapplyCurrentState called at \(now, privacy: .public)")
         let log = store.load()
         let config = compute(log, at: now)

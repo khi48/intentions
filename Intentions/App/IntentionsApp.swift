@@ -22,10 +22,12 @@ struct IntentApp: App {
         // re-render. Extension-process writes alone don't render on
         // iOS 26 (Apple DTS 807934).
         DarwinWake.observe {
+            DebugBreadcrumbs.record(.darwinReceived)
             let bgLog = Logger(subsystem: "oh.Intent", category: "App")
             bgLog.notice("Darwin wake → ShieldEngine.reapplyCurrentState()")
             ShieldEngine.mainApp().reapplyCurrentState()
         }
+        DebugBreadcrumbs.record(.darwinObserverInstalled)
     }
 
     var body: some Scene {
@@ -35,25 +37,16 @@ struct IntentApp: App {
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
-            Self.log.notice("scenePhase → active: catchUp + reapplyCurrentState")
+            DebugBreadcrumbs.record(.scenePhaseActive)
+            Self.log.notice("scenePhase → active\n--- breadcrumbs ---\n\(DebugBreadcrumbs.dump(), privacy: .public)\n--- end ---")
             let engine = ShieldEngine.mainApp()
-            // catchUp clears any expired session from the log when DAM
-            // didn't fire (e.g. force-quit case where BGTask was disabled).
             engine.catchUpOnForeground()
-            // reapply writes the current shield config from the main-app
-            // process so springboard re-renders. This is a no-op for FC
-            // when the cache is already up to date; when DAM wrote from
-            // the extension without rendering, this is what makes the
-            // shield actually appear on screen.
             engine.reapplyCurrentState()
         }
-        // Main-app wake triggered by the DAM extension after session expiry.
-        // On iOS 26, extension-process ManagedSettingsStore writes don't
-        // re-render the springboard shield layer; the main app must write
-        // from its own process for the render to refresh.
         .backgroundTask(.appRefresh("oh.Intent.shieldClear")) {
+            DebugBreadcrumbs.record(.bgtaskHandlerRan)
             let bgLog = Logger(subsystem: "oh.Intent", category: "App")
-            bgLog.notice("BGTask oh.Intent.shieldClear → ShieldEngine.reapplyCurrentState()")
+            bgLog.notice("BGTask oh.Intent.shieldClear ran")
             ShieldEngine.mainApp().reapplyCurrentState()
         }
     }

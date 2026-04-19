@@ -27,6 +27,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
+        DebugBreadcrumbs.record(.damIntervalDidEnd, note: activity.rawValue)
         guard activity == DAMScheduler.sessionExpiryName else {
             logger.notice("intervalDidEnd: ignoring unrelated activity \(activity.rawValue, privacy: .public)")
             return
@@ -37,6 +38,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
         super.eventDidReachThreshold(event, activity: activity)
+        DebugBreadcrumbs.record(.damEventThreshold, note: "\(event.rawValue)/\(activity.rawValue)")
         guard activity == DAMScheduler.sessionExpiryName,
               event == DAMScheduler.thresholdEventName else {
             logger.notice("eventDidReachThreshold: ignoring unrelated event \(event.rawValue, privacy: .public)/\(activity.rawValue, privacy: .public)")
@@ -48,25 +50,21 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     private func handleSessionExpiry() {
         ShieldEngine.damExtension().handleExpiry()
-        // Fastest wake path: if the main-app process is still alive in
-        // background, its Darwin observer fires immediately and writes
-        // the shield config from its own process. Under force-quit there's
-        // no listener — the BGTask path below is the next tier.
         DarwinWake.post()
+        DebugBreadcrumbs.record(.darwinPosted)
         submitMainAppReapplyRequest()
     }
 
-    /// Submit a BGAppRefreshTask so the main app wakes and re-applies the
-    /// shield config from its own process. Needed because springboard
-    /// doesn't observe extension-process store writes on iOS 26.
     private func submitMainAppReapplyRequest() {
         let request = BGAppRefreshTaskRequest(identifier: "oh.Intent.shieldClear")
         request.earliestBeginDate = nil
         do {
             try BGTaskScheduler.shared.submit(request)
-            logger.notice("BGTask submitted: main app will re-apply on wake")
+            DebugBreadcrumbs.record(.bgtaskSubmitted)
+            logger.notice("BGTask submitted")
         } catch {
-            logger.error("BGTask submit failed: \(error.localizedDescription, privacy: .public) — fallback to foreground catch-up")
+            DebugBreadcrumbs.record(.bgtaskSubmitFailed, note: error.localizedDescription)
+            logger.error("BGTask submit failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

@@ -25,6 +25,7 @@ struct DAMScheduler: Sendable {
     /// Schedule a single-fire session-expiry callback for `endsAt`.
     /// Throws if authorization is missing or the schedule is otherwise rejected.
     func schedule(endsAt: Date) throws {
+        DebugBreadcrumbs.record(.damScheduleAttempted)
         let now = Date()
         let requestedDuration = endsAt.timeIntervalSince(now)
 
@@ -46,11 +47,17 @@ struct DAMScheduler: Sendable {
             threshold: DateComponents(second: max(Int(requestedDuration), 1))
         )
 
-        try center.startMonitoring(
-            Self.sessionExpiryName,
-            during: schedule,
-            events: [Self.thresholdEventName: threshold]
-        )
+        do {
+            try center.startMonitoring(
+                Self.sessionExpiryName,
+                during: schedule,
+                events: [Self.thresholdEventName: threshold]
+            )
+            DebugBreadcrumbs.record(.damScheduleSucceeded, note: "duration=\(Int(requestedDuration))s padded=\(Int(paddedEnd.timeIntervalSince(now)))s")
+        } catch {
+            DebugBreadcrumbs.record(.damScheduleFailed, note: "\(error.localizedDescription)")
+            throw error
+        }
     }
 
     /// Cancel any in-flight schedule under our name. Safe to call when nothing is scheduled.

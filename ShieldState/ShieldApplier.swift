@@ -21,6 +21,7 @@ struct ManagedSettingsShieldApplier: ShieldApplying {
     private let store = ManagedSettingsStore()
 
     func apply(_ config: ShieldConfig) {
+        DebugBreadcrumbs.record(.applierApply, note: "\(config)")
         switch config {
         case .none:
             flush()
