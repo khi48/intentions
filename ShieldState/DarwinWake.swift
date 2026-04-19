@@ -27,13 +27,20 @@ enum DarwinWake {
         )
     }
 
-    /// Install a process-wide observer. Fires `block` on the main queue
-    /// whenever a Darwin notification with our name arrives. Call once
-    /// during main-app startup. Observer lives for the life of the process.
+    /// Install a process-wide observer. Fires `block` **synchronously on the
+    /// CFNotificationCenter callback thread** whenever a Darwin notification
+    /// with our name arrives. Call once during main-app startup. Observer
+    /// lives for the life of the process.
+    ///
+    /// Intentionally does NOT dispatch to the main queue: for a backgrounded
+    /// app the main queue is suspended, and the callback would wait until
+    /// foreground (defeating the point of a Darwin wake). Running
+    /// synchronously on the callback thread lets the work complete during
+    /// the kernel-provided wake window. The block must therefore be
+    /// thread-safe — the production use (ShieldEngine.reapplyCurrentState)
+    /// touches Sendable types and ManagedSettingsStore writes, both of
+    /// which are safe off the main actor.
     static func observe(_ block: @escaping @Sendable () -> Void) {
-        // Store the block in a class so CFNotificationCenter's C callback can
-        // retrieve it via an unretained pointer. Intentionally leaked for the
-        // life of the process — installed once at startup.
         final class Box: @unchecked Sendable {
             let block: @Sendable () -> Void
             init(_ block: @escaping @Sendable () -> Void) { self.block = block }
@@ -44,7 +51,7 @@ enum DarwinWake {
         let callback: CFNotificationCallback = { _, observer, _, _, _ in
             guard let observer else { return }
             let box = Unmanaged<Box>.fromOpaque(observer).takeUnretainedValue()
-            DispatchQueue.main.async { box.block() }
+            box.block()
         }
 
         let center = CFNotificationCenterGetDarwinNotifyCenter()
