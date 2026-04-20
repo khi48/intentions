@@ -19,6 +19,13 @@ actor ScreenTimeService: ScreenTimeManaging {
     private let _isInitialized = Atomic<Bool>(false)
     private var initializationTask: Task<Void, Error>?
 
+    /// In-app session-expiry timer. Fires at exact wall-clock duration when
+    /// the app process is alive (foreground or suspended-but-not-killed).
+    /// Redundant with DAM extension — whichever wakes first wins; both are
+    /// idempotent via `handleExpiry` / `reapplyCurrentState`. Covers the
+    /// iOS 26 DAM callback reliability gap when the main app is running.
+    private var sessionExpirationTask: Task<Void, Never>?
+
     // MARK: - Initialization
 
     init(engine: ShieldEngine = .mainApp()) {
@@ -119,6 +126,26 @@ actor ScreenTimeService: ScreenTimeManaging {
         logger.notice("allowApps → startSession(endsAt: \(endsAt, privacy: .public), id: \(sessionId.uuidString, privacy: .public))")
         engine.startSession(apps: selection, endsAt: endsAt)
         updateWidget(blocking: true)
+
+        // Belt-and-suspenders in-app timer. Main-app process write is the
+        // only one iOS 26 reliably renders — if we're alive at expiry, this
+        // fires BEFORE DAM intervalDidEnd (which is padded to ≥15min+60s
+        // floor). Idempotent: engine.reapplyCurrentState reads IntentLog +
+        // re-applies, so if DAM already handled it, this is a no-op.
+        sessionExpirationTask?.cancel()
+        let capturedEngine = engine
+        let durationNanos = UInt64(duration * 1_000_000_000)
+        let capturedSessionId = sessionId
+        sessionExpirationTask = Task { [logger] in
+            do {
+                try await Task.sleep(nanoseconds: durationNanos)
+                guard !Task.isCancelled else { return }
+                logger.notice("sessionExpirationTask fired for \(capturedSessionId.uuidString, privacy: .public) — reapplyCurrentState")
+                capturedEngine.reapplyCurrentState()
+            } catch {
+                // Task.sleep threw — cancellation. No-op.
+            }
+        }
     }
 
     func allowAllAccess() async throws {
@@ -163,6 +190,8 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// replace semantics handle it transparently.
     func cancelSessionTimers() async {
         logger.notice("cancelSessionTimers → endSession")
+        sessionExpirationTask?.cancel()
+        sessionExpirationTask = nil
         engine.endSession()
     }
 
@@ -170,6 +199,8 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// state untouched so a subsequent operation does not re-prompt.
     func cleanup() async {
         logger.notice("cleanup → endSession")
+        sessionExpirationTask?.cancel()
+        sessionExpirationTask = nil
         engine.endSession()
     }
 

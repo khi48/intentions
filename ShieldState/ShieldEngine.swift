@@ -152,10 +152,14 @@ extension ShieldEngine {
     }
 
     /// Production engine used by the DAM extension (no scheduling — only handles expiry).
+    /// Uses `AdditiveShieldApplier` (no clearAllSettings) because iOS 26 drops
+    /// extension-process clearAllSettings from the springboard cache
+    /// (DTS 807934). Additive .all() writes DO render; flushing doesn't.
+    /// Main-app process still uses full-flush `ManagedSettingsShieldApplier`.
     static func damExtension() -> ShieldEngine {
         ShieldEngine(
             store: IntentLogStore(),
-            applier: ManagedSettingsShieldApplier(),
+            applier: AdditiveShieldApplier(),
             scheduler: nil
         )
     }

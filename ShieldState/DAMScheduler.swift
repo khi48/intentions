@@ -30,8 +30,21 @@ struct DAMScheduler: Sendable {
 
     private let center = DeviceActivityCenter()
 
-    static func activityName(for sessionId: UUID) -> DeviceActivityName {
-        DeviceActivityName("\(sessionExpiryPrefix).\(sessionId.uuidString)")
+    /// Per-session sub-schedule identifiers. We register multiple overlapping
+    /// schedules per session so `intervalDidEnd` has multiple wake opportunities
+    /// — iOS 26 DAM callback delivery is intermittent (thread 809410,
+    /// 819242, 820956). Opal / Jomo / habitdoom all use this chaining pattern
+    /// to raise the hit rate. Each slot has a unique DeviceActivityName so
+    /// iOS schedules them independently; all share the same session prefix
+    /// for cancel().
+    static let chainSlots: [(suffix: String, offsetMinutes: Int)] = [
+        (suffix: "primary", offsetMinutes: 0),     // padded session end
+        (suffix: "retry1",  offsetMinutes: 15),    // +15 min
+        (suffix: "retry2",  offsetMinutes: 30)     // +30 min
+    ]
+
+    static func activityName(for sessionId: UUID, slot: String = "primary") -> DeviceActivityName {
+        DeviceActivityName("\(sessionExpiryPrefix).\(sessionId.uuidString).\(slot)")
     }
 
     static func isSessionExpiryActivity(_ activity: DeviceActivityName) -> Bool {
@@ -42,22 +55,35 @@ struct DAMScheduler: Sendable {
         DebugBreadcrumbs.record(.damScheduleAttempted)
         let now = Date()
         let requestedDuration = endsAt.timeIntervalSince(now)
-        let paddedEnd = now.addingTimeInterval(max(requestedDuration, Self.minimumIntervalSeconds) + 60)
+        let basePaddedEnd = now.addingTimeInterval(max(requestedDuration, Self.minimumIntervalSeconds) + 60)
 
-        let schedule = DeviceActivitySchedule(
-            intervalStart: Self.components(from: now),
-            intervalEnd: Self.components(from: paddedEnd),
-            repeats: false
-        )
+        var succeeded: [String] = []
+        var lastError: Error?
 
-        let name = Self.activityName(for: sessionId)
-        do {
-            try center.startMonitoring(name, during: schedule)
-            DebugBreadcrumbs.record(.damScheduleSucceeded, note: "duration=\(Int(requestedDuration))s padded=\(Int(paddedEnd.timeIntervalSince(now)))s name=\(name.rawValue)")
-        } catch {
-            DebugBreadcrumbs.record(.damScheduleFailed, note: "\(error.localizedDescription)")
-            throw error
+        for slot in Self.chainSlots {
+            let slotEnd = basePaddedEnd.addingTimeInterval(Double(slot.offsetMinutes) * 60)
+            let schedule = DeviceActivitySchedule(
+                intervalStart: Self.components(from: now),
+                intervalEnd: Self.components(from: slotEnd),
+                repeats: false
+            )
+            let name = Self.activityName(for: sessionId, slot: slot.suffix)
+            do {
+                try center.startMonitoring(name, during: schedule)
+                succeeded.append(slot.suffix)
+            } catch {
+                lastError = error
+                DebugBreadcrumbs.record(.damScheduleFailed, note: "slot=\(slot.suffix) \(error.localizedDescription)")
+            }
         }
+
+        if succeeded.isEmpty, let err = lastError {
+            throw err
+        }
+        DebugBreadcrumbs.record(
+            .damScheduleSucceeded,
+            note: "duration=\(Int(requestedDuration))s slots=\(succeeded.joined(separator: ",")) base-pad=\(Int(basePaddedEnd.timeIntervalSince(now)))s"
+        )
     }
 
     /// Cancel every session-expiry schedule currently registered. Iterates
