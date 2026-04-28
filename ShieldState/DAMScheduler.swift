@@ -1,104 +1,92 @@
 import Foundation
+@preconcurrency import FamilyControls
 @preconcurrency import DeviceActivity
 
-/// Thin wrapper over DeviceActivityCenter that schedules session-expiry callbacks.
+/// Wall-clock-future-start scheduler for session expiry. Validated in
+/// block-mvp on iOS 26.5 beta 3 across 5 scenarios (force-killed app
+/// included). The breakthrough: `DeviceActivitySchedule`'s 15-min minimum
+/// applies to `intervalEnd - intervalStart` (duration), NOT to
+/// `intervalStart - now` (offset). So we set `intervalStart` at the
+/// session's wall-clock end time and `intervalEnd` 15min30s later. iOS
+/// fires `intervalDidStart` in the extension at the session-end moment
+/// (within +2s to +9s slop), regardless of main-app state.
 ///
-/// iOS imposes a minimum interval length (intervalTooShort, ~15 min). For
-/// shorter sessions we pad the interval so startMonitoring accepts it.
-/// `intervalDidEnd` still fires at the padded end, not the actual duration
-/// — that's fine because the actual user-facing "session ended" signal is
-/// the pre-scheduled local notification that NotificationService registers
-/// at session start for the real endsAt; iOS delivers that reliably even
-/// for fully-suspended apps. intervalDidEnd is cleanup: when it eventually
-/// fires, the extension runs handleExpiry which is idempotent (no-op if the
-/// main app already cleared the session on foreground).
+/// Secondary: a `DeviceActivityEvent` with the session's REAL tokens and
+/// a 1-second threshold catches the case where the user opens the picked
+/// app post-expiry before iOS gets around to firing `intervalDidStart`.
+/// Empty-token thresholds fire at ~700ms on iOS 26 — populating tokens
+/// fixes that.
 ///
-/// We do NOT use a DeviceActivityEvent threshold. With an empty
-/// applications/categories/webDomains set the threshold fires immediately
-/// (~700 ms after startMonitoring on iOS 26) — the counter measures
-/// something other than "seconds since interval start" and is effectively
-/// useless for our purpose.
-///
-/// Each session gets a UNIQUE DeviceActivityName (`shieldstate.session-expiry.<uuid>`)
-/// so replace semantics stop the prior schedule cleanly.
+/// `intervalDidEnd` remains as a third belt-and-braces; the extension's
+/// `handleExpiry` is idempotent so late fires are no-ops.
 struct DAMScheduler: Sendable {
     static let sessionExpiryPrefix = "shieldstate.session-expiry"
-
-    /// iOS requires monitored intervals to be at least this long. Shorter
-    /// schedules throw intervalTooShort from startMonitoring.
-    static let minimumIntervalSeconds: TimeInterval = 15 * 60
+    static let firstTouchEventName = DeviceActivityEvent.Name("shieldstate.first-touch")
 
     private let center = DeviceActivityCenter()
 
-    /// Per-session sub-schedule identifiers. We register multiple overlapping
-    /// schedules per session so `intervalDidEnd` has multiple wake opportunities
-    /// — iOS 26 DAM callback delivery is intermittent (thread 809410,
-    /// 819242, 820956). Opal / Jomo / habitdoom all use this chaining pattern
-    /// to raise the hit rate. Each slot has a unique DeviceActivityName so
-    /// iOS schedules them independently; all share the same session prefix
-    /// for cancel().
-    static let chainSlots: [(suffix: String, offsetMinutes: Int)] = [
-        (suffix: "primary", offsetMinutes: 0),     // padded session end
-        (suffix: "retry1",  offsetMinutes: 15),    // +15 min
-        (suffix: "retry2",  offsetMinutes: 30)     // +30 min
-    ]
-
-    static func activityName(for sessionId: UUID, slot: String = "primary") -> DeviceActivityName {
-        DeviceActivityName("\(sessionExpiryPrefix).\(sessionId.uuidString).\(slot)")
+    static func activityName(for sessionId: UUID) -> DeviceActivityName {
+        DeviceActivityName("\(sessionExpiryPrefix).\(sessionId.uuidString)")
     }
 
     static func isSessionExpiryActivity(_ activity: DeviceActivityName) -> Bool {
         activity.rawValue.hasPrefix(sessionExpiryPrefix)
     }
 
-    func schedule(endsAt: Date, sessionId: UUID) throws {
+    /// Schedule one DAM monitoring window whose interval BEGINS at the
+    /// session end time. iOS fires `intervalDidStart` at that wall-clock
+    /// moment in the extension process — that's the canonical reshield
+    /// trigger.
+    func schedule(endsAt: Date, sessionId: UUID, apps: FamilyActivitySelection) throws {
         DebugBreadcrumbs.record(.damScheduleAttempted)
         let now = Date()
         let requestedDuration = endsAt.timeIntervalSince(now)
-        let basePaddedEnd = now.addingTimeInterval(max(requestedDuration, Self.minimumIntervalSeconds) + 60)
 
-        var succeeded: [String] = []
-        var lastError: Error?
+        // intervalStart at wall-clock session end → intervalDidStart fires there.
+        // intervalEnd 15min30s later → satisfies iOS 15-min duration minimum;
+        // intervalDidEnd fires there as a third fallback.
+        let start = endsAt
+        let end = start.addingTimeInterval(15 * 60 + 30)
 
-        for slot in Self.chainSlots {
-            let slotEnd = basePaddedEnd.addingTimeInterval(Double(slot.offsetMinutes) * 60)
-            let schedule = DeviceActivitySchedule(
-                intervalStart: Self.components(from: now),
-                intervalEnd: Self.components(from: slotEnd),
-                repeats: false
-            )
-            let name = Self.activityName(for: sessionId, slot: slot.suffix)
-            do {
-                try center.startMonitoring(name, during: schedule)
-                succeeded.append(slot.suffix)
-            } catch {
-                lastError = error
-                DebugBreadcrumbs.record(.damScheduleFailed, note: "slot=\(slot.suffix) \(error.localizedDescription)")
-            }
-        }
-
-        if succeeded.isEmpty, let err = lastError {
-            throw err
-        }
-        DebugBreadcrumbs.record(
-            .damScheduleSucceeded,
-            note: "duration=\(Int(requestedDuration))s slots=\(succeeded.joined(separator: ",")) base-pad=\(Int(basePaddedEnd.timeIntervalSince(now)))s"
+        let calendar = Calendar.current
+        let schedule = DeviceActivitySchedule(
+            intervalStart: calendar.dateComponents([.hour, .minute, .second], from: start),
+            intervalEnd: calendar.dateComponents([.hour, .minute, .second], from: end),
+            repeats: false
         )
+
+        // Secondary: usage-counter event with REAL session tokens. Fires ~1s
+        // into the user's foreground use of any picked app post-expiry.
+        // Catches "user opens picked app before intervalDidStart was honored".
+        let firstTouch = DeviceActivityEvent(
+            applications: apps.applicationTokens,
+            categories: apps.categoryTokens,
+            webDomains: apps.webDomainTokens,
+            threshold: DateComponents(second: 1)
+        )
+        let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
+            Self.firstTouchEventName: firstTouch
+        ]
+
+        let name = Self.activityName(for: sessionId)
+        do {
+            try center.startMonitoring(name, during: schedule, events: events)
+            DebugBreadcrumbs.record(
+                .damScheduleSucceeded,
+                note: "duration=\(Int(requestedDuration))s intervalStart=+\(Int(start.timeIntervalSince(now)))s intervalEnd=+\(Int(end.timeIntervalSince(now)))s name=\(name.rawValue)"
+            )
+        } catch {
+            DebugBreadcrumbs.record(.damScheduleFailed, note: error.localizedDescription)
+            throw error
+        }
     }
 
     /// Cancel every session-expiry schedule currently registered. Iterates
-    /// DeviceActivityCenter.activities because we do not persist the exact
-    /// set of active names — anything that looks like one of ours is ours.
+    /// `DeviceActivityCenter.activities` because we do not persist the exact
+    /// set of active names — anything matching the session-expiry prefix is ours.
     func cancel() {
         let ours = center.activities.filter { Self.isSessionExpiryActivity($0) }
         guard !ours.isEmpty else { return }
         center.stopMonitoring(ours)
-    }
-
-    private static func components(from date: Date) -> DateComponents {
-        Calendar.current.dateComponents(
-            [.year, .month, .day, .hour, .minute, .second],
-            from: date
-        )
     }
 }

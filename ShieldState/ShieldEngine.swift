@@ -36,7 +36,7 @@ struct ShieldEngine: Sendable {
         store.save(log)
 
         do {
-            try scheduler?.schedule(endsAt: endsAt, sessionId: session.id)
+            try scheduler?.schedule(endsAt: endsAt, sessionId: session.id, apps: apps)
             logger.notice("startSession: DAM scheduled successfully")
         } catch {
             logger.error("startSession: DAM schedule FAILED — \(error.localizedDescription, privacy: .public)")

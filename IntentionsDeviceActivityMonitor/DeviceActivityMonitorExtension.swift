@@ -1,29 +1,45 @@
 import Foundation
 import DeviceActivity
-import BackgroundTasks
 import OSLog
 
-/// DeviceActivityMonitor extension. Runs in its own process; survives main-app
-/// termination and force-quit. Delegates all shield-state decisions to
-/// ShieldEngine, which derives the target config from the persisted IntentLog.
+/// DeviceActivityMonitor extension. Runs in its own process; survives
+/// main-app termination and force-quit (validated in block-mvp).
 ///
-/// On iOS 26, extension-process ManagedSettingsStore writes do NOT re-render
-/// the springboard shield layer (Apple DTS 807934) — even for shield
-/// ADDITION. The store is updated, but springboard keeps its cached shield
-/// state until the MAIN APP process writes. So after handing off to the
-/// engine (which writes from this extension, best-effort) we also submit a
-/// BGAppRefreshTask request. iOS wakes the main app, the main app's
-/// BGTask handler re-applies the current config from its own process,
-/// and springboard re-reads. Under force-quit BGTask is disabled — the
-/// foreground catch-up path picks up the slack on next app launch.
+/// Three callbacks all route to the same idempotent `handleExpiry`:
 ///
-/// We register BOTH interval and threshold callbacks. For sessions shorter
-/// than the iOS minimum interval length (~15 min) the threshold event fires
-/// at the actual expiry time; the padded intervalDidEnd is an idempotent
-/// no-op because handleExpiry already cleared the session.
+///   1. `intervalDidStart` — the canonical trigger. Schedule's
+///      `intervalStart` is set to the session's wall-clock end time, so
+///      iOS fires this in the extension at session expiry (+2s to +9s
+///      slop on iOS 26.5 beta 3).
+///   2. `eventDidReachThreshold` — secondary. `firstTouch=1s` event on
+///      the session's tokens fires when user opens the picked app
+///      post-expiry; backstop if `intervalDidStart` was dropped.
+///   3. `intervalDidEnd` — tertiary, fires at intervalStart + 15min30s.
+///      Idempotent guard makes it a no-op once the session has been
+///      reshielded.
 class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     private let logger = Logger(subsystem: "oh.Intent", category: "DeviceActivityMonitor")
+
+    override func intervalDidStart(for activity: DeviceActivityName) {
+        super.intervalDidStart(for: activity)
+        DebugBreadcrumbs.record(.damIntervalDidStart, note: activity.rawValue)
+        guard DAMScheduler.isSessionExpiryActivity(activity) else {
+            logger.notice("intervalDidStart: ignoring unrelated activity \(activity.rawValue, privacy: .public)")
+            return
+        }
+        logger.notice("intervalDidStart: session expiry — primary trigger")
+        ShieldEngine.damExtension().handleExpiry()
+    }
+
+    override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
+        super.eventDidReachThreshold(event, activity: activity)
+        DebugBreadcrumbs.record(.damEventThreshold, note: "\(activity.rawValue)/\(event.rawValue)")
+        guard DAMScheduler.isSessionExpiryActivity(activity) else { return }
+        guard event == DAMScheduler.firstTouchEventName else { return }
+        logger.notice("eventDidReachThreshold: firstTouch on session tokens — secondary trigger")
+        ShieldEngine.damExtension().handleExpiry()
+    }
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
@@ -32,27 +48,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             logger.notice("intervalDidEnd: ignoring unrelated activity \(activity.rawValue, privacy: .public)")
             return
         }
-        logger.notice("intervalDidEnd: session expiry")
-        handleSessionExpiry()
-    }
-
-    private func handleSessionExpiry() {
+        logger.notice("intervalDidEnd: session expiry — tertiary trigger")
         ShieldEngine.damExtension().handleExpiry()
-        DarwinWake.post()
-        DebugBreadcrumbs.record(.darwinPosted)
-        submitMainAppReapplyRequest()
-    }
-
-    private func submitMainAppReapplyRequest() {
-        let request = BGAppRefreshTaskRequest(identifier: "oh.Intent.shieldClear")
-        request.earliestBeginDate = nil
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            DebugBreadcrumbs.record(.bgtaskSubmitted)
-            logger.notice("BGTask submitted")
-        } catch {
-            DebugBreadcrumbs.record(.bgtaskSubmitFailed, note: error.localizedDescription)
-            logger.error("BGTask submit failed: \(error.localizedDescription, privacy: .public)")
-        }
     }
 }

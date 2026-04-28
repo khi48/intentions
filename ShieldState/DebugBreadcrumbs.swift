@@ -12,6 +12,7 @@ enum DebugBreadcrumbs {
         case engineHandleExpiry          = "shieldstate.debug.engine.handleExpiry"
         case engineCatchUp               = "shieldstate.debug.engine.catchUp"
         case engineReapply               = "shieldstate.debug.engine.reapply"
+        case damIntervalDidStart         = "shieldstate.debug.dam.intervalDidStart"
         case damIntervalDidEnd           = "shieldstate.debug.dam.intervalDidEnd"
         case damEventThreshold           = "shieldstate.debug.dam.eventThreshold"
         case damScheduleAttempted        = "shieldstate.debug.dam.scheduleAttempted"
@@ -61,7 +62,7 @@ enum DebugBreadcrumbs {
 
     private static let allEvents: [Event] = [
         .engineStartSession, .engineHandleExpiry, .engineCatchUp, .engineReapply,
-        .damIntervalDidEnd, .damEventThreshold,
+        .damIntervalDidStart, .damIntervalDidEnd, .damEventThreshold,
         .damScheduleAttempted, .damScheduleSucceeded, .damScheduleFailed,
         .darwinPosted, .darwinObserverInstalled, .darwinReceived,
         .bgtaskSubmitted, .bgtaskSubmitFailed, .bgtaskHandlerRan,
