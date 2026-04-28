@@ -6,21 +6,12 @@
 //
 
 import Foundation
-import CoreFoundation
 import SwiftUI
 @preconcurrency import FamilyControls
 @preconcurrency import ManagedSettings
 import UserNotifications
 import WidgetKit
 import OSLog
-
-extension Notification.Name {
-    /// Process-local fan-out of the cross-process Darwin notification posted
-    /// by the DeviceActivityMonitor extension when a session expires. Observed
-    /// by ContentViewModel to run the marker drain instantly while the app is
-    /// still in memory.
-    static let shieldReconcileNeeded = Notification.Name("oh.Intent.shieldReconcile.local")
-}
 
 /// Tracks the lifecycle state of the ScreenTimeService within ContentViewModel
 enum ScreenTimeServiceState: Sendable {
@@ -150,49 +141,6 @@ final class ContentViewModel: Sendable {
                 self?.selectedTab = .home
             }
         }
-
-        // Darwin observer: when the DeviceActivity extension writes a
-        // shield-clear marker + posts the Darwin notification, run the drain
-        // immediately instead of waiting for BGAppRefresh or foreground.
-        // Works only while the app process is in memory; killed/suspended
-        // cases still rely on BGTask + user-tap notification fallback.
-        NotificationCenter.default.addObserver(
-            forName: .shieldReconcileNeeded,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                await self?.drainShieldMarkerFromDarwin()
-            }
-        }
-        installShieldReconcileDarwinObserver()
-    }
-
-    /// Install a system-wide (Darwin) observer that wakes this process when
-    /// the extension posts `oh.Intent.shieldReconcile`. Darwin observers use a
-    /// C callback; we re-post into the local NotificationCenter so the
-    /// `@MainActor`-isolated handler picks it up without Unmanaged juggling.
-    nonisolated private func installShieldReconcileDarwinObserver() {
-        let center = CFNotificationCenterGetDarwinNotifyCenter()
-        let name = AppConstants.BackgroundTasks.shieldReconcileDarwinName as CFString
-        CFNotificationCenterAddObserver(
-            center,
-            nil,
-            { _, _, _, _, _ in
-                NotificationCenter.default.post(name: .shieldReconcileNeeded, object: nil)
-            },
-            name,
-            nil,
-            .deliverImmediately
-        )
-    }
-
-    /// Triggered by the Darwin bridge. Calls the standard drain which cancels
-    /// the fallback notification and re-applies blocking from the main app
-    /// process (the mutation the springboard actually honors).
-    private func drainShieldMarkerFromDarwin() async {
-        logger.notice("📡 Darwin wake — draining shield marker")
-        await drainPendingShieldClearIfNeeded()
     }
 
     /// Initialize the app when it launches
@@ -680,58 +628,6 @@ final class ContentViewModel: Sendable {
             return
         }
 
-        // Belt-and-braces: honor the shared shield-clear marker in case the
-        // BGTask hand-off didn't fire (iOS throttled it, device was under
-        // memory pressure, etc.). Runs before applyDefaultBlocking so we
-        // don't race our own re-blocking path.
-        await drainPendingShieldClearIfNeeded()
-
-        await applyDefaultBlocking()
-    }
-
-    /// Handle a shield-clear hand-off triggered by the DeviceActivity
-    /// extension. Called by the BGTask registered in IntentionsApp AND by
-    /// `reconcileBlockingOnForeground` as a fallback.
-    ///
-    /// Flow:
-    /// 1. Consume the shared marker (flip pending flag off).
-    /// 2. Clear ManagedSettings from the main app process — this is what
-    ///    forces the springboard shield layer to re-render (DTS 807934).
-    /// 3. Re-apply default blocking based on current schedule/session.
-    /// 4. Cancel the fallback notification so the user doesn't see it.
-    func handleShieldClearBackgroundTask() async {
-        logger.notice("🌀 BGTASK HANDLER: running shield-clear hand-off")
-        await drainPendingShieldClearIfNeeded(forceClear: true)
-    }
-
-    /// Drain any pending shield-clear hand-off. No-op if neither the marker
-    /// is set nor `forceClear` is requested.
-    private func drainPendingShieldClearIfNeeded(forceClear: Bool = false) async {
-        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId)
-        let markerSet = sharedDefaults?.bool(forKey: AppConstants.Keys.shieldClearPending) ?? false
-
-        guard markerSet || forceClear else { return }
-        guard screenTimeService.isReady else {
-            logger.warning("drainPendingShieldClear: service not ready, deferring")
-            return
-        }
-
-        logger.info("drainPendingShieldClear: marker=\(markerSet, privacy: .public) forceClear=\(forceClear, privacy: .public)")
-
-        // Reset the marker + cancel fallback notification BEFORE applying
-        // shields so a concurrent foreground observer can't re-enter.
-        sharedDefaults?.removeObject(forKey: AppConstants.Keys.shieldClearPending)
-        sharedDefaults?.removeObject(forKey: AppConstants.Keys.shieldClearRequestedAt)
-        sharedDefaults?.synchronize()
-        UNUserNotificationCenter.current().removePendingNotificationRequests(
-            withIdentifiers: [AppConstants.BackgroundTasks.shieldClearFallbackNotificationId]
-        )
-
-        // Go straight to applyDefaultBlocking. Its block/allow paths
-        // (`blockAllApps` / `allowAllAccess`) already do the per-key nil +
-        // clearAllSettings dance, so we don't need the explicit clearAllShields
-        // call that was creating a visible "all apps unblocked" flash on
-        // foreground reconcile.
         await applyDefaultBlocking()
     }
 
