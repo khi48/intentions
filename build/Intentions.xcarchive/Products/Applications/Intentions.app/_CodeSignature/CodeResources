@@ -6,19 +6,19 @@
 	<dict>
 		<key>AppIcon60x60@2x.png</key>
 		<data>
-		DVl+ZR5/r5mPYpnYmVPCBPtdbTA=
+		ArfMkTQyP0A+DwsuIcqRg0B1PGY=
 		</data>
 		<key>AppIcon76x76@2x~ipad.png</key>
 		<data>
-		xOZOF+rO7qByWY9dIGv29IwYUD0=
+		wseThsxo4hhfD88bTLx7uA+fNCs=
 		</data>
 		<key>Assets.car</key>
 		<data>
-		YwvaP1jek5GLQpK0TNq6Q08FyKM=
+		N/IzBhu98y1jcV+EPjZkRHjm6yA=
 		</data>
 		<key>Info.plist</key>
 		<data>
-		qG43aeGhYa+9YoeOZOqj010pR4Q=
+		At1J1YIOsPueQNir7tGo3Rdi6YM=
 		</data>
 		<key>PkgInfo</key>
 		<data>
@@ -26,35 +26,35 @@
 		</data>
 		<key>PlugIns/IntentionsDeviceActivityMonitor.appex/Info.plist</key>
 		<data>
-		rgyp3bWmkaMKxUuR3zrCrTw2rlw=
+		iDmoKfC+hEexVoIam3H+2f+LAOI=
 		</data>
 		<key>PlugIns/IntentionsDeviceActivityMonitor.appex/IntentionsDeviceActivityMonitor</key>
 		<data>
-		82F/LucFqCz2YEuIg5kZMSO115U=
+		sb6sKOxb/wzikd8foq5oiz4I38k=
 		</data>
 		<key>PlugIns/IntentionsDeviceActivityMonitor.appex/_CodeSignature/CodeResources</key>
 		<data>
-		PpNsUEC7S2P5Al13ucJO3Qdwcps=
+		ujbNylkYWwfeC+2Ej6VZFEx5Gnw=
 		</data>
 		<key>PlugIns/IntentionsDeviceActivityMonitor.appex/embedded.mobileprovision</key>
 		<data>
-		vxUx91eM0fPS/kZ+VThVI0KchFU=
+		KIZSa8asCQuRlyepfLepFOlmLyk=
 		</data>
 		<key>PlugIns/IntentionsShieldAction.appex/Info.plist</key>
 		<data>
-		c5zQYJTH8wDxjjowpM2ElrEOVgo=
+		VtcM8V06vM0yVAz0NWJ6Dei25Rs=
 		</data>
 		<key>PlugIns/IntentionsShieldAction.appex/IntentionsShieldAction</key>
 		<data>
-		iWXbMxKMwkueUuMyqw+eVPwkH/k=
+		Bjk6wHb9Zyf17ieTTUQZS0P3o8c=
 		</data>
 		<key>PlugIns/IntentionsShieldAction.appex/_CodeSignature/CodeResources</key>
 		<data>
-		j/y2W7/hzLI39FaDPlgJshyLQ9s=
+		034p+iICCLoLXw9twO0lvbYn3VM=
 		</data>
 		<key>PlugIns/IntentionsShieldAction.appex/embedded.mobileprovision</key>
 		<data>
-		nwVVI1z6S5FlyYzCq5JZvFBJC2s=
+		xhNmXv6ZFNNhcnkH9M6kNP0jfDo=
 		</data>
 		<key>PlugIns/IntentionsShieldConfiguration.appex/Assets.car</key>
 		<data>
@@ -62,31 +62,31 @@
 		</data>
 		<key>PlugIns/IntentionsShieldConfiguration.appex/Info.plist</key>
 		<data>
-		W03ZbRucliLZf2NSvBZY+KtZXkw=
+		0v/N4DtSVzssFhtPRdk7DlJkd9c=
 		</data>
 		<key>PlugIns/IntentionsShieldConfiguration.appex/IntentionsShieldConfiguration</key>
 		<data>
-		72VvIuHHfYSBxyTZpGxrwQtEQbc=
+		NTgVwwnH5Yf1tL2VDXnAoi4RXa8=
 		</data>
 		<key>PlugIns/IntentionsShieldConfiguration.appex/_CodeSignature/CodeResources</key>
 		<data>
-		+EAtcW7mGUEuINKGZnHcVqmLhWw=
+		InuBk1y0NWAZaW3JIZ1x1mTgg1Q=
 		</data>
 		<key>PlugIns/IntentionsShieldConfiguration.appex/embedded.mobileprovision</key>
 		<data>
-		tn0SIJ8VNgCtMzKsUoK1NiBGys4=
+		zh10Hh3vpmKvvsiMHASwPZQihf8=
 		</data>
 		<key>PlugIns/IntentionsWidgetExtension.appex/Info.plist</key>
 		<data>
-		syRQvz2N4dJH+LvNGl/sln49gjM=
+		574AgRPMqUkUoMv/MurwNuwuUhw=
 		</data>
 		<key>PlugIns/IntentionsWidgetExtension.appex/IntentionsWidgetExtension</key>
 		<data>
-		fVhJM/UpC0qrNqLfrsHzIcs3O4s=
+		+1F6SIa/+DACBZ4NFRu/C7c+LY8=
 		</data>
 		<key>PlugIns/IntentionsWidgetExtension.appex/_CodeSignature/CodeResources</key>
 		<data>
-		0unAn15zs3fw4WhBbG0NvlpeMgM=
+		53fJmh7E06ZmHsAmEniERc6cRnU=
 		</data>
 		<key>PlugIns/IntentionsWidgetExtension.appex/embedded.mobileprovision</key>
 		<data>
@@ -103,77 +103,77 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			UT73JCbWwi4c3/WFihUEZScIKhr7hdwIZOgtov5KeeY=
+			GW6mvTtgmcNBDzh6ApxJc+Qj+64TF5zB6NS8z/n6QnQ=
 			</data>
 		</dict>
 		<key>AppIcon76x76@2x~ipad.png</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Tea+eLnyczeAoFEkS9Xt5iaNInu+2GfYxpLBqhZVvds=
+			1GeMbyjpv6NtlGxFTKRH1RCOjHjptWsanUC2D2J9yo0=
 			</data>
 		</dict>
 		<key>Assets.car</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			ktGH7oUPV373yOVP/bO+mrwKt+vfZJ0PrJmqHx7iXV0=
+			RgYokbL1lApKu5EMFmGWofqwhtJ/VxnFBElbCKsUqPA=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsDeviceActivityMonitor.appex/Info.plist</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			tceVMStAv7yQLHGfwMF7/3exPkE58yMZM6EdqHPxDzQ=
+			sfBbZd52UqSmWMIedcugitRg9E6UxKTQitYD8YoeoAU=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsDeviceActivityMonitor.appex/IntentionsDeviceActivityMonitor</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			QK4QhgMXI3V3L7boL220B7nyJTHh1qvtWEqx5lOmucE=
+			0YjCwOLsw4zl4X4J1s3vxsJOKj+U4pTLtbr0jRPm4r8=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsDeviceActivityMonitor.appex/_CodeSignature/CodeResources</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			KIgRUzKc7aSLpAxxkll+RPun+Z1haDD6zsnv76c74OU=
+			uJn2awfJiycF8xP6WBsSmverHT5tYEcqD5Q9I4wQqaQ=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsDeviceActivityMonitor.appex/embedded.mobileprovision</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			ty3vE6cKcnuf7Im2UHQj7rXG0GGUacydP4IpREOQfrE=
+			atEN0tC+7CDt7ov307G/Q7B9faqRKZ6e+lxggiPm8Ms=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsShieldAction.appex/Info.plist</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			WrjNYiuXn+W0gGoNCyJaxGt+GqHLbLmdmke6MdhsiZk=
+			ENSv9PWpudcGDLOGDyGZIYxOGV03vUyaCPgwF95DuwM=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsShieldAction.appex/IntentionsShieldAction</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			CansGUQYt3h16QEO99kKMUEIABfKCNpHtN08OBut/Wc=
+			U1I1GeiPb3Fw4D5et8bPQizZZ9/SCjr+cffKcaGN/zY=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsShieldAction.appex/_CodeSignature/CodeResources</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			I0ctbDEBF8Z8N+RsP4JlSiZqYDntsK+mYjxwdN40RLE=
+			G/JdFPheaBdM6Fs0V9aXlz890sx0af1Dz57YkrKGoQA=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsShieldAction.appex/embedded.mobileprovision</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			HsoJkFTm3pOlmVNqecF/qUwdOCaq8o2FG7smQASONWI=
+			h2IyPxQKLN7ujVBA+y2bN8EvjyRRy2NZPFkxNiwIFG8=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsShieldConfiguration.appex/Assets.car</key>
@@ -187,49 +187,49 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			xpGXcQ9IjFsi20C16uHVazmLhscGOnMZgcwr+P6wpds=
+			eLlD4H9AX6kYB6ipUMZ+t1hHW/IZ0SlmsZv8tc9XZEE=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsShieldConfiguration.appex/IntentionsShieldConfiguration</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			EtTmTydMUKe5bynX777lt2fgTOMwKnVLoyCe8lKfk9g=
+			PQPy3GhXyqzZVWNq+5ZrGJbDvXy5X2Nfc6mt81dq3X8=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsShieldConfiguration.appex/_CodeSignature/CodeResources</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			1S7CbRsy6T0QdBH7xRblNiR7zNL8KTwwD+zjLnPL1lM=
+			RhbOMe972Yq6yGj1p4ZtV/96C+fOmL/xW66/P3hhnls=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsShieldConfiguration.appex/embedded.mobileprovision</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			88gVVsoxhR1Q2C4Ep9m9mptSdSnuvw3OaTDXJkBvZ2k=
+			LtjmStu/w3ZKcUbneH/ItMhIB2EAZrdCzQLpCYFB254=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsWidgetExtension.appex/Info.plist</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			SaspXs2ZSo7uMb0LUV5/5pHh87GlQoXDfiyzOUAM5Ik=
+			1x7Nd5B8M+/48WE5O14a2glef0KXIHgclzXQxoo2DuU=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsWidgetExtension.appex/IntentionsWidgetExtension</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			ZlBlLwRifayEi4MU7oD492XblTaQYTskaBbouxYkjDs=
+			qoTcQfjcZqYsfUe5Id0/mwGm3yyi2b+NetOAfpM+eqM=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsWidgetExtension.appex/_CodeSignature/CodeResources</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			XQYi3L/xCWTqO/42I/1DLhwHOL87rV2ENP/AtTL6TVQ=
+			3To+7Q1hT86WSejMtxpdMGEid6VJ4wBQk1Wr+2VWkXc=
 			</data>
 		</dict>
 		<key>PlugIns/IntentionsWidgetExtension.appex/embedded.mobileprovision</key>
