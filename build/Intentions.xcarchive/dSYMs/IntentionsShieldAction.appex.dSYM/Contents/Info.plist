@@ -5,7 +5,7 @@
 		<key>CFBundleDevelopmentRegion</key>
 		<string>English</string>
 		<key>CFBundleIdentifier</key>
-		<string>com.apple.xcode.dsym.oh.Intent.ShieldAction</string>
+		<string>com.apple.xcode.dsym.oh.Intent.IntentShieldAction</string>
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundlePackageType</key>
@@ -15,6 +15,6 @@
 		<key>CFBundleShortVersionString</key>
 		<string>1.1</string>
 		<key>CFBundleVersion</key>
-		<string>84</string>
+		<string>108</string>
 	</dict>
 </plist>

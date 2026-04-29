@@ -905,7 +905,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Intentions/Intentions.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				DEVELOPMENT_ASSET_PATHS = "\"Intentions/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -937,7 +937,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Intentions/Intentions.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				DEVELOPMENT_ASSET_PATHS = "\"Intentions/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -967,7 +967,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MACH_O_TYPE = mh_bundle;
@@ -987,7 +987,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				DEVELOPMENT_TEAM = QUR55L9SP5;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -1007,7 +1007,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = oh.IntentUITests;
@@ -1023,7 +1023,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = oh.IntentUITests;
@@ -1040,7 +1040,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = IntentionsShieldConfiguration/IntentionsShieldConfiguration.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsShieldConfiguration/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = IntentShieldConfiguration;
@@ -1066,7 +1066,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = IntentionsShieldConfiguration/IntentionsShieldConfiguration.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsShieldConfiguration/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = IntentShieldConfiguration;
@@ -1078,7 +1078,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.ShieldConfiguration;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.IntentShieldConfiguration;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1092,7 +1092,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = IntentionsShieldAction/IntentionsShieldAction.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsShieldAction/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = IntentShieldAction;
@@ -1118,7 +1118,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = IntentionsShieldAction/IntentionsShieldAction.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsShieldAction/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = IntentShieldAction;
@@ -1130,7 +1130,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.ShieldAction;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.IntentShieldAction;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1144,7 +1144,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = IntentionsDeviceActivityMonitor/IntentionsDeviceActivityMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsDeviceActivityMonitor/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = IntentDeviceActivityMonitor;
@@ -1170,7 +1170,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = IntentionsDeviceActivityMonitor/IntentionsDeviceActivityMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsDeviceActivityMonitor/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = IntentDeviceActivityMonitor;
@@ -1182,7 +1182,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.DeviceActivity;
+				PRODUCT_BUNDLE_IDENTIFIER = oh.Intent.IntentDeviceActivityMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1198,7 +1198,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = IntentionsWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = IntentWidget;
@@ -1226,7 +1226,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = IntentionsWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 107;
+				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IntentionsWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = IntentWidget;
