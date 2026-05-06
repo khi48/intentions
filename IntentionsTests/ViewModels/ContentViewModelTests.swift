@@ -312,6 +312,31 @@ final class ContentViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.isLoading)
     }
     
+    // MARK: - Schedule Update Tests
+
+    @MainActor
+    func testUpdateWeeklyScheduleFailsWhenServiceNotReady() async throws {
+        // Given - View model wired with a mock screen-time service that has
+        // never been initialised. isReady is false.
+        try createViewModel()
+        XCTAssertFalse(mockScreenTimeService.isReady)
+        XCTAssertNil(viewModel.errorMessage)
+
+        var schedule = WeeklySchedule()
+        schedule.isEnabled = true
+
+        // When - User saves an edit before setup completes.
+        await viewModel.updateWeeklySchedule(schedule)
+
+        // Then - errorMessage is set with a serviceUnavailable description so
+        // the user sees the failure rather than a silent no-op IntentLog push.
+        XCTAssertNotNil(viewModel.errorMessage)
+        XCTAssertTrue(
+            viewModel.errorMessage?.contains("Screen Time service is not ready") ?? false,
+            "Expected serviceUnavailable error, got: \(viewModel.errorMessage ?? "nil")"
+        )
+    }
+
     // MARK: - Error Handling Tests
     
     @MainActor

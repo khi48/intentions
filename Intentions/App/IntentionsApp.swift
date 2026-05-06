@@ -21,8 +21,9 @@ struct IntentApp: App {
         // Register a Darwin observer so the DAM extension can wake this
         // process instantly (when alive in background) and we can write
         // the shield config from the main-app process for springboard
-        // re-render. Extension-process writes alone don't render on
-        // iOS 26 (Apple DTS 807934).
+        // re-render. In our current iOS 26 testing the extension-process
+        // flush has not been observed re-rendering the springboard cache,
+        // so we route shield-drop renders through the main app.
         DarwinWake.observe {
             DebugBreadcrumbs.record(.darwinReceived)
             let bgLog = Logger(subsystem: "oh.Intent", category: "App")
@@ -30,6 +31,12 @@ struct IntentApp: App {
             ShieldEngine.mainApp().reapplyCurrentState()
         }
         DebugBreadcrumbs.record(.darwinObserverInstalled)
+        // One-shot per process: freeze the live breadcrumb keys here so the
+        // frozen snapshot reflects whatever the extension last wrote BEFORE
+        // any main-app reconcile work runs. Do NOT call freeze() elsewhere —
+        // a second freeze on scenePhase.active would clobber that pre-launch
+        // snapshot with foreground-reapply data.
+        DebugBreadcrumbs.freeze()
     }
 
     var body: some Scene {
@@ -39,6 +46,9 @@ struct IntentApp: App {
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
+            // Do NOT call DebugBreadcrumbs.freeze() here — it's one-shot per
+            // process and runs in App.init. Re-freezing on each foreground
+            // would overwrite the pre-launch snapshot we want to inspect.
             DebugBreadcrumbs.record(.scenePhaseActive)
             let dump = DebugBreadcrumbs.dump()
             Self.log.notice("scenePhase → active\n\(dump, privacy: .public)")
