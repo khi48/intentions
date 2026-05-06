@@ -39,11 +39,52 @@ enum DebugBreadcrumbs {
     }
 
     /// Record a breadcrumb with the current timestamp and an optional note.
+    /// Updates the per-key live value AND appends to the ring-buffer history.
     static func record(_ event: Event, note: String = "") {
         guard let defaults = UserDefaults(suiteName: suiteName) else { return }
         let stamp = DateFormatter.iso.string(from: Date())
         let value = note.isEmpty ? stamp : "\(stamp) | \(note)"
         defaults.set(value, forKey: event.rawValue)
+        appendToHistory(stamp: stamp, event: event, note: note, defaults: defaults)
+    }
+
+    // MARK: - Ring-buffer history
+
+    private static let historyKey = "shieldstate.debug.history"
+    private static let frozenHistoryKey = "shieldstate.frozen.history"
+    private static let historyCap = 100
+
+    /// Append one entry to the live history and trim to `historyCap` lines.
+    /// Read-modify-write — racy across processes (main app + DAM extension)
+    /// but tolerable for diagnostics; occasional lost appends are fine.
+    private static func appendToHistory(stamp: String, event: Event, note: String, defaults: UserDefaults) {
+        let shortName = event.rawValue.replacingOccurrences(of: "shieldstate.debug.", with: "")
+        let line = "\(stamp)  \(shortName)  \(note)"
+        let existing = defaults.string(forKey: historyKey) ?? ""
+        var lines = existing.isEmpty
+            ? []
+            : existing.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        lines.append(line)
+        if lines.count > historyCap {
+            lines = Array(lines.suffix(historyCap))
+        }
+        defaults.set(lines.joined(separator: "\n"), forKey: historyKey)
+    }
+
+    /// Chronological dump of the live ring-buffer history (oldest first).
+    static func dumpHistory() -> String {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return "(no app group)" }
+        let raw = defaults.string(forKey: historyKey) ?? ""
+        if raw.isEmpty { return "(no history)" }
+        return raw
+    }
+
+    /// Chronological dump of the frozen ring-buffer history (oldest first).
+    static func dumpFrozenHistory() -> String {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return "(no app group)" }
+        let raw = defaults.string(forKey: frozenHistoryKey) ?? ""
+        if raw.isEmpty { return "(no frozen history)" }
+        return raw
     }
 
     /// Read all breadcrumbs, sorted by timestamp, as a multi-line string.
@@ -79,6 +120,12 @@ enum DebugBreadcrumbs {
             } else {
                 defaults.removeObject(forKey: frozenKey)
             }
+        }
+        // Snapshot the live ring-buffer history into the frozen-history key.
+        if let history = defaults.string(forKey: historyKey) {
+            defaults.set(history, forKey: frozenHistoryKey)
+        } else {
+            defaults.removeObject(forKey: frozenHistoryKey)
         }
         defaults.set(DateFormatter.iso.string(from: Date()), forKey: frozenAtKey)
     }
@@ -116,6 +163,8 @@ enum DebugBreadcrumbs {
         for event in allEvents {
             defaults.removeObject(forKey: event.rawValue)
         }
+        defaults.removeObject(forKey: historyKey)
+        defaults.removeObject(forKey: frozenHistoryKey)
     }
 
     private static let allEvents: [Event] = [
