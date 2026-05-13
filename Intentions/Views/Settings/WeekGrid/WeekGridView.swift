@@ -5,6 +5,7 @@ import SwiftUI
 struct WeekGridView: View {
     let intervals: [FreeTimeInterval]
     let selectedIntervalID: UUID?
+    let isReadOnly: Bool
     let onTapEmpty: (_ day: Weekday, _ minuteOfDay: Int) -> Void
     let onTapBlock: (_ intervalID: UUID) -> Void
     let onEditBlock: (_ intervalID: UUID) -> Void
@@ -47,6 +48,7 @@ struct WeekGridView: View {
                                     dayOfWeek: day,
                                     renderedBlocks: renderedBlocks(for: day),
                                     selectedIntervalID: selectedIntervalID,
+                                    isReadOnly: isReadOnly,
                                     onTapEmpty: { minute in onTapEmpty(day, minute) },
                                     onTapBlock: onTapBlock,
                                     onEditBlock: onEditBlock,

@@ -56,24 +56,18 @@ enum AppConstants {
 
     // MARK: - Background Tasks
     enum BackgroundTasks {
-        /// Identifier for the BGAppRefresh task that wakes the app so it can
-        /// clear shield state from its own process after a session expires.
-        /// Must match the entry in Info.plist under
-        /// BGTaskSchedulerPermittedIdentifiers.
-        static let shieldClearIdentifier = "oh.Intent.shieldClear"
-
         /// Identifier for the user-visible fallback notification scheduled by
-        /// the DeviceActivity extension alongside the BGTask submission.
-        /// The app cancels it on successful BGTask/foreground reconcile.
+        /// the DeviceActivity extension to prompt user-tap reconciliation when
+        /// the extension can't complete the shield transition itself.
         static let shieldClearFallbackNotificationId = "shield_clear_fallback"
 
-        /// Darwin notification name the extension posts to wake the main app
-        /// process when it's backgrounded but still in memory. iOS delivers
-        /// this cross-process immediately (no scheduling), so it's much
-        /// faster and more reliable than BGAppRefresh for the common case.
+        /// Darwin notification name the extension posts after writing the
+        /// session-expiry shield-clear marker, so the main-app process (when
+        /// alive in background) can drain the marker immediately rather than
+        /// waiting for the user to foreground the app.
         static let shieldReconcileDarwinName = "oh.Intent.shieldReconcile"
     }
-    
+
     // MARK: - Session Management
     enum Session {
         /// Default session duration (5 minutes)

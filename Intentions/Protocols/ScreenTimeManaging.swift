@@ -75,8 +75,17 @@ protocol ScreenTimeManaging: Sendable {
     func updateKnownAppTokens(_ tokens: Set<ApplicationToken>) async
 
     /// Clear all shield-related ManagedSettings entries from the main app process.
-    /// Needed to force the springboard to re-render its shield layer after the
-    /// DeviceActivity extension alone writes removal (which is ignored — Apple
-    /// DTS 807934). Does NOT cancel DeviceActivity schedules or session timers.
+    /// Used to re-render the springboard shield layer after the DeviceActivity
+    /// extension writes a removal — in this codebase's iOS 26 testing, the
+    /// equivalent extension-process flush has not been observed updating the
+    /// springboard cache, so the main-app write is the known-working path
+    /// today. Does NOT cancel DeviceActivity schedules or session timers.
     func clearAllShields() async
+
+    /// Push the latest weekly-schedule snapshot into the shield engine. Causes
+    /// the engine to persist it in the App Group log (visible to DAM extension),
+    /// (re-)register the next schedule-boundary DAM monitor, and re-apply the
+    /// current shield config via `compute()`. Call on schedule edits and on
+    /// scenePhase → .active.
+    func refreshSchedule(_ snapshot: ScheduleSnapshot) async
 }

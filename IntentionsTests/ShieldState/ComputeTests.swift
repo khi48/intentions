@@ -60,4 +60,33 @@ final class ComputeTests: XCTestCase {
         let log = IntentLog(defaultState: .open, activeSession: session(endOffset: 300))
         XCTAssertEqual(compute(log, at: t0.addingTimeInterval(301)), .none)
     }
+
+    // MARK: - Schedule overrides defaultState
+
+    private func snapshot(enabled: Bool, freeAllWeek: Bool) -> ScheduleSnapshot {
+        let intervals: [ScheduleSnapshot.Interval] = freeAllWeek
+            ? [.init(startMinuteOfWeek: 0, durationMinutes: ScheduleSnapshot.minutesPerWeek)]
+            : []
+        return ScheduleSnapshot(isEnabled: enabled, intervals: intervals, timeZoneIdentifier: "UTC")
+    }
+
+    func test_scheduleEnabled_outsideFree_overridesDefaultOpen_returnsAll() {
+        // Regression: was returning .none because defaultState=.open
+        // short-circuited the schedule check.
+        var log = IntentLog(defaultState: .open, activeSession: nil)
+        log.weeklySchedule = snapshot(enabled: true, freeAllWeek: false)
+        XCTAssertEqual(compute(log, at: t0), .all)
+    }
+
+    func test_scheduleEnabled_inFree_overridesDefaultBlocked_returnsNone() {
+        var log = IntentLog(defaultState: .blocked, activeSession: nil)
+        log.weeklySchedule = snapshot(enabled: true, freeAllWeek: true)
+        XCTAssertEqual(compute(log, at: t0), .none)
+    }
+
+    func test_scheduleDisabled_overridesDefaultBlocked_returnsNone() {
+        var log = IntentLog(defaultState: .blocked, activeSession: nil)
+        log.weeklySchedule = snapshot(enabled: false, freeAllWeek: false)
+        XCTAssertEqual(compute(log, at: t0), .none)
+    }
 }

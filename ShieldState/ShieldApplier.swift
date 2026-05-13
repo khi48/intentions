@@ -64,22 +64,19 @@ struct ManagedSettingsShieldApplier: ShieldApplying {
     }
 }
 
-/// Additive applier used by the DAM extension. Same semantics as
-/// `ManagedSettingsShieldApplier` EXCEPT no `clearAllSettings()` / nil-flush.
+/// Additive applier used by the DAM extension. Same write pattern as
+/// `ManagedSettingsShieldApplier` EXCEPT no `clearAllSettings()` — from an
+/// extension process `clearAllSettings()` detaches the ShieldConfiguration
+/// binding for a brief window which can leave apps unshielded across the
+/// transition.
 ///
-/// Background: this codebase's on-device testing on iOS 26 has not found a
-/// reliable extension-process pattern that drops the shield (the obvious
-/// nil-everything + `clearAllSettings()` from the extension updates the
-/// store but has not been observed re-rendering the springboard cache).
-/// Additive policy writes (`.all()`, `.all(except:)`) render fine from the
-/// extension. So the current strategy is: extension writes target-state
-/// additively, main app separately runs a full flush via
-/// `ManagedSettingsShieldApplier` woken by DarwinWake / BGTask / scenePhase.
-///
-/// Other Family Controls apps (Opal, Jomo, etc.) reportedly do unshield
-/// from the extension — there is presumably a pattern that works that we
-/// haven't found yet. Worth revisiting before assuming the main-app
-/// hand-off is permanent.
+/// On-device sysdiagnose 2026-05-11 confirmed the explicit nil-property
+/// writes in the `.none` arm DO propagate: ManagedSettingsAgent picks them
+/// up, emits `Settings changed: ["shield.applications"]` etc., then
+/// broadcasts `Notifying clients of changes in ["shield"]`. SpringBoard
+/// subscribes to that broadcast and drops its shield cache. Verified in a
+/// reaped-app + force-quit scenario — apps unshielded correctly from these
+/// writes alone, without any main-app wake.
 struct AdditiveShieldApplier: ShieldApplying {
     private let store = ManagedSettingsStore()
 

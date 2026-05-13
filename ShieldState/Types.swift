@@ -23,6 +23,93 @@ struct Session: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
+/// Sendable, value-type snapshot of the user's weekly free-time schedule.
+/// Mirrors the data + queries from `WeeklySchedule` (main-app-only, MainActor)
+/// in a form the DAM extension can read out of the App Group plist.
+struct ScheduleSnapshot: Codable, Sendable, Equatable {
+    static let minutesPerDay = 1440
+    static let minutesPerWeek = 10_080
+
+    /// Start + duration in minutes from Monday 00:00 in the schedule's timezone.
+    struct Interval: Codable, Sendable, Equatable {
+        let startMinuteOfWeek: Int
+        let durationMinutes: Int
+    }
+
+    var isEnabled: Bool
+    var intervals: [Interval]
+    /// TimeZone identifier (e.g. "Pacific/Auckland"). Stored as String for Sendable.
+    var timeZoneIdentifier: String
+
+    var timeZone: TimeZone {
+        TimeZone(identifier: timeZoneIdentifier) ?? .current
+    }
+
+    /// Disabled snapshot ⇒ blocking is off everywhere. Used as a no-op default.
+    static let disabled = ScheduleSnapshot(isEnabled: false, intervals: [], timeZoneIdentifier: TimeZone.current.identifier)
+
+    func isFreeTime(at date: Date) -> Bool {
+        guard isEnabled else { return true }
+        let mow = minuteOfWeek(for: date)
+        return intervals.contains { Self.contains(interval: $0, minuteOfWeek: mow) }
+    }
+
+    func isBlocking(at date: Date) -> Bool {
+        guard isEnabled else { return false }
+        return !isFreeTime(at: date)
+    }
+
+    /// Next wall-clock moment when `isBlocking(at:)` flips, or `nil` if the schedule is
+    /// disabled / never flips within the next week. Minute-by-minute probe over 7 days
+    /// (10080 iterations — trivial).
+    func nextBoundary(after date: Date) -> Date? {
+        guard isEnabled else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        var probe = date
+        let reference = isBlocking(at: date)
+        for _ in 0..<Self.minutesPerWeek {
+            probe = calendar.date(byAdding: .minute, value: 1, to: probe)!
+            if isBlocking(at: probe) != reference {
+                return probe
+            }
+        }
+        return nil
+    }
+
+    private func minuteOfWeek(for date: Date) -> Int {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let calendarWeekday = calendar.component(.weekday, from: date)
+        // Foundation: Sun=1..Sat=7. Normalise to Monday=0..Sunday=6.
+        let mondayZeroIndex: Int
+        switch calendarWeekday {
+        case 1: mondayZeroIndex = 6
+        case 2: mondayZeroIndex = 0
+        case 3: mondayZeroIndex = 1
+        case 4: mondayZeroIndex = 2
+        case 5: mondayZeroIndex = 3
+        case 6: mondayZeroIndex = 4
+        case 7: mondayZeroIndex = 5
+        default: mondayZeroIndex = 0
+        }
+        let hour = calendar.component(.hour, from: date)
+        let minute = calendar.component(.minute, from: date)
+        return mondayZeroIndex * Self.minutesPerDay + hour * 60 + minute
+    }
+
+    private static func contains(interval: Interval, minuteOfWeek: Int) -> Bool {
+        let end = interval.startMinuteOfWeek + interval.durationMinutes
+        if end <= Self.minutesPerWeek {
+            return minuteOfWeek >= interval.startMinuteOfWeek && minuteOfWeek < end
+        } else {
+            // Wraps Sunday→Monday boundary.
+            let wrappedEnd = end - Self.minutesPerWeek
+            return minuteOfWeek >= interval.startMinuteOfWeek || minuteOfWeek < wrappedEnd
+        }
+    }
+}
+
 /// Persisted source of truth for shield decisions. Read/written by main app and DAM extension.
 struct IntentLog: Codable, Sendable, Equatable {
     var defaultState: DefaultState
@@ -36,17 +123,25 @@ struct IntentLog: Codable, Sendable, Equatable {
     /// `knownAppTokens`; name kept here for continuity in the plist.
     var knownApplicationTokens: Set<ApplicationToken>
     var knownWebDomainTokens: Set<WebDomainToken>
+    /// Cached snapshot of the user's weekly schedule. Written by the main app
+    /// when the schedule changes and on foreground. The DAM extension reads it
+    /// to evaluate `compute(_:at:)` correctly when handling schedule-boundary
+    /// transitions (and when handling session expiry that lands in free time).
+    /// Optional so logs persisted before this field exists decode cleanly.
+    var weeklySchedule: ScheduleSnapshot?
 
     init(
         defaultState: DefaultState,
         activeSession: Session?,
         knownApplicationTokens: Set<ApplicationToken> = [],
-        knownWebDomainTokens: Set<WebDomainToken> = []
+        knownWebDomainTokens: Set<WebDomainToken> = [],
+        weeklySchedule: ScheduleSnapshot? = nil
     ) {
         self.defaultState = defaultState
         self.activeSession = activeSession
         self.knownApplicationTokens = knownApplicationTokens
         self.knownWebDomainTokens = knownWebDomainTokens
+        self.weeklySchedule = weeklySchedule
     }
 
     static let empty = IntentLog(defaultState: .blocked, activeSession: nil)
@@ -54,7 +149,7 @@ struct IntentLog: Codable, Sendable, Equatable {
 
 extension IntentLog {
     private enum CodingKeys: String, CodingKey {
-        case defaultState, activeSession, knownApplicationTokens, knownWebDomainTokens
+        case defaultState, activeSession, knownApplicationTokens, knownWebDomainTokens, weeklySchedule
     }
 
     init(from decoder: Decoder) throws {
@@ -64,6 +159,7 @@ extension IntentLog {
         // Tolerate logs saved before these fields existed.
         self.knownApplicationTokens = try c.decodeIfPresent(Set<ApplicationToken>.self, forKey: .knownApplicationTokens) ?? []
         self.knownWebDomainTokens = try c.decodeIfPresent(Set<WebDomainToken>.self, forKey: .knownWebDomainTokens) ?? []
+        self.weeklySchedule = try c.decodeIfPresent(ScheduleSnapshot.self, forKey: .weeklySchedule)
     }
 }
 

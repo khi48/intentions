@@ -23,12 +23,6 @@ enum DebugBreadcrumbs {
         case scheduleBoundaryScheduled   = "shieldstate.debug.scheduleBoundary.scheduled"
         case scheduleBoundarySkipped     = "shieldstate.debug.scheduleBoundary.skipped"
         case scheduleBoundaryFailed      = "shieldstate.debug.scheduleBoundary.failed"
-        case darwinPosted                = "shieldstate.debug.darwin.posted"
-        case darwinObserverInstalled     = "shieldstate.debug.darwin.observerInstalled"
-        case darwinReceived              = "shieldstate.debug.darwin.received"
-        case bgtaskSubmitted             = "shieldstate.debug.bgtask.submitted"
-        case bgtaskSubmitFailed          = "shieldstate.debug.bgtask.submitFailed"
-        case bgtaskHandlerRan            = "shieldstate.debug.bgtask.handlerRan"
         case scenePhaseActive            = "shieldstate.debug.scenePhase.active"
         // Split per-writer so the main-app applier doesn't clobber the
         // extension's last write under the single `applier.apply` key.
@@ -173,8 +167,6 @@ enum DebugBreadcrumbs {
         .damIntervalDidStart, .damIntervalDidEnd, .damEventThreshold,
         .damScheduleAttempted, .damScheduleSucceeded, .damScheduleFailed,
         .scheduleBoundaryScheduled, .scheduleBoundarySkipped, .scheduleBoundaryFailed,
-        .darwinPosted, .darwinObserverInstalled, .darwinReceived,
-        .bgtaskSubmitted, .bgtaskSubmitFailed, .bgtaskHandlerRan,
         .scenePhaseActive, .extensionApplied, .mainAppApplied,
         .weeklyScheduleLoaded, .weeklyScheduleVerified
     ]

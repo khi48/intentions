@@ -6,15 +6,18 @@ struct WeekScheduleEditorView: View {
     @State private var draftForEdit: DraftInterval?
     @State private var draftForCopy: DraftInterval?
 
+    let isReadOnly: Bool
     let onSave: (WeeklySchedule) -> Void
 
     @MainActor
     init(schedule: WeeklySchedule,
+         isReadOnly: Bool = false,
          onSave: @escaping (WeeklySchedule) -> Void) {
         // Deep copy via codable round-trip so the caller's schedule isn't mutated until Save.
         let data = (try? JSONEncoder().encode(schedule)) ?? Data()
         let copy = (try? JSONDecoder().decode(WeeklySchedule.self, from: data)) ?? WeeklySchedule()
         _editing = State(wrappedValue: copy)
+        self.isReadOnly = isReadOnly
         self.onSave = onSave
     }
 
@@ -53,25 +56,35 @@ struct WeekScheduleEditorView: View {
     }
 
     var body: some View {
-        WeekGridView(
-            intervals: displayedIntervals,
-            selectedIntervalID: draftForEdit?.id ?? selectedIntervalID,
-            onTapEmpty: handleTapEmpty,
-            onTapBlock: handleTapBlock,
-            onEditBlock: handleEditBlock,
-            onDeleteBlock: handleDeleteBlock
-        )
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, 12)
-        .padding(.top, 20)
-        .padding(.bottom, 28)
+        VStack(spacing: 0) {
+            if isReadOnly {
+                lockedBanner
+                    .padding(.horizontal, 12)
+                    .padding(.top, 12)
+            }
+            WeekGridView(
+                intervals: displayedIntervals,
+                selectedIntervalID: draftForEdit?.id ?? selectedIntervalID,
+                isReadOnly: isReadOnly,
+                onTapEmpty: handleTapEmpty,
+                onTapBlock: handleTapBlock,
+                onEditBlock: handleEditBlock,
+                onDeleteBlock: handleDeleteBlock
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 12)
+            .padding(.top, isReadOnly ? 12 : 20)
+            .padding(.bottom, 28)
+        }
         .background(AppConstants.Colors.background)
         .navigationTitle("Free Time Settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Save") { onSave(editing) }
-                    .fontWeight(.semibold)
+            if !isReadOnly {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") { onSave(editing) }
+                        .fontWeight(.semibold)
+                }
             }
         }
         .sheet(isPresented: editSheetBinding) {
@@ -107,6 +120,33 @@ struct WeekScheduleEditorView: View {
                 }
             )
         }
+    }
+
+    private var lockedBanner: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "lock.fill")
+                .font(.caption)
+                .foregroundColor(AppConstants.Colors.accent)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Schedule locked while Blocking is on.")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppConstants.Colors.text)
+                Text("Turn off Blocking in Settings to edit.")
+                    .font(.caption)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 11)
+        .padding(.horizontal, 13)
+        .background(AppConstants.Colors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(AppConstants.Colors.border, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Gesture handlers

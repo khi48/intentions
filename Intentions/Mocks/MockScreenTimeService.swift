@@ -210,4 +210,8 @@ actor MockScreenTimeService: ScreenTimeManaging {
         mockCurrentlyAllowedApps.removeAll()
         print("Mock: clearAllShields — all shield entries flushed")
     }
+
+    func refreshSchedule(_ snapshot: ScheduleSnapshot) async {
+        print("Mock: refreshSchedule — isEnabled=\(snapshot.isEnabled) intervals=\(snapshot.intervals.count)")
+    }
 }

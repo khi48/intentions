@@ -153,6 +153,25 @@ final class WeeklySchedule: @preconcurrency Codable {
     }
 }
 
+// MARK: - ShieldState bridge
+
+extension WeeklySchedule {
+    /// Convert this Observable schedule to a Sendable, value-type snapshot
+    /// suitable for embedding in `IntentLog` and reading from the DAM extension.
+    func snapshot() -> ScheduleSnapshot {
+        ScheduleSnapshot(
+            isEnabled: isEnabled,
+            intervals: intervals.map {
+                ScheduleSnapshot.Interval(
+                    startMinuteOfWeek: $0.startMinuteOfWeek,
+                    durationMinutes: $0.durationMinutes
+                )
+            },
+            timeZoneIdentifier: timeZone.identifier
+        )
+    }
+}
+
 // MARK: - Weekend backfill (one-shot, v97+)
 
 extension WeeklySchedule {

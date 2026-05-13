@@ -10,6 +10,7 @@ struct DayColumn: View {
     let dayOfWeek: Weekday
     let renderedBlocks: [RenderedBlock]
     let selectedIntervalID: UUID?
+    let isReadOnly: Bool
     let onTapEmpty: (_ minuteOfDay: Int) -> Void
     let onTapBlock: (_ intervalID: UUID) -> Void
     let onEditBlock: (_ intervalID: UUID) -> Void
@@ -30,6 +31,7 @@ struct DayColumn: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .contentShape(Rectangle())
                     .onTapGesture(coordinateSpace: .local) { point in
+                        guard !isReadOnly else { return }
                         let normalized = max(0, min(1, point.y / geo.size.height))
                         let minute = Int(normalized * CGFloat(FreeTimeInterval.minutesPerDay))
                         onTapEmpty(minute)
@@ -63,17 +65,22 @@ struct DayColumn: View {
             .frame(height: blockHeight)
             .padding(.horizontal, 2)
             .contentShape(Rectangle())
-            .onTapGesture { onTapBlock(block.intervalID) }
+            .onTapGesture {
+                guard !isReadOnly else { return }
+                onTapBlock(block.intervalID)
+            }
             .contextMenu {
-                Button {
-                    onEditBlock(block.intervalID)
-                } label: {
-                    Label("Edit", systemImage: "pencil")
-                }
-                Button(role: .destructive) {
-                    onDeleteBlock(block.intervalID)
-                } label: {
-                    Label("Delete", systemImage: "trash")
+                if !isReadOnly {
+                    Button {
+                        onEditBlock(block.intervalID)
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                    Button(role: .destructive) {
+                        onDeleteBlock(block.intervalID)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
                 }
             }
             .padding(.top, topY)
