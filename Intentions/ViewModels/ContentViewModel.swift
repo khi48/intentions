@@ -238,12 +238,9 @@ final class ContentViewModel: Sendable {
     private func loadScheduleSettings() async {
         do {
             weeklySchedule = try await dataService.loadWeeklySchedule() ?? WeeklySchedule()
-            // CRITICAL: Also save to UserDefaults so DeviceActivityMonitor extension can access it
-            saveWeeklyScheduleToUserDefaults(weeklySchedule)
         } catch {
             logger.warning("Failed to load weekly schedule, using defaults: \(error.localizedDescription)")
             weeklySchedule = WeeklySchedule()
-            saveWeeklyScheduleToUserDefaults(weeklySchedule)
         }
         // Push fresh snapshot to ShieldEngine so DAM extension reads it from
         // the IntentLog plist and the next schedule boundary is registered.
@@ -309,16 +306,13 @@ final class ContentViewModel: Sendable {
     func updateWeeklySchedule(_ schedule: WeeklySchedule) async {
         weeklySchedule = schedule
 
-        // Save to persistence
+        // Save to persistence (canonical store: App Group UserDefaults)
         do {
             try await dataService.saveWeeklySchedule(schedule)
         } catch {
             logger.error("Failed to save weekly schedule: \(error.localizedDescription)")
             handleError(error)
         }
-
-        // Also save to UserDefaults for DeviceActivityMonitor extension
-        saveWeeklyScheduleToUserDefaults(schedule)
 
         // Gate the IntentLog push on service readiness. If we push to an
         // uninitialised engine the snapshot may not actually persist — the
@@ -367,18 +361,6 @@ final class ContentViewModel: Sendable {
         }
     }
 
-    /// Save weekly schedule to UserDefaults for DeviceActivityMonitor extension
-    private func saveWeeklyScheduleToUserDefaults(_ schedule: WeeklySchedule) {
-        guard let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) else { return }
-
-        sharedDefaults.set(schedule.isEnabled, forKey: AppConstants.Keys.scheduleIsEnabled)
-        if let data = try? JSONEncoder().encode(schedule.intervals) {
-            sharedDefaults.set(data, forKey: AppConstants.Keys.scheduleIntervalsData)
-        }
-        sharedDefaults.set(schedule.timeZone.identifier, forKey: AppConstants.Keys.scheduleTimeZoneId)
-        sharedDefaults.synchronize()
-    }
-    
     // MARK: - Authorization Management
     
     /// Request Screen Time authorization from user

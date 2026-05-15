@@ -29,11 +29,6 @@ enum AppConstants {
         static let sessionExpirationTime = "intentions.session.expirationTime"
         static let sessionExpiredBy = "intentions.session.expiredBy"
 
-        // Schedule
-        static let scheduleIsEnabled = "intentions.schedule.isEnabled"
-        static let scheduleIntervalsData = "intentions.schedule.intervalsData"
-        static let scheduleTimeZoneId = "intentions.schedule.timeZoneId"
-
         // DeviceActivity
         static let lastScheduledActivity = "intentions.lastScheduledActivity"
         static let lastScheduledEndTime = "intentions.lastScheduledEndTime"
