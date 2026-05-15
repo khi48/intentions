@@ -23,10 +23,20 @@ protocol DataPersisting: Sendable {
 @MainActor final class DataPersistenceService: DataPersisting, Sendable {
     private let modelContainer: ModelContainer
     private let modelContext: ModelContext
-    
-    // UserDefaults for simple key-value storage
+
+    /// Standard-suite UserDefaults. Used for the generic `save(_:forKey:)` /
+    /// `load(_:forKey:)` API, the per-install backfill flag, and as the
+    /// **source** of the one-shot legacy `WeeklySchedule` migration that
+    /// hoists the canonical blob into the App Group suite. Never the
+    /// canonical store for `WeeklySchedule` — that lives in `appGroupDefaults`.
     private let userDefaults = UserDefaults.standard
-    
+
+    /// App Group UserDefaults — the canonical store for the unified
+    /// `WeeklySchedule` blob (see issue #8). The DAM extension reads schedule
+    /// state via `IntentLog.weeklySchedule` (orthogonal), but the main app's
+    /// load/save path now writes here so a single store owns the truth.
+    private let appGroupDefaults: UserDefaults?
+
     // MARK: - Private Methods
 
     /// Get the App Group container URL for shared data storage
@@ -45,7 +55,15 @@ protocol DataPersisting: Sendable {
     }
 
     // MARK: - Initialization
-    init(container: ModelContainer? = nil) throws {
+    /// - Parameters:
+    ///   - container: Optional `ModelContainer` (tests inject in-memory).
+    ///   - appGroupSuiteName: Suite name for the canonical `WeeklySchedule`
+    ///     store. Defaults to `AppConstants.appGroupId`; tests inject a
+    ///     scratch suite to avoid clobbering the real App Group on-device.
+    init(
+        container: ModelContainer? = nil,
+        appGroupSuiteName: String = AppConstants.appGroupId
+    ) throws {
         let schema = Schema([
             PersistentIntentionSession.self,
             PersistentScheduleSettings.self
@@ -64,6 +82,16 @@ protocol DataPersisting: Sendable {
             isStoredInMemoryOnly: false,
             groupContainer: .identifier(AppConstants.appGroupId)
         )
+
+        // Resolve the App Group UserDefaults handle once, up-front. If the
+        // group can't be opened we surface a clear failure rather than
+        // silently writing to .standard later.
+        self.appGroupDefaults = UserDefaults(suiteName: appGroupSuiteName)
+        if appGroupDefaults == nil {
+            throw AppError.dataInitializationFailed(
+                "Failed to open App Group UserDefaults for suite \(appGroupSuiteName)."
+            )
+        }
 
         if let container = container {
             // Use provided test container
@@ -118,16 +146,27 @@ protocol DataPersisting: Sendable {
         userDefaults.removeObject(forKey: key.prefixedKey)
     }
     
-    // MARK: - Weekly Schedule Storage Key
-    private static let weeklyScheduleKey = "intentions.weeklySchedule"
+    // MARK: - Weekly Schedule Storage Keys
+    /// Canonical key for the unified `WeeklySchedule` blob in App Group
+    /// UserDefaults. `.v2` distinguishes from the pre-issue-#8 standard-suite
+    /// `.v1`-equivalent key (`legacyStandardSuiteWeeklyScheduleKey` below)
+    /// so future schema migrations have a clean version axis to bump.
+    static let weeklyScheduleKey = "intentions.weeklySchedule.v2" // gitleaks:allow
+
+    /// Pre-issue-#8 key in `UserDefaults.standard`. Read-only — drained by
+    /// the one-shot migration in `loadWeeklySchedule` and then deleted.
+    static let legacyStandardSuiteWeeklyScheduleKey = "intentions.weeklySchedule"
 
     // MARK: - Weekly Schedule Methods
     func saveWeeklySchedule(_ schedule: WeeklySchedule) async throws {
+        guard let appGroupDefaults else {
+            throw AppError.persistenceError("App Group UserDefaults unavailable.")
+        }
         do {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
             let data = try encoder.encode(schedule)
-            userDefaults.set(data, forKey: Self.weeklyScheduleKey)
+            appGroupDefaults.set(data, forKey: Self.weeklyScheduleKey)
             Self.mirrorIntentionQuoteToSharedDefaults(schedule.intentionQuote)
         } catch {
             throw AppError.persistenceError("Failed to save WeeklySchedule: \(error.localizedDescription)")
@@ -135,11 +174,14 @@ protocol DataPersisting: Sendable {
     }
 
     func loadWeeklySchedule() async throws -> WeeklySchedule? {
+        guard let appGroupDefaults else {
+            throw AppError.persistenceError("App Group UserDefaults unavailable.")
+        }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
-        // 1. Try the new blob first
-        if let data = userDefaults.data(forKey: Self.weeklyScheduleKey) {
+        // 1. Try the canonical App Group blob first.
+        if let data = appGroupDefaults.data(forKey: Self.weeklyScheduleKey) {
             do {
                 let schedule = try decoder.decode(WeeklySchedule.self, from: data)
                 Self.mirrorIntentionQuoteToSharedDefaults(schedule.intentionQuote)
@@ -154,7 +196,37 @@ protocol DataPersisting: Sendable {
             }
         }
 
-        // 2. Fall back to legacy ScheduleSettings via SwiftData
+        // 2. One-shot migration: hoist a pre-issue-#8 standard-suite blob into
+        //    the App Group suite. Idempotent — once the standard-suite key is
+        //    deleted, this branch never runs again. Note that we cannot call
+        //    `saveWeeklySchedule` here because the schedule contains an
+        //    `@MainActor`-isolated WeeklySchedule that we re-encode straight
+        //    from the legacy bytes (no main-actor hop needed).
+        if let legacyData = userDefaults.data(forKey: Self.legacyStandardSuiteWeeklyScheduleKey) {
+            do {
+                let schedule = try decoder.decode(WeeklySchedule.self, from: legacyData)
+                appGroupDefaults.set(legacyData, forKey: Self.weeklyScheduleKey)
+                userDefaults.removeObject(forKey: Self.legacyStandardSuiteWeeklyScheduleKey)
+                Self.mirrorIntentionQuoteToSharedDefaults(schedule.intentionQuote)
+                DebugBreadcrumbs.record(
+                    .weeklyScheduleLoaded,
+                    note: "appGroupMigration enabled=\(schedule.isEnabled) intervals=\(schedule.intervals.count)"
+                )
+                return schedule
+            } catch {
+                // Bytes were present but undecodable — surface the error and
+                // delete the corrupt legacy blob so we don't loop on it next
+                // launch. The user will fall through to a fresh default schedule.
+                userDefaults.removeObject(forKey: Self.legacyStandardSuiteWeeklyScheduleKey)
+                DebugBreadcrumbs.record(
+                    .weeklyScheduleLoaded,
+                    note: "decodeError(appGroupMigration): \(error.localizedDescription)"
+                )
+                throw AppError.persistenceError("Failed to decode legacy WeeklySchedule: \(error.localizedDescription)")
+            }
+        }
+
+        // 3. Fall back to legacy ScheduleSettings via SwiftData.
         let legacy = try await loadScheduleSettings()
         guard let legacy else {
             DebugBreadcrumbs.record(.weeklyScheduleLoaded, note: "nil (no blob, no legacy)")
