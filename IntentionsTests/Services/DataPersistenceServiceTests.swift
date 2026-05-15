@@ -6,35 +6,57 @@ import SwiftData
 
 @MainActor
 final class DataPersistenceServiceTests: XCTestCase {
-    
+
     var service: DataPersistenceService!
     var testContainer: ModelContainer!
-    
+
+    /// Scratch App Group suite — keeps tests off the real on-device suite so
+    /// running them locally doesn't clobber a developer's persisted schedule.
+    private let testAppGroupSuiteName = "test.intentions.persistence.appgroup"
+
     override func setUp() async throws {
         try await super.setUp()
-        
+
+        // Wipe scratch suite so any leftover state from a previous run can't
+        // bleed in (XCTest runs share process state across cases).
+        UserDefaults(suiteName: testAppGroupSuiteName)?
+            .removePersistentDomain(forName: testAppGroupSuiteName)
+        // Also clear the legacy standard-suite key so migration tests start
+        // from a known state.
+        UserDefaults.standard.removeObject(
+            forKey: DataPersistenceService.legacyStandardSuiteWeeklyScheduleKey
+        )
+
         // Create in-memory test container
         let schema = Schema([
             PersistentIntentionSession.self,
             PersistentScheduleSettings.self
         ])
-        
+
         let configuration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: true
         )
-        
+
         testContainer = try ModelContainer(
             for: schema,
             configurations: [configuration]
         )
-        
-        service = try DataPersistenceService(container: testContainer)
+
+        service = try DataPersistenceService(
+            container: testContainer,
+            appGroupSuiteName: testAppGroupSuiteName
+        )
     }
-    
+
     override func tearDown() async throws {
         service = nil
         testContainer = nil
+        UserDefaults(suiteName: testAppGroupSuiteName)?
+            .removePersistentDomain(forName: testAppGroupSuiteName)
+        UserDefaults.standard.removeObject(
+            forKey: DataPersistenceService.legacyStandardSuiteWeeklyScheduleKey
+        )
         try await super.tearDown()
     }
     
@@ -242,8 +264,131 @@ final class DataPersistenceServiceTests: XCTestCase {
         }
     }
     
+    // MARK: - Weekly Schedule App Group Migration Tests (issue #8)
+
+    /// Legacy `intentions.weeklySchedule` blob present in `UserDefaults.standard`
+    /// only ⇒ first `loadWeeklySchedule` hoists it into the App Group, deletes
+    /// the legacy entry, and returns the decoded schedule.
+    func testWeeklyScheduleMigration_legacyBlobMovedToAppGroup() async throws {
+        // Given: a legacy blob written to the standard suite, App Group empty.
+        let legacy = WeeklySchedule()
+        legacy.isEnabled = false
+        legacy.intentionQuote = "be intentional"
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let legacyData = try encoder.encode(legacy)
+        UserDefaults.standard.set(
+            legacyData,
+            forKey: DataPersistenceService.legacyStandardSuiteWeeklyScheduleKey
+        )
+
+        let appGroup = UserDefaults(suiteName: testAppGroupSuiteName)!
+        XCTAssertNil(appGroup.data(forKey: DataPersistenceService.weeklyScheduleKey))
+
+        // When
+        let loaded = try await service.loadWeeklySchedule()
+
+        // Then: returned schedule matches legacy bytes,
+        XCTAssertNotNil(loaded)
+        XCTAssertEqual(loaded?.isEnabled, false)
+        XCTAssertEqual(loaded?.intentionQuote, "be intentional")
+
+        // App Group blob is now populated,
+        let appGroupBytes = appGroup.data(forKey: DataPersistenceService.weeklyScheduleKey)
+        XCTAssertNotNil(appGroupBytes)
+        XCTAssertEqual(appGroupBytes, legacyData)
+
+        // and the legacy standard-suite key is gone.
+        XCTAssertNil(UserDefaults.standard.data(
+            forKey: DataPersistenceService.legacyStandardSuiteWeeklyScheduleKey
+        ))
+    }
+
+    /// No legacy blob and no App Group blob ⇒ migration is a no-op and
+    /// `loadWeeklySchedule` returns nil (the SwiftData fallback also has
+    /// nothing to migrate from in this test setup).
+    func testWeeklyScheduleMigration_noLegacy_isNoOp() async throws {
+        // Given: both stores empty.
+        XCTAssertNil(UserDefaults.standard.data(
+            forKey: DataPersistenceService.legacyStandardSuiteWeeklyScheduleKey
+        ))
+        let appGroup = UserDefaults(suiteName: testAppGroupSuiteName)!
+        XCTAssertNil(appGroup.data(forKey: DataPersistenceService.weeklyScheduleKey))
+
+        // When
+        let loaded = try await service.loadWeeklySchedule()
+
+        // Then: nothing produced, nothing written.
+        XCTAssertNil(loaded)
+        XCTAssertNil(appGroup.data(forKey: DataPersistenceService.weeklyScheduleKey))
+        XCTAssertNil(UserDefaults.standard.data(
+            forKey: DataPersistenceService.legacyStandardSuiteWeeklyScheduleKey
+        ))
+    }
+
+    /// Migration runs at most once per legacy blob: a second `loadWeeklySchedule`
+    /// after migration must read straight from the App Group key (the legacy
+    /// entry was deleted in the first call) and must not corrupt the App Group
+    /// blob.
+    func testWeeklyScheduleMigration_idempotentAcrossLoads() async throws {
+        // Given: legacy blob present.
+        let legacy = WeeklySchedule()
+        legacy.isEnabled = true
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let legacyData = try encoder.encode(legacy)
+        UserDefaults.standard.set(
+            legacyData,
+            forKey: DataPersistenceService.legacyStandardSuiteWeeklyScheduleKey
+        )
+
+        // First load: migrates.
+        let first = try await service.loadWeeklySchedule()
+        XCTAssertNotNil(first)
+        let appGroup = UserDefaults(suiteName: testAppGroupSuiteName)!
+        let appGroupBytesAfterFirst = appGroup.data(forKey: DataPersistenceService.weeklyScheduleKey)
+        XCTAssertNotNil(appGroupBytesAfterFirst)
+        XCTAssertNil(UserDefaults.standard.data(
+            forKey: DataPersistenceService.legacyStandardSuiteWeeklyScheduleKey
+        ))
+
+        // Second load: reads from App Group, does not touch the standard suite,
+        // and the App Group bytes are byte-identical to what was written.
+        let second = try await service.loadWeeklySchedule()
+        XCTAssertNotNil(second)
+        XCTAssertEqual(second?.isEnabled, legacy.isEnabled)
+        XCTAssertEqual(
+            appGroup.data(forKey: DataPersistenceService.weeklyScheduleKey),
+            appGroupBytesAfterFirst
+        )
+        XCTAssertNil(UserDefaults.standard.data(
+            forKey: DataPersistenceService.legacyStandardSuiteWeeklyScheduleKey
+        ))
+    }
+
+    /// Save → load round-trip uses the App Group store and never touches
+    /// the legacy standard-suite key. Regression guard for the unification.
+    func testSaveWeeklySchedule_writesToAppGroup_notStandard() async throws {
+        let schedule = WeeklySchedule()
+        schedule.isEnabled = false
+        schedule.intentionQuote = "rt"
+
+        try await service.saveWeeklySchedule(schedule)
+
+        let appGroup = UserDefaults(suiteName: testAppGroupSuiteName)!
+        XCTAssertNotNil(appGroup.data(forKey: DataPersistenceService.weeklyScheduleKey))
+        XCTAssertNil(UserDefaults.standard.data(
+            forKey: DataPersistenceService.legacyStandardSuiteWeeklyScheduleKey
+        ))
+
+        let loaded = try await service.loadWeeklySchedule()
+        XCTAssertNotNil(loaded)
+        XCTAssertEqual(loaded?.isEnabled, false)
+        XCTAssertEqual(loaded?.intentionQuote, "rt")
+    }
+
     // MARK: - Helper Methods
-    
+
     private func createTestScheduleSettings() -> ScheduleSettings {
         let settings = ScheduleSettings()
         settings.isEnabled = true
