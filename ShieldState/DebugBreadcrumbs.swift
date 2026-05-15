@@ -1,9 +1,17 @@
 import Foundation
 
 /// Diagnostic harness for on-device testing. Each touchpoint in the wake
-/// chain writes a timestamped breadcrumb to shared UserDefaults so we can
-/// reconstruct the sequence after the fact. Not for production — this is
-/// scaffolding for Case A diagnosis.
+/// chain appends a timestamped entry to a ring-buffer (cap 100) stored in
+/// the App-Group `UserDefaults`. Not for production — this is scaffolding
+/// for Case A diagnosis.
+///
+/// History semantics:
+/// - **Live ring** (`shieldstate.debug.history`) — appended on every
+///   `record()`; trimmed to `historyCap` lines.
+/// - **Frozen ring** (`shieldstate.frozen.history`) — snapshot of the live
+///   ring taken once per process at `IntentApp.init()` (via `freeze()`),
+///   so the pre-foreground state can be inspected after the foreground
+///   reapply has begun overwriting the live ring.
 enum DebugBreadcrumbs {
     private static let suiteName = "group.oh.Intent"
 
@@ -32,13 +40,11 @@ enum DebugBreadcrumbs {
         case weeklyScheduleVerified      = "shieldstate.debug.cvm.weeklyScheduleVerified"
     }
 
-    /// Record a breadcrumb with the current timestamp and an optional note.
-    /// Updates the per-key live value AND appends to the ring-buffer history.
+    /// Append a breadcrumb to the live ring-buffer history with the current
+    /// timestamp and an optional note.
     static func record(_ event: Event, note: String = "") {
         guard let defaults = UserDefaults(suiteName: suiteName) else { return }
         let stamp = DateFormatter.iso.string(from: Date())
-        let value = note.isEmpty ? stamp : "\(stamp) | \(note)"
-        defaults.set(value, forKey: event.rawValue)
         appendToHistory(stamp: stamp, event: event, note: note, defaults: defaults)
     }
 
@@ -46,6 +52,7 @@ enum DebugBreadcrumbs {
 
     private static let historyKey = "shieldstate.debug.history"
     private static let frozenHistoryKey = "shieldstate.frozen.history"
+    private static let frozenAtKey = "shieldstate.frozen.capturedAt"
     private static let historyCap = 100
 
     /// Append one entry to the live history and trim to `historyCap` lines.
@@ -74,29 +81,19 @@ enum DebugBreadcrumbs {
     }
 
     /// Chronological dump of the frozen ring-buffer history (oldest first).
+    /// Includes the `frozen at:` header timestamp if `freeze()` has ever run.
     static func dumpFrozenHistory() -> String {
         guard let defaults = UserDefaults(suiteName: suiteName) else { return "(no app group)" }
         let raw = defaults.string(forKey: frozenHistoryKey) ?? ""
-        if raw.isEmpty { return "(no frozen history)" }
-        return raw
-    }
-
-    /// Read all breadcrumbs, sorted by timestamp, as a multi-line string.
-    /// Safe to call from anywhere.
-    static func dump() -> String {
-        guard let defaults = UserDefaults(suiteName: suiteName) else { return "(no app group)" }
-        var entries: [(String, String)] = []
-        for event in allEvents {
-            if let value = defaults.string(forKey: event.rawValue) {
-                entries.append((value, event.rawValue.replacingOccurrences(of: "shieldstate.debug.", with: "")))
-            }
+        if raw.isEmpty {
+            return "(no frozen history — freeze() not run or live ring was empty)"
         }
-        entries.sort { $0.0 < $1.0 }
-        if entries.isEmpty { return "(no breadcrumbs)" }
-        return entries.map { "  \($0.0)  \($0.1)" }.joined(separator: "\n")
+        let frozenAt = defaults.string(forKey: frozenAtKey)
+        let header = frozenAt.map { "  (frozen at: \($0))" } ?? "  (frozen at: ?)"
+        return ([header, raw]).joined(separator: "\n")
     }
 
-    /// Copy every live breadcrumb to a parallel `shieldstate.frozen.*` key.
+    /// Snapshot the live ring-buffer history into the frozen-history key.
     /// **One-shot per process**: invoked exactly once at the end of
     /// `IntentApp.init()`, after the Darwin observer install and before any
     /// main-app reconcile or scenePhase work. The frozen snapshot therefore
@@ -106,16 +103,6 @@ enum DebugBreadcrumbs {
     /// snapshot with foreground-reapply data and we'd lose the diagnostic.
     static func freeze() {
         guard let defaults = UserDefaults(suiteName: suiteName) else { return }
-        for event in allEvents {
-            let liveKey = event.rawValue
-            let frozenKey = frozenKey(for: liveKey)
-            if let value = defaults.string(forKey: liveKey) {
-                defaults.set(value, forKey: frozenKey)
-            } else {
-                defaults.removeObject(forKey: frozenKey)
-            }
-        }
-        // Snapshot the live ring-buffer history into the frozen-history key.
         if let history = defaults.string(forKey: historyKey) {
             defaults.set(history, forKey: frozenHistoryKey)
         } else {
@@ -124,52 +111,13 @@ enum DebugBreadcrumbs {
         defaults.set(DateFormatter.iso.string(from: Date()), forKey: frozenAtKey)
     }
 
-    /// Read the most recent frozen snapshot. Same format as `dump()`. Returns
-    /// a placeholder string if `freeze()` has never been called this install.
-    static func dumpFrozen() -> String {
-        guard let defaults = UserDefaults(suiteName: suiteName) else { return "(no app group)" }
-        let frozenAt = defaults.string(forKey: frozenAtKey)
-        var entries: [(String, String)] = []
-        for event in allEvents {
-            let frozenKey = frozenKey(for: event.rawValue)
-            if let value = defaults.string(forKey: frozenKey) {
-                entries.append((value, event.rawValue.replacingOccurrences(of: "shieldstate.debug.", with: "")))
-            }
-        }
-        entries.sort { $0.0 < $1.0 }
-        if entries.isEmpty {
-            return "(no frozen snapshot — app hasn't foregrounded since install)"
-        }
-        let header = frozenAt.map { "  (frozen at: \($0))" } ?? "  (frozen at: ?)"
-        return ([header] + entries.map { "  \($0.0)  \($0.1)" }).joined(separator: "\n")
-    }
-
-    private static let frozenAtKey = "shieldstate.frozen.capturedAt"
-
-    private static func frozenKey(for liveKey: String) -> String {
-        "shieldstate.frozen." + liveKey.replacingOccurrences(of: "shieldstate.debug.", with: "")
-    }
-
-    /// Clear every breadcrumb. Call when a new session starts so the log
-    /// reflects one test run at a time.
+    /// Clear the ring-buffer history. Call when a new session starts so the
+    /// log reflects one test run at a time. Frozen ring is preserved so the
+    /// pre-foreground snapshot from this process spawn stays available.
     static func reset() {
         guard let defaults = UserDefaults(suiteName: suiteName) else { return }
-        for event in allEvents {
-            defaults.removeObject(forKey: event.rawValue)
-        }
         defaults.removeObject(forKey: historyKey)
-        defaults.removeObject(forKey: frozenHistoryKey)
     }
-
-    private static let allEvents: [Event] = [
-        .engineStartSession, .engineHandleExpiry, .engineCatchUp, .engineReapply,
-        .engineScheduleTransition, .engineRefreshSchedule,
-        .damIntervalDidStart, .damIntervalDidEnd, .damEventThreshold,
-        .damScheduleAttempted, .damScheduleSucceeded, .damScheduleFailed,
-        .scheduleBoundaryScheduled, .scheduleBoundarySkipped, .scheduleBoundaryFailed,
-        .scenePhaseActive, .extensionApplied, .mainAppApplied,
-        .weeklyScheduleLoaded, .weeklyScheduleVerified
-    ]
 }
 
 private extension DateFormatter {

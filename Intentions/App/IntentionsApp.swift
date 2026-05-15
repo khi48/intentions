@@ -35,7 +35,7 @@ struct IntentApp: App {
             // process and runs in App.init. Re-freezing on each foreground
             // would overwrite the pre-launch snapshot we want to inspect.
             DebugBreadcrumbs.record(.scenePhaseActive)
-            let dump = DebugBreadcrumbs.dump()
+            let dump = DebugBreadcrumbs.dumpHistory()
             Self.log.notice("scenePhase → active\n\(dump, privacy: .public)")
             print("SHIELDSTATE_BREADCRUMBS_START")
             print(dump)

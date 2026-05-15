@@ -61,15 +61,11 @@ struct DebugStatusSnapshot: Sendable {
     // DeviceActivity
     let activeMonitors: [String]
 
-    // Breadcrumbs (full dump; view truncates display)
-    let breadcrumbsDump: String
-    /// Pre-foreground snapshot of breadcrumbs, frozen at the most recent
-    /// scenePhase → .active transition. Shows what the extension wrote
-    /// before the foreground reapply overwrote the live values.
-    let frozenBreadcrumbsDump: String
-
-    // Ring-buffer history (last 100 events, chronological)
+    // Ring-buffer breadcrumb history (cap 100, chronological).
+    /// Live ring as of capture.
     let historyDump: String
+    /// Frozen ring snapshot taken once per process at `IntentApp.init()`,
+    /// before any main-app reconcile begins overwriting the live ring.
     let frozenHistoryDump: String
 }
 
@@ -115,9 +111,7 @@ extension DebugStatusSnapshot {
         // DeviceActivity
         let monitors = DeviceActivityCenter().activities.map { $0.rawValue }.sorted()
 
-        // Breadcrumbs
-        let crumbs = DebugBreadcrumbs.dump()
-        let frozenCrumbs = DebugBreadcrumbs.dumpFrozen()
+        // Breadcrumbs (ring buffer)
         let history = DebugBreadcrumbs.dumpHistory()
         let frozenHistory = DebugBreadcrumbs.dumpFrozenHistory()
 
@@ -144,8 +138,6 @@ extension DebugStatusSnapshot {
             storeWebContentBlockedByFilter: storeFilter,
             authorizationStatus: authText,
             activeMonitors: monitors,
-            breadcrumbsDump: crumbs,
-            frozenBreadcrumbsDump: frozenCrumbs,
             historyDump: history,
             frozenHistoryDump: frozenHistory
         )
@@ -207,16 +199,10 @@ extension DebugStatusSnapshot {
             }
         }
         out.append("")
-        out.append("[DebugBreadcrumbs — pre-foreground (frozen)]")
-        out.append(frozenBreadcrumbsDump)
-        out.append("")
-        out.append("[DebugBreadcrumbs — live]")
-        out.append(breadcrumbsDump)
-        out.append("")
-        out.append("[DebugBreadcrumbs history — pre-foreground (frozen)]")
+        out.append("[DebugBreadcrumbs — frozen (pre-foreground)]")
         out.append(frozenHistoryDump)
         out.append("")
-        out.append("[DebugBreadcrumbs history — live (last 100)]")
+        out.append("[DebugBreadcrumbs — live (last 100)]")
         out.append(historyDump)
         return out.joined(separator: "\n")
     }
@@ -310,16 +296,10 @@ struct DebugStatusView: View {
         SettingsSectionHeader(title: "DeviceActivity Monitors")
         deviceActivitySection(snap)
 
-        SettingsSectionHeader(title: "Breadcrumbs — pre-foreground (frozen)")
-        breadcrumbsSection(snap, dump: snap.frozenBreadcrumbsDump)
-
-        SettingsSectionHeader(title: "Breadcrumbs — live (last 50)")
-        breadcrumbsSection(snap, dump: snap.breadcrumbsDump)
-
-        SettingsSectionHeader(title: "Breadcrumbs history — pre-foreground (frozen)")
+        SettingsSectionHeader(title: "DebugBreadcrumbs — frozen (pre-foreground)")
         breadcrumbsSection(snap, dump: snap.frozenHistoryDump)
 
-        SettingsSectionHeader(title: "Breadcrumbs history — live (last 100)")
+        SettingsSectionHeader(title: "DebugBreadcrumbs — live (last 100)")
         breadcrumbsSection(snap, dump: snap.historyDump)
     }
 
