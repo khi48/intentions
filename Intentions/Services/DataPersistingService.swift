@@ -2,7 +2,9 @@ import Foundation
 import SwiftData
 import FamilyControls
 import ManagedSettings
-import os
+#if DEBUG
+import os // DEBUG-PROBE #16: remove with probe block in mirrorIntentionQuoteToSharedDefaults
+#endif
 
 // MARK: - Data Persistence Protocol
 protocol DataPersisting: Sendable {
@@ -247,20 +249,32 @@ protocol DataPersisting: Sendable {
     /// Mirrors the user's intention quote into App Group UserDefaults so the
     /// ShieldConfiguration extension can read it without decoding the full
     /// WeeklySchedule (which lives only in the main app target).
+    // DEBUG-PROBE #16: remove when App Group testing infra no longer needed
+    #if DEBUG
     private static let appGroupLog = Logger(subsystem: "oh.Intent", category: "appGroup")
+    #endif
 
     private static func mirrorIntentionQuoteToSharedDefaults(_ quote: String?) {
         guard let shared = UserDefaults(suiteName: SharedConstants.appGroupId) else {
+            // DEBUG-PROBE #16: remove when App Group testing infra no longer needed
+            #if DEBUG
             appGroupLog.error("probe-write: UserDefaults(suiteName:) returned nil — App Group entitlement missing in main app")
+            #endif
             return
         }
         let trimmed = quote?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let trimmed, !trimmed.isEmpty {
             shared.set(trimmed, forKey: SharedConstants.ShieldKeys.intentionQuote)
+            // DEBUG-PROBE #16: remove when App Group testing infra no longer needed
+            #if DEBUG
             appGroupLog.notice("probe-write: key=\(SharedConstants.ShieldKeys.intentionQuote, privacy: .public) action=set length=\(trimmed.count, privacy: .public) prefix=\(String(trimmed.prefix(8)), privacy: .private)")
+            #endif
         } else {
             shared.removeObject(forKey: SharedConstants.ShieldKeys.intentionQuote)
+            // DEBUG-PROBE #16: remove when App Group testing infra no longer needed
+            #if DEBUG
             appGroupLog.notice("probe-write: key=\(SharedConstants.ShieldKeys.intentionQuote, privacy: .public) action=remove")
+            #endif
         }
     }
 
