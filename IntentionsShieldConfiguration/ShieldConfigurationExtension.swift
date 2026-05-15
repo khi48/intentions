@@ -91,10 +91,10 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         let raw = shared.string(forKey: Shared.intentionQuoteKey)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard let raw, !raw.isEmpty else {
-            Self.log.info("probe: key=\(Shared.intentionQuoteKey, privacy: .public) value=<nil> — fallback subtitle")
+            Self.log.notice("probe: key=\(Shared.intentionQuoteKey, privacy: .public) value=<nil> — fallback subtitle")
             return nil
         }
-        Self.log.info("probe: key=\(Shared.intentionQuoteKey, privacy: .public) resolved length=\(raw.count, privacy: .public) prefix=\(String(raw.prefix(8)), privacy: .private)")
+        Self.log.notice("probe: key=\(Shared.intentionQuoteKey, privacy: .public) resolved length=\(raw.count, privacy: .public) prefix=\(String(raw.prefix(8)), privacy: .private)")
         return raw
     }
 

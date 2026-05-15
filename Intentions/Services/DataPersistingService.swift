@@ -257,10 +257,10 @@ protocol DataPersisting: Sendable {
         let trimmed = quote?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let trimmed, !trimmed.isEmpty {
             shared.set(trimmed, forKey: SharedConstants.ShieldKeys.intentionQuote)
-            appGroupLog.info("probe-write: key=\(SharedConstants.ShieldKeys.intentionQuote, privacy: .public) action=set length=\(trimmed.count, privacy: .public) prefix=\(String(trimmed.prefix(8)), privacy: .private)")
+            appGroupLog.notice("probe-write: key=\(SharedConstants.ShieldKeys.intentionQuote, privacy: .public) action=set length=\(trimmed.count, privacy: .public) prefix=\(String(trimmed.prefix(8)), privacy: .private)")
         } else {
             shared.removeObject(forKey: SharedConstants.ShieldKeys.intentionQuote)
-            appGroupLog.info("probe-write: key=\(SharedConstants.ShieldKeys.intentionQuote, privacy: .public) action=remove")
+            appGroupLog.notice("probe-write: key=\(SharedConstants.ShieldKeys.intentionQuote, privacy: .public) action=remove")
         }
     }
 
