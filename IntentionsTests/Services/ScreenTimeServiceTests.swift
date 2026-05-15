@@ -125,57 +125,6 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         XCTAssertEqual(status, .denied)
     }
     
-    // MARK: - App Blocking Tests
-    
-    func testBlockAllAppsRequiresAuthorization() async {
-        // Given - Service without authorization
-        await mockService.setMockAuthorizationStatus(.denied)
-        
-        // When/Then - Block should fail
-        do {
-            try await mockService.blockAllApps()
-            XCTFail("Block should fail without authorization")
-        } catch AppError.screenTimeAuthorizationFailed {
-            // Expected
-        } catch {
-            XCTFail("Wrong error type: \(error)")
-        }
-    }
-    
-    func testBlockAllAppsClearsAllowedApps() async throws {
-        // Given - Service with some allowed apps
-        try await mockService.initialize()
-        let tokens = try createTestTokens()
-        try await mockService.allowApps(tokens, duration: 3600, sessionId: UUID())
-        
-        let allowedBefore = await mockService.getCurrentlyAllowedApps()
-        XCTAssertFalse(allowedBefore.isEmpty)
-        
-        // When - Block all apps
-        try await mockService.blockAllApps()
-        
-        // Then - Should clear allowed apps
-        let allowedAfter = await mockService.getCurrentlyAllowedApps()
-        XCTAssertTrue(allowedAfter.isEmpty)
-    }
-    
-    func testBlockAllAppsCancelsActiveSessions() async throws {
-        // Given - Service with active session
-        try await mockService.initialize()
-        let tokens = try createTestTokens()
-        try await mockService.allowApps(tokens, duration: 3600, sessionId: UUID())
-        
-        let statusBefore = await mockService.getStatusInfo()
-        XCTAssertTrue(statusBefore.hasActiveSession)
-        
-        // When - Block all apps
-        try await mockService.blockAllApps()
-        
-        // Then - Should cancel session
-        let statusAfter = await mockService.getStatusInfo()
-        XCTAssertFalse(statusAfter.hasActiveSession)
-    }
-    
     // MARK: - App Allowing Tests
     
     func testAllowAppsRequiresAuthorization() async {
@@ -285,19 +234,17 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         try await mockService.initialize()
         let tokens = try createTestTokens()
         try await mockService.allowApps(tokens, duration: 10, sessionId: UUID()) // 10 seconds
-        
+
         let statusBefore = await mockService.getStatusInfo()
         XCTAssertTrue(statusBefore.hasActiveSession)
-        
-        // When - Manually revoke access
-        try await mockService.allowAllAccess()
-        
+
+        // When - Cancel session timers (the public surface for ending the
+        // active session early; replaces the old allowAllAccess() path).
+        await mockService.cancelSessionTimers()
+
         // Then - Session should be cancelled
         let statusAfter = await mockService.getStatusInfo()
         XCTAssertFalse(statusAfter.hasActiveSession)
-        
-        let allowedApps = await mockService.getCurrentlyAllowedApps()
-        XCTAssertTrue(allowedApps.isEmpty)
     }
     
     // MARK: - App Permission Tests
@@ -367,46 +314,6 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         
         // Then - Should report correct count
         XCTAssertEqual(status.essentialSystemAppsCount, 3)
-    }
-    
-    // MARK: - Revoke Access Tests
-    
-    func testRevokeAllAccessRequiresAuthorization() async {
-        // Given - Service without authorization
-        await mockService.setMockAuthorizationStatus(.denied)
-        
-        // When/Then - Revoke should fail
-        do {
-            try await mockService.allowAllAccess()
-            XCTFail("Revoke should fail without authorization")
-        } catch AppError.screenTimeAuthorizationFailed {
-            // Expected
-        } catch {
-            XCTFail("Wrong error type: \(error)")
-        }
-    }
-    
-    func testRevokeAllAccessClearsAppsAndSession() async throws {
-        // Given - Service with active session
-        try await mockService.initialize()
-        let tokens = try createTestTokens()
-        try await mockService.allowApps(tokens, duration: 3600, sessionId: UUID())
-        
-        let allowedBefore = await mockService.getCurrentlyAllowedApps()
-        XCTAssertFalse(allowedBefore.isEmpty)
-        
-        let statusBefore = await mockService.getStatusInfo()
-        XCTAssertTrue(statusBefore.hasActiveSession)
-        
-        // When - Revoke access
-        try await mockService.allowAllAccess()
-        
-        // Then - Should clear apps and cancel session
-        let allowedAfter = await mockService.getCurrentlyAllowedApps()
-        XCTAssertTrue(allowedAfter.isEmpty)
-        
-        let statusAfter = await mockService.getStatusInfo()
-        XCTAssertFalse(statusAfter.hasActiveSession)
     }
     
     // MARK: - Status Information Tests
@@ -482,19 +389,22 @@ final class ScreenTimeServiceTests: XCTestCase, @unchecked Sendable {
         XCTAssertTrue(finalAllowed.count > 0, "Should have some apps allowed")
     }
     
-    func testConcurrentBlockAndAllow() async throws {
+    func testConcurrentCancelAndAllow() async throws {
         // Given - Initialized service
         try await mockService.initialize()
         let tokens = try createTestTokens()
-        
-        // When - Make concurrent block and allow requests
-        async let blockResult: Void = mockService.blockAllApps()
+
+        // When - Make concurrent cancel-timers and allow requests. Replaces
+        // the old blockAllApps + allow concurrency probe; both paths funnel
+        // through the same actor so the contract is "no crash, ends in
+        // consistent state".
+        async let cancelResult: Void = mockService.cancelSessionTimers()
         async let allowResult: Void = mockService.allowApps(tokens, duration: 1800, sessionId: UUID())
-        
+
         // Then - Both should complete without errors
-        try await blockResult
+        await cancelResult
         try await allowResult
-        
+
         // Final state should be consistent
         let status = await mockService.getStatusInfo()
         XCTAssertTrue(status.isFullyOperational)

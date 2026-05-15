@@ -86,17 +86,6 @@ actor ScreenTimeService: ScreenTimeManaging {
 
     // MARK: - Shield-state transitions (delegated to ShieldEngine)
 
-    func blockAllApps() async throws {
-        try ensureInitialized()
-        guard await authorizationStatus() == .approved else {
-            throw AppError.screenTimeAuthorizationFailed
-        }
-
-        logger.notice("blockAllApps → flipDefault(.blocked)")
-        engine.flipDefault(to: .blocked)
-        updateWidget(blocking: true)
-    }
-
     func allowApps(
         _ tokens: sending Set<ApplicationToken>,
         webDomains: Set<WebDomainToken> = [],
@@ -146,17 +135,6 @@ actor ScreenTimeService: ScreenTimeManaging {
                 // Task.sleep threw — cancellation. No-op.
             }
         }
-    }
-
-    func allowAllAccess() async throws {
-        try ensureInitialized()
-        guard await authorizationStatus() == .approved else {
-            throw AppError.screenTimeAuthorizationFailed
-        }
-
-        logger.notice("allowAllAccess → flipDefault(.open)")
-        engine.flipDefault(to: .open)
-        updateWidget(blocking: false)
     }
 
     // MARK: - Queries (read from IntentLog)
@@ -211,6 +189,14 @@ actor ScreenTimeService: ScreenTimeManaging {
         engine.catchUpOnForeground()
     }
 
+    /// Push the latest weekly-schedule snapshot to the engine. The engine
+    /// persists it, re-registers the next schedule-boundary DAM monitor, and
+    /// re-applies the current shield config.
+    func refreshSchedule(_ snapshot: ScheduleSnapshot) async {
+        logger.notice("refreshSchedule → engine.refreshScheduleMonitoring")
+        engine.refreshScheduleMonitoring(snapshot)
+    }
+
     // MARK: - Vestigial protocol methods (no-ops)
 
     /// Legacy: callback mechanism for session-end. ShieldEngine owns transitions
@@ -218,10 +204,11 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// the IntentLog or use the widget/shared-state bus instead.
     func setRestoreDefaultStateCallback(_ callback: @escaping @Sendable () async -> Void) async {}
 
-    /// Legacy: belt-and-suspenders app-token list for category-blocking gaps.
-    /// New engine shields everything-except-picked via `.all(except:)`,
-    /// categories included — no secondary token list needed.
-    func updateKnownAppTokens(_ tokens: Set<ApplicationToken>) async {}
+    /// Feed app tokens into the IntentLog's known-tokens set. Used to plug the
+    /// iOS 26 `.all()` shield gap on fresh installs / pre-session state.
+    func updateKnownAppTokens(_ tokens: Set<ApplicationToken>) async {
+        engine.registerKnownTokens(apps: tokens)
+    }
 
     // MARK: - Widget
 

@@ -21,6 +21,7 @@ import Foundation
 /// `handleExpiry` is idempotent so late fires are no-ops.
 struct DAMScheduler: Sendable {
     static let sessionExpiryPrefix = "shieldstate.session-expiry"
+    static let scheduleBoundaryName = DeviceActivityName("shieldstate.schedule-boundary")
     static let firstTouchEventName = DeviceActivityEvent.Name("shieldstate.first-touch")
 
     private let center = DeviceActivityCenter()
@@ -31,6 +32,10 @@ struct DAMScheduler: Sendable {
 
     static func isSessionExpiryActivity(_ activity: DeviceActivityName) -> Bool {
         activity.rawValue.hasPrefix(sessionExpiryPrefix)
+    }
+
+    static func isScheduleBoundaryActivity(_ activity: DeviceActivityName) -> Bool {
+        activity == scheduleBoundaryName
     }
 
     /// Schedule one DAM monitoring window whose interval BEGINS at the
@@ -86,6 +91,48 @@ struct DAMScheduler: Sendable {
     /// set of active names — anything matching the session-expiry prefix is ours.
     func cancel() {
         let ours = center.activities.filter { Self.isSessionExpiryActivity($0) }
+        guard !ours.isEmpty else { return }
+        center.stopMonitoring(ours)
+    }
+
+    /// Schedule a one-shot DAM monitor at the next schedule boundary (free⇄blocked
+    /// transition). Self-rescheduling: the DAM extension chains the next call after
+    /// each `intervalDidStart` fire. Same future-start pattern as session expiry —
+    /// `intervalStart` at the boundary, `intervalEnd` 15min30s later to satisfy iOS's
+    /// 15-min duration minimum.
+    ///
+    /// No-op if the snapshot reports no upcoming boundary in the next 7 days
+    /// (e.g. schedule disabled, or always-blocking / always-free).
+    func scheduleNextBoundary(schedule: ScheduleSnapshot, from now: Date = Date()) throws {
+        cancelScheduleBoundary()
+        guard let boundary = schedule.nextBoundary(after: now) else {
+            DebugBreadcrumbs.record(.scheduleBoundarySkipped, note: "no upcoming boundary")
+            return
+        }
+        let intervalStart = boundary
+        let intervalEnd = intervalStart.addingTimeInterval(15 * 60 + 30)
+        let calendar = Calendar.current
+        let dActivity = DeviceActivitySchedule(
+            intervalStart: calendar.dateComponents([.hour, .minute, .second], from: intervalStart),
+            intervalEnd: calendar.dateComponents([.hour, .minute, .second], from: intervalEnd),
+            repeats: false
+        )
+        do {
+            try center.startMonitoring(Self.scheduleBoundaryName, during: dActivity)
+            DebugBreadcrumbs.record(
+                .scheduleBoundaryScheduled,
+                note: "boundary=+\(Int(boundary.timeIntervalSince(now)))s"
+            )
+        } catch {
+            DebugBreadcrumbs.record(.scheduleBoundaryFailed, note: error.localizedDescription)
+            throw error
+        }
+    }
+
+    /// Cancel any currently-registered schedule-boundary monitor. Safe to call
+    /// even if none is active.
+    func cancelScheduleBoundary() {
+        let ours = center.activities.filter { Self.isScheduleBoundaryActivity($0) }
         guard !ours.isEmpty else { return }
         center.stopMonitoring(ours)
     }

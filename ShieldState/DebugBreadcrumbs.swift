@@ -1,9 +1,17 @@
 import Foundation
 
 /// Diagnostic harness for on-device testing. Each touchpoint in the wake
-/// chain writes a timestamped breadcrumb to shared UserDefaults so we can
-/// reconstruct the sequence after the fact. Not for production — this is
-/// scaffolding for Case A diagnosis.
+/// chain appends a timestamped entry to a ring-buffer (cap 100) stored in
+/// the App-Group `UserDefaults`. Not for production — this is scaffolding
+/// for Case A diagnosis.
+///
+/// History semantics:
+/// - **Live ring** (`shieldstate.debug.history`) — appended on every
+///   `record()`; trimmed to `historyCap` lines.
+/// - **Frozen ring** (`shieldstate.frozen.history`) — snapshot of the live
+///   ring taken once per process at `IntentApp.init()` (via `freeze()`),
+///   so the pre-foreground state can be inspected after the foreground
+///   reapply has begun overwriting the live ring.
 enum DebugBreadcrumbs {
     private static let suiteName = "group.oh.Intent"
 
@@ -12,62 +20,104 @@ enum DebugBreadcrumbs {
         case engineHandleExpiry          = "shieldstate.debug.engine.handleExpiry"
         case engineCatchUp               = "shieldstate.debug.engine.catchUp"
         case engineReapply               = "shieldstate.debug.engine.reapply"
+        case engineScheduleTransition    = "shieldstate.debug.engine.scheduleTransition"
+        case engineRefreshSchedule       = "shieldstate.debug.engine.refreshSchedule"
         case damIntervalDidStart         = "shieldstate.debug.dam.intervalDidStart"
         case damIntervalDidEnd           = "shieldstate.debug.dam.intervalDidEnd"
         case damEventThreshold           = "shieldstate.debug.dam.eventThreshold"
         case damScheduleAttempted        = "shieldstate.debug.dam.scheduleAttempted"
         case damScheduleSucceeded        = "shieldstate.debug.dam.scheduleSucceeded"
         case damScheduleFailed           = "shieldstate.debug.dam.scheduleFailed"
-        case darwinPosted                = "shieldstate.debug.darwin.posted"
-        case darwinObserverInstalled     = "shieldstate.debug.darwin.observerInstalled"
-        case darwinReceived              = "shieldstate.debug.darwin.received"
-        case bgtaskSubmitted             = "shieldstate.debug.bgtask.submitted"
-        case bgtaskSubmitFailed          = "shieldstate.debug.bgtask.submitFailed"
-        case bgtaskHandlerRan            = "shieldstate.debug.bgtask.handlerRan"
+        case scheduleBoundaryScheduled   = "shieldstate.debug.scheduleBoundary.scheduled"
+        case scheduleBoundarySkipped     = "shieldstate.debug.scheduleBoundary.skipped"
+        case scheduleBoundaryFailed      = "shieldstate.debug.scheduleBoundary.failed"
         case scenePhaseActive            = "shieldstate.debug.scenePhase.active"
-        case applierApply                = "shieldstate.debug.applier.apply"
+        // Split per-writer so the main-app applier doesn't clobber the
+        // extension's last write under the single `applier.apply` key.
+        case extensionApplied            = "shieldstate.debug.applier.extensionApplied"
+        case mainAppApplied              = "shieldstate.debug.applier.mainAppApplied"
+        case weeklyScheduleLoaded        = "shieldstate.debug.dataPersistence.weeklyScheduleLoaded"
+        case weeklyScheduleVerified      = "shieldstate.debug.cvm.weeklyScheduleVerified"
     }
 
-    /// Record a breadcrumb with the current timestamp and an optional note.
+    /// Append a breadcrumb to the live ring-buffer history with the current
+    /// timestamp and an optional note.
     static func record(_ event: Event, note: String = "") {
         guard let defaults = UserDefaults(suiteName: suiteName) else { return }
         let stamp = DateFormatter.iso.string(from: Date())
-        let value = note.isEmpty ? stamp : "\(stamp) | \(note)"
-        defaults.set(value, forKey: event.rawValue)
+        appendToHistory(stamp: stamp, event: event, note: note, defaults: defaults)
     }
 
-    /// Read all breadcrumbs, sorted by timestamp, as a multi-line string.
-    /// Safe to call from anywhere.
-    static func dump() -> String {
-        guard let defaults = UserDefaults(suiteName: suiteName) else { return "(no app group)" }
-        var entries: [(String, String)] = []
-        for event in allEvents {
-            if let value = defaults.string(forKey: event.rawValue) {
-                entries.append((value, event.rawValue.replacingOccurrences(of: "shieldstate.debug.", with: "")))
-            }
+    // MARK: - Ring-buffer history
+
+    private static let historyKey = "shieldstate.debug.history"
+    private static let frozenHistoryKey = "shieldstate.frozen.history"
+    private static let frozenAtKey = "shieldstate.frozen.capturedAt"
+    private static let historyCap = 100
+
+    /// Append one entry to the live history and trim to `historyCap` lines.
+    /// Read-modify-write — racy across processes (main app + DAM extension)
+    /// but tolerable for diagnostics; occasional lost appends are fine.
+    private static func appendToHistory(stamp: String, event: Event, note: String, defaults: UserDefaults) {
+        let shortName = event.rawValue.replacingOccurrences(of: "shieldstate.debug.", with: "")
+        let line = "\(stamp)  \(shortName)  \(note)"
+        let existing = defaults.string(forKey: historyKey) ?? ""
+        var lines = existing.isEmpty
+            ? []
+            : existing.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        lines.append(line)
+        if lines.count > historyCap {
+            lines = Array(lines.suffix(historyCap))
         }
-        entries.sort { $0.0 < $1.0 }
-        if entries.isEmpty { return "(no breadcrumbs)" }
-        return entries.map { "  \($0.0)  \($0.1)" }.joined(separator: "\n")
+        defaults.set(lines.joined(separator: "\n"), forKey: historyKey)
     }
 
-    /// Clear every breadcrumb. Call when a new session starts so the log
-    /// reflects one test run at a time.
+    /// Chronological dump of the live ring-buffer history (oldest first).
+    static func dumpHistory() -> String {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return "(no app group)" }
+        let raw = defaults.string(forKey: historyKey) ?? ""
+        if raw.isEmpty { return "(no history)" }
+        return raw
+    }
+
+    /// Chronological dump of the frozen ring-buffer history (oldest first).
+    /// Includes the `frozen at:` header timestamp if `freeze()` has ever run.
+    static func dumpFrozenHistory() -> String {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return "(no app group)" }
+        let raw = defaults.string(forKey: frozenHistoryKey) ?? ""
+        if raw.isEmpty {
+            return "(no frozen history — freeze() not run or live ring was empty)"
+        }
+        let frozenAt = defaults.string(forKey: frozenAtKey)
+        let header = frozenAt.map { "  (frozen at: \($0))" } ?? "  (frozen at: ?)"
+        return ([header, raw]).joined(separator: "\n")
+    }
+
+    /// Snapshot the live ring-buffer history into the frozen-history key.
+    /// **One-shot per process**: invoked exactly once at the end of
+    /// `IntentApp.init()`, after the Darwin observer install and before any
+    /// main-app reconcile or scenePhase work. The frozen snapshot therefore
+    /// preserves whatever the extension wrote between the previous app exit
+    /// and this process spawn. Do NOT call this anywhere else — a second
+    /// freeze (e.g. on scenePhase.active) would clobber that pre-launch
+    /// snapshot with foreground-reapply data and we'd lose the diagnostic.
+    static func freeze() {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
+        if let history = defaults.string(forKey: historyKey) {
+            defaults.set(history, forKey: frozenHistoryKey)
+        } else {
+            defaults.removeObject(forKey: frozenHistoryKey)
+        }
+        defaults.set(DateFormatter.iso.string(from: Date()), forKey: frozenAtKey)
+    }
+
+    /// Clear the ring-buffer history. Call when a new session starts so the
+    /// log reflects one test run at a time. Frozen ring is preserved so the
+    /// pre-foreground snapshot from this process spawn stays available.
     static func reset() {
         guard let defaults = UserDefaults(suiteName: suiteName) else { return }
-        for event in allEvents {
-            defaults.removeObject(forKey: event.rawValue)
-        }
+        defaults.removeObject(forKey: historyKey)
     }
-
-    private static let allEvents: [Event] = [
-        .engineStartSession, .engineHandleExpiry, .engineCatchUp, .engineReapply,
-        .damIntervalDidStart, .damIntervalDidEnd, .damEventThreshold,
-        .damScheduleAttempted, .damScheduleSucceeded, .damScheduleFailed,
-        .darwinPosted, .darwinObserverInstalled, .darwinReceived,
-        .bgtaskSubmitted, .bgtaskSubmitFailed, .bgtaskHandlerRan,
-        .scenePhaseActive, .applierApply
-    ]
 }
 
 private extension DateFormatter {

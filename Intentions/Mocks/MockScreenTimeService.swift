@@ -86,19 +86,6 @@ actor MockScreenTimeService: ScreenTimeManaging {
         _mockIsInitialized.load(ordering: .acquiring)
     }
     
-    func blockAllApps() async throws {
-        let status = await authorizationStatus()
-        guard status == .approved else {
-            throw AppError.screenTimeAuthorizationFailed
-        }
-        
-        mockCurrentlyAllowedApps.removeAll()
-        mockSessionTask?.cancel()
-        mockSessionTask = nil
-        
-        print("Mock: All apps blocked")
-    }
-    
     func allowApps(_ tokens: sending Set<ApplicationToken>, webDomains: Set<WebDomainToken> = [], allowWebsites: Bool = false, duration: TimeInterval, sessionId: UUID) async throws {
         let status = await authorizationStatus()
         guard status == .approved else {
@@ -129,7 +116,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
                 try await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
                 guard !Task.isCancelled else { return }
 
-                try? await self?.blockAllApps()
+                await self?.expireSession()
                 print("Mock: Session expired")
             } catch {
                 // Task cancelled or sleep interrupted
@@ -139,23 +126,19 @@ actor MockScreenTimeService: ScreenTimeManaging {
 
         print("Mock: Allowed \(tokens.count) apps for \(duration) seconds")
     }
-    
+
+    /// Internal helper used by the mock's expiration timer to drop the active
+    /// session and clear allowed apps. Replaces the old `blockAllApps()` call
+    /// that the public protocol no longer exposes.
+    private func expireSession() {
+        mockCurrentlyAllowedApps.removeAll()
+        mockSessionTask = nil
+    }
+
     func getCurrentlyAllowedApps() async -> Set<ApplicationToken> {
         return mockCurrentlyAllowedApps
     }
-    
-    func allowAllAccess() async throws {
-        let status = await authorizationStatus()
-        guard status == .approved else {
-            throw AppError.screenTimeAuthorizationFailed
-        }
 
-        mockSessionTask?.cancel()
-        mockSessionTask = nil
-        mockCurrentlyAllowedApps.removeAll()
-        print("🧪 MockScreenTimeService: All access allowed - no restrictions")
-    }
-    
     func isAppAllowed(_ token: sending ApplicationToken) async -> Bool {
         return mockCurrentlyAllowedApps.contains(token) || mockSystemApps.contains(token)
     }
@@ -209,5 +192,9 @@ actor MockScreenTimeService: ScreenTimeManaging {
     func clearAllShields() async {
         mockCurrentlyAllowedApps.removeAll()
         print("Mock: clearAllShields — all shield entries flushed")
+    }
+
+    func refreshSchedule(_ snapshot: ScheduleSnapshot) async {
+        print("Mock: refreshSchedule — isEnabled=\(snapshot.isEnabled) intervals=\(snapshot.intervals.count)")
     }
 }

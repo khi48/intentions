@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import Combine
 
 /// Confirmation modal that adds friction when disabling Intentions blocking.
 /// Layout: stat boxes at the top (streak + optional time remaining), intention quote
@@ -21,9 +20,10 @@ struct DisableBlockingConfirmationView: View {
     let onCancel: () -> Void
 
     @State private var reasonText: String = ""
-    @State private var countdownSecondsRemaining: Double = 10.0
-    @State private var isCountdownActive: Bool = false
-    @State private var countdownCancellable: AnyCancellable?
+    @State private var countdownEndDate: Date?
+    @State private var isCountdownComplete: Bool = false
+    @State private var animatedProgress: CGFloat = 0
+    @State private var countdownTask: Task<Void, Never>?
     @FocusState private var isTextFieldFocused: Bool
 
     private let countdownDuration: Double = 10.0
@@ -79,8 +79,8 @@ struct DisableBlockingConfirmationView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
-                        countdownCancellable?.cancel()
-                        countdownCancellable = nil
+                        countdownTask?.cancel()
+                        countdownTask = nil
                         onCancel()
                     }
                 }
@@ -90,8 +90,8 @@ struct DisableBlockingConfirmationView: View {
             isTextFieldFocused = false
         }
         .onDisappear {
-            countdownCancellable?.cancel()
-            countdownCancellable = nil
+            countdownTask?.cancel()
+            countdownTask = nil
         }
     }
 
@@ -167,7 +167,7 @@ struct DisableBlockingConfirmationView: View {
                 .submitLabel(.done)
                 .onSubmit { isTextFieldFocused = false }
                 .onChange(of: reasonText) { _, _ in
-                    if textRequirementMet && !isCountdownActive {
+                    if textRequirementMet && countdownEndDate == nil {
                         startCountdown()
                     }
                 }
@@ -203,26 +203,29 @@ struct DisableBlockingConfirmationView: View {
     private var progressButton: some View {
         Button(action: { onConfirm() }) {
             ZStack {
-                // Background
                 RoundedRectangle(cornerRadius: 12)
                     .fill(AppConstants.Colors.textSecondary.opacity(0.15))
 
-                // Progress fill
-                GeometryReader { geometry in
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(isConfirmEnabled
-                              ? AppConstants.Colors.text
-                              : AppConstants.Colors.textSecondary.opacity(0.08))
-                        .frame(width: geometry.size.width * progressFraction)
-                        .animation(.linear(duration: 1.0 / 60.0), value: progressFraction)
-                }
+                // Fill grows leading→trailing via scaleEffect, animated by the
+                // `.animation(_:value:)` modifier whenever animatedProgress changes.
+                // scaleEffect is reliably animatable; using GeometryReader + frame
+                // can lose animation context.
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isConfirmEnabled
+                          ? AppConstants.Colors.text
+                          : AppConstants.Colors.text.opacity(0.35))
+                    .scaleEffect(x: animatedProgress, y: 1, anchor: .leading)
+                    .animation(.linear(duration: countdownDuration), value: animatedProgress)
 
-                // Label
-                Text(buttonLabel)
-                    .font(.headline)
-                    .foregroundColor(isConfirmEnabled
-                                    ? AppConstants.Colors.background
-                                    : AppConstants.Colors.textSecondary)
+                // TimelineView only for the seconds label — 4Hz is enough since
+                // text changes at most once per second.
+                TimelineView(.periodic(from: .now, by: 0.25)) { context in
+                    Text(currentLabel(at: context.date))
+                        .font(.headline)
+                        .foregroundColor(isConfirmEnabled
+                                        ? AppConstants.Colors.background
+                                        : AppConstants.Colors.textSecondary)
+                }
             }
             .frame(height: 52)
         }
@@ -240,39 +243,33 @@ struct DisableBlockingConfirmationView: View {
     // MARK: - Computed Properties
 
     private var isConfirmEnabled: Bool {
-        textRequirementMet && countdownSecondsRemaining <= 0
+        textRequirementMet && isCountdownComplete
     }
 
-    private var progressFraction: CGFloat {
-        guard isCountdownActive else { return 0 }
-        let elapsed = countdownDuration - countdownSecondsRemaining
-        return CGFloat(max(0, min(1, elapsed / countdownDuration)))
+    private func currentLabel(at date: Date) -> String {
+        guard let end = countdownEndDate, !isCountdownComplete else { return "Disable" }
+        let remaining = max(0, end.timeIntervalSince(date))
+        let seconds = Int(ceil(remaining))
+        return seconds > 0 ? "Disable · \(seconds)s" : "Disable"
     }
 
-    private var buttonLabel: String {
-        let seconds = Int(ceil(max(0, countdownSecondsRemaining)))
-        if seconds > 0 {
-            return "Disable · \(seconds)s"
-        }
-        return "Disable"
-    }
-
-    // MARK: - Timer
+    // MARK: - Countdown
 
     private func startCountdown() {
-        isCountdownActive = true
-        countdownSecondsRemaining = countdownDuration
+        countdownTask?.cancel()
+        countdownEndDate = Date().addingTimeInterval(countdownDuration)
+        isCountdownComplete = false
 
-        countdownCancellable = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common)
-            .autoconnect()
-            .sink { _ in
-                countdownSecondsRemaining = max(0, countdownSecondsRemaining - (1.0 / 60.0))
+        // Drive the fill: setting animatedProgress to 1.0 triggers the
+        // .animation(.linear(duration: countdownDuration), value:) modifier
+        // on the fill rectangle, interpolating 0 → 1 over the countdown.
+        animatedProgress = 1.0
 
-                if countdownSecondsRemaining <= 0 {
-                    countdownCancellable?.cancel()
-                    countdownCancellable = nil
-                }
-            }
+        countdownTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(countdownDuration * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            isCountdownComplete = true
+        }
     }
 }
 

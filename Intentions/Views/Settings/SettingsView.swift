@@ -14,6 +14,7 @@ enum SettingsDestination: Hashable {
     case greyscale
     case scheduleEditor
     case intentionQuote
+    case debugStatus
 
     var title: String {
         switch self {
@@ -22,6 +23,7 @@ enum SettingsDestination: Hashable {
         case .greyscale: return "Enable Greyscale"
         case .scheduleEditor: return "Free Time Settings"
         case .intentionQuote: return "Your Intention"
+        case .debugStatus: return "Debug Status"
         }
     }
 
@@ -32,6 +34,7 @@ enum SettingsDestination: Hashable {
         case .greyscale: return "circle.lefthalf.filled"
         case .scheduleEditor: return "calendar"
         case .intentionQuote: return "quote.opening"
+        case .debugStatus: return "ladybug.fill"
         }
     }
 }
@@ -46,17 +49,6 @@ struct SettingsView: View {
     private let setupCoordinator: SetupCoordinator?
     private let hasActiveSession: Bool
     @Environment(NavigationStateManager.self) private var navigationManager
-
-    private var isScheduleEditingDisabled: Bool {
-        viewModel.weeklySchedule.isEnabled
-    }
-
-    private var scheduleEditingDisabledReason: String {
-        if viewModel.weeklySchedule.isEnabled {
-            return "Disable blocking to edit free time settings"
-        }
-        return ""
-    }
 
     init(
         dataService: DataPersisting? = nil,
@@ -92,18 +84,6 @@ struct SettingsView: View {
                         blockingToggleRow
                         freeTimeRow
 
-                        if isScheduleEditingDisabled {
-                            HStack(spacing: 6) {
-                                Image(systemName: "info.circle")
-                                    .font(.caption2)
-                                Text(scheduleEditingDisabledReason)
-                                    .font(.caption)
-                            }
-                            .foregroundColor(AppConstants.Colors.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 8)
-                        }
-
                         // General
                         sectionLabel("General")
                         SettingsNavigationRow(
@@ -122,6 +102,10 @@ struct SettingsView: View {
                         SettingsNavigationRow(
                             "App Setup",
                             value: SettingsDestination.setupFlow
+                        )
+                        SettingsNavigationRow(
+                            "Debug Status",
+                            value: SettingsDestination.debugStatus
                         )
                     }
                     .padding(.horizontal)
@@ -158,6 +142,7 @@ struct SettingsView: View {
                     case .scheduleEditor:
                         WeekScheduleEditorView(
                             schedule: viewModel.weeklySchedule,
+                            isReadOnly: viewModel.weeklySchedule.isEnabled,
                             onSave: { updated in
                                 Task {
                                     await viewModel.updateSchedule(updated)
@@ -175,6 +160,8 @@ struct SettingsView: View {
                                 await viewModel.updateSchedule(viewModel.weeklySchedule)
                             }
                         }
+                    case .debugStatus:
+                        DebugStatusView()
                     }
                 }
             }
@@ -303,8 +290,7 @@ struct SettingsView: View {
     private var freeTimeRow: some View {
         SettingsNavigationRow(
             "Free Time Settings",
-            value: SettingsDestination.scheduleEditor,
-            isDisabled: isScheduleEditingDisabled
+            value: SettingsDestination.scheduleEditor
         )
     }
 

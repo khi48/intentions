@@ -143,19 +143,31 @@ protocol DataPersisting: Sendable {
             do {
                 let schedule = try decoder.decode(WeeklySchedule.self, from: data)
                 Self.mirrorIntentionQuoteToSharedDefaults(schedule.intentionQuote)
+                DebugBreadcrumbs.record(
+                    .weeklyScheduleLoaded,
+                    note: "newBlob enabled=\(schedule.isEnabled) intervals=\(schedule.intervals.count)"
+                )
                 return schedule
             } catch {
+                DebugBreadcrumbs.record(.weeklyScheduleLoaded, note: "decodeError: \(error.localizedDescription)")
                 throw AppError.persistenceError("Failed to decode WeeklySchedule: \(error.localizedDescription)")
             }
         }
 
         // 2. Fall back to legacy ScheduleSettings via SwiftData
         let legacy = try await loadScheduleSettings()
-        guard let legacy else { return nil }
+        guard let legacy else {
+            DebugBreadcrumbs.record(.weeklyScheduleLoaded, note: "nil (no blob, no legacy)")
+            return nil
+        }
 
         // Migrate once and persist so future reads skip this path
         let migrated = WeeklySchedule.migrate(from: legacy)
         try await saveWeeklySchedule(migrated)
+        DebugBreadcrumbs.record(
+            .weeklyScheduleLoaded,
+            note: "legacyMigration enabled=\(migrated.isEnabled) intervals=\(migrated.intervals.count)"
+        )
         return migrated
     }
 

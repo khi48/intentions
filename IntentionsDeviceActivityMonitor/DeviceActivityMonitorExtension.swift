@@ -24,12 +24,17 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
         DebugBreadcrumbs.record(.damIntervalDidStart, note: activity.rawValue)
-        guard DAMScheduler.isSessionExpiryActivity(activity) else {
-            logger.notice("intervalDidStart: ignoring unrelated activity \(activity.rawValue, privacy: .public)")
+        if DAMScheduler.isSessionExpiryActivity(activity) {
+            logger.notice("intervalDidStart: session expiry — primary trigger")
+            ShieldEngine.damExtension().handleExpiry()
             return
         }
-        logger.notice("intervalDidStart: session expiry — primary trigger")
-        ShieldEngine.damExtension().handleExpiry()
+        if DAMScheduler.isScheduleBoundaryActivity(activity) {
+            logger.notice("intervalDidStart: schedule boundary")
+            ShieldEngine.damExtension().handleScheduleTransition()
+            return
+        }
+        logger.notice("intervalDidStart: ignoring unrelated activity \(activity.rawValue, privacy: .public)")
     }
 
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
@@ -44,11 +49,14 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
         DebugBreadcrumbs.record(.damIntervalDidEnd, note: activity.rawValue)
-        guard DAMScheduler.isSessionExpiryActivity(activity) else {
-            logger.notice("intervalDidEnd: ignoring unrelated activity \(activity.rawValue, privacy: .public)")
+        if DAMScheduler.isSessionExpiryActivity(activity) {
+            logger.notice("intervalDidEnd: session expiry — tertiary trigger")
+            ShieldEngine.damExtension().handleExpiry()
             return
         }
-        logger.notice("intervalDidEnd: session expiry — tertiary trigger")
-        ShieldEngine.damExtension().handleExpiry()
+        // Schedule-boundary intervalDidEnd is informational only — the boundary
+        // itself fired at intervalDidStart 15min30s earlier and the chain has
+        // already advanced. No-op.
+        logger.notice("intervalDidEnd: ignoring \(activity.rawValue, privacy: .public)")
     }
 }

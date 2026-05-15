@@ -193,6 +193,9 @@ final class ContentViewModel: Sendable {
             weeklySchedule = WeeklySchedule()
             saveWeeklyScheduleToUserDefaults(weeklySchedule)
         }
+        // Push fresh snapshot to ShieldEngine so DAM extension reads it from
+        // the IntentLog plist and the next schedule boundary is registered.
+        await screenTimeService.refreshSchedule(weeklySchedule.snapshot())
     }
     
     /// Load any existing active session from persistence
@@ -264,6 +267,41 @@ final class ContentViewModel: Sendable {
 
         // Also save to UserDefaults for DeviceActivityMonitor extension
         saveWeeklyScheduleToUserDefaults(schedule)
+
+        // Gate the IntentLog push on service readiness. If we push to an
+        // uninitialised engine the snapshot may not actually persist — the
+        // user sees a successful Save but IntentLog retains the previous
+        // snapshot, and `compute()` runs against stale state. Surface this
+        // loudly instead of silently no-op'ing.
+        guard screenTimeService.isReady else {
+            handleError(AppError.serviceUnavailable(
+                "Screen Time service is not ready. Schedule saved locally but blocking has not been activated — please complete setup."
+            ))
+            return
+        }
+
+        // Push fresh snapshot to ShieldEngine — persists in IntentLog,
+        // re-registers next schedule-boundary DAM monitor, re-applies shield.
+        let snapshot = schedule.snapshot()
+        await screenTimeService.refreshSchedule(snapshot)
+
+        // Verify the engine actually persisted the snapshot. If not, the
+        // edit-flow has silently lost the user's change; surface it.
+        let persisted = IntentLogStore().load().weeklySchedule
+        if persisted != snapshot {
+            DebugBreadcrumbs.record(
+                .weeklyScheduleVerified,
+                note: "MISMATCH saved enabled=\(snapshot.isEnabled)/intervals=\(snapshot.intervals.count) log enabled=\(persisted?.isEnabled.description ?? "nil")/intervals=\(persisted?.intervals.count.description ?? "nil")"
+            )
+            handleError(AppError.persistenceError(
+                "Schedule was saved but the shield engine did not persist it. Please retry."
+            ))
+            return
+        }
+        DebugBreadcrumbs.record(
+            .weeklyScheduleVerified,
+            note: "ok enabled=\(snapshot.isEnabled) intervals=\(snapshot.intervals.count)"
+        )
 
         // If blocking was disabled and there's an active session, cancel it —
         // session exists to manage blocking, so no blocking means no session.
@@ -631,8 +669,14 @@ final class ContentViewModel: Sendable {
         await applyDefaultBlocking()
     }
 
-    /// Apply default blocking state based on schedule settings.
-    /// If a session is active, preserves session blocking.
+    /// Reconcile in-app session state with shield state.
+    ///
+    /// Shield decisions (session vs schedule vs default) are owned by
+    /// `ShieldEngine.compute(_:at:)`. This method only handles the SwiftData
+    /// side of session lifecycle (mark expired sessions complete, tear down
+    /// UI state) and then asks the engine to re-evaluate via
+    /// `refreshSchedule(...)` — which pushes the latest snapshot, re-registers
+    /// the schedule-boundary DAM monitor, and applies the computed config.
     private func applyDefaultBlocking() async {
         guard !isApplyingDefaultBlocking else {
             logger.info("⏭️ applyDefaultBlocking: skipped (already in progress)")
@@ -646,46 +690,34 @@ final class ContentViewModel: Sendable {
         isApplyingDefaultBlocking = true
         defer { isApplyingDefaultBlocking = false }
 
-        do {
-            // Session expired while app was backgrounded — the extension already
-            // cleared the shared ManagedSettingsStore. We just need to update the
-            // app's data model (mark session complete, clear UI state) then fall
-            // through to schedule-based blocking to ensure consistency.
-            // This is a .naturalCompletion — the pre-scheduled notification has
-            // already delivered (or will deliver) at the true end time.
-            if let activeSession = activeSession, activeSession.isActive, activeSession.isExpired {
-                let expiredId = activeSession.id
-                logger.notice("🔄 applyDefaultBlocking: found expired session \(expiredId), completing")
-                // Cancel only warnings — the completion trigger is either already
-                // fired (user saw the banner) or pending for delivery at end time.
-                await NotificationService.shared.cancelSessionWarnings(sessionId: expiredId)
-                activeSession.complete()
-                try? await dataService.saveIntentionSession(activeSession)
-                await teardownSessionState()
-                if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
-                    sharedDefaults.removeObject(forKey: AppConstants.Keys.currentSessionId)
-                    sharedDefaults.synchronize()
-                }
-                // Fall through to schedule-based blocking below
-            } else if let activeSession = activeSession, activeSession.isActive {
-                logger.info("🔄 applyDefaultBlocking: active session \(activeSession.id) still running, preserving")
-                await applySessionBlocking(for: activeSession)
-                return
+        // Session expired while app was backgrounded — DAM extension already
+        // cleared shared ManagedSettings. We only need to update the app's
+        // data model (mark session complete, clear UI state).
+        // This is a .naturalCompletion — pre-scheduled notif already delivered
+        // (or will deliver) at the true end time.
+        if let activeSession = activeSession, activeSession.isActive, activeSession.isExpired {
+            let expiredId = activeSession.id
+            logger.notice("🔄 applyDefaultBlocking: found expired session \(expiredId), completing")
+            await NotificationService.shared.cancelSessionWarnings(sessionId: expiredId)
+            activeSession.complete()
+            try? await dataService.saveIntentionSession(activeSession)
+            await teardownSessionState()
+            if let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) {
+                sharedDefaults.removeObject(forKey: AppConstants.Keys.currentSessionId)
+                sharedDefaults.synchronize()
             }
-
-            currentlyAppliedSessionId = nil
-
-            let shouldBlock = weeklySchedule.isBlocking(at: Date())
-            logger.notice("🔄 applyDefaultBlocking: schedule.isEnabled=\(self.weeklySchedule.isEnabled), isBlocking=\(shouldBlock)")
-
-            if shouldBlock {
-                try await screenTimeService.blockAllApps()
-            } else {
-                try await screenTimeService.allowAllAccess()
-            }
-        } catch {
-            logger.error("Failed to apply default blocking: \(error.localizedDescription)")
+            // Fall through to engine reapply below.
+        } else if let activeSession = activeSession, activeSession.isActive {
+            logger.info("🔄 applyDefaultBlocking: active session \(activeSession.id) still running, preserving")
+            await applySessionBlocking(for: activeSession)
+            return
         }
+
+        currentlyAppliedSessionId = nil
+
+        // Delegate to engine: pushes snapshot, registers next boundary,
+        // applies compute(IntentLog, now) which handles session/schedule/default.
+        await screenTimeService.refreshSchedule(weeklySchedule.snapshot())
     }
     
     // MARK: - Setup

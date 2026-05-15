@@ -10,44 +10,45 @@ protocol ShieldApplying: Sendable {
 /// Production implementation that writes directly to ManagedSettingsStore.
 ///
 /// Spec §4.2 originally said "never call clearAllSettings()" to avoid a
-/// visible shield-drop flash. On-device testing 2026-04-19 proved that
-/// direct-overwrite does NOT reliably transition from .all(except: X) to
-/// .all() or .none — Family Controls retains the stale except-set. The
-/// working pattern from the pre-rewrite codebase was: nil every shield
-/// property + clearAllSettings() + set target. Brief empty-shield window
-/// is the lesser regression vs. cache staleness that leaves apps unshielded
-/// after session expiry. Spec to be amended.
+/// visible shield-drop flash. On-device testing 2026-04-19 found that
+/// direct-overwrite did not reliably transition from .all(except: X) to
+/// .all() or .none in the patterns we tested — Family Controls held the
+/// stale except-set. Switching to nil-every-property + clearAllSettings()
+/// + set-target restored reliable transitions in those scenarios. There
+/// may be other patterns that avoid the flash AND transition cleanly;
+/// haven't found one yet.
 struct ManagedSettingsShieldApplier: ShieldApplying {
     private let store = ManagedSettingsStore()
 
     func apply(_ config: ShieldConfig, knownApps: Set<ApplicationToken>, knownDomains: Set<WebDomainToken>) {
-        DebugBreadcrumbs.record(.applierApply, note: "\(config) known=\(knownApps.count)a/\(knownDomains.count)d")
+        DebugBreadcrumbs.record(.mainAppApplied, note: "\(config) known=\(knownApps.count)a/\(knownDomains.count)d")
         switch config {
         case .none:
             flush()
 
         case .all:
-            flush()
+            // Direct overwrites — matches pre-rewrite blockAllApps that worked
+            // through iOS 26.5 testing. clearAllSettings() detaches the
+            // ShieldConfiguration extension binding for a brief window which
+            // can leave apps unshielded after the transition. Explicit per-key
+            // writes are atomic from the system's perspective.
+            store.shield.applications = knownApps.isEmpty ? nil : knownApps
             store.shield.applicationCategories = .all()
-            store.shield.webDomainCategories = .all()
+            store.shield.webDomains = knownDomains.isEmpty ? nil : knownDomains
+            store.shield.webDomainCategories = nil
             store.webContent.blockedByFilter = .all()
-            // Belt-and-suspenders: category-policy .all() does NOT reliably
-            // shield every app (iOS 26 Family Controls gap; notably browsers
-            // and previously-session-unlocked apps slip through). Explicit
-            // token list plugs the gap.
-            if !knownApps.isEmpty { store.shield.applications = knownApps }
-            if !knownDomains.isEmpty { store.shield.webDomains = knownDomains }
 
         case .allExcept(let selection):
             // Shield categories except session's picks; shield every known
             // app token except session's picks so the gap-plugging doesn't
             // re-shield the user's currently-unlocked apps.
-            store.shield.applicationCategories = .all(except: selection.applicationTokens)
-            store.shield.webDomainCategories = .all(except: selection.webDomainTokens)
             let shieldApps = knownApps.subtracting(selection.applicationTokens)
             let shieldDomains = knownDomains.subtracting(selection.webDomainTokens)
             store.shield.applications = shieldApps.isEmpty ? nil : shieldApps
+            store.shield.applicationCategories = .all(except: selection.applicationTokens)
             store.shield.webDomains = shieldDomains.isEmpty ? nil : shieldDomains
+            store.shield.webDomainCategories = nil
+            store.webContent.blockedByFilter = .all()
         }
     }
 
@@ -63,22 +64,24 @@ struct ManagedSettingsShieldApplier: ShieldApplying {
     }
 }
 
-/// Additive applier used by the DAM extension. Same semantics as
-/// `ManagedSettingsShieldApplier` EXCEPT no `clearAllSettings()` / nil-flush.
+/// Additive applier used by the DAM extension. Same write pattern as
+/// `ManagedSettingsShieldApplier` EXCEPT no `clearAllSettings()` — from an
+/// extension process `clearAllSettings()` detaches the ShieldConfiguration
+/// binding for a brief window which can leave apps unshielded across the
+/// transition.
 ///
-/// Rationale: on iOS 26 Apple DTS 807934 documents that extension-process
-/// `clearAllSettings()` writes are dropped from the springboard shield
-/// layer cache — the store is updated but the shield UI doesn't re-render
-/// until a main-app-process write propagates. Additive policy writes
-/// (.all(), .all(except:)) DO render reliably from the extension process
-/// per the patterns used by Opal / Jomo / habitdoom. So: extension writes
-/// target-state additively, main app separately runs a full flush via
-/// `ManagedSettingsShieldApplier` via DarwinWake / BGTask / scenePhase.
+/// On-device sysdiagnose 2026-05-11 confirmed the explicit nil-property
+/// writes in the `.none` arm DO propagate: ManagedSettingsAgent picks them
+/// up, emits `Settings changed: ["shield.applications"]` etc., then
+/// broadcasts `Notifying clients of changes in ["shield"]`. SpringBoard
+/// subscribes to that broadcast and drops its shield cache. Verified in a
+/// reaped-app + force-quit scenario — apps unshielded correctly from these
+/// writes alone, without any main-app wake.
 struct AdditiveShieldApplier: ShieldApplying {
     private let store = ManagedSettingsStore()
 
     func apply(_ config: ShieldConfig, knownApps: Set<ApplicationToken>, knownDomains: Set<WebDomainToken>) {
-        DebugBreadcrumbs.record(.applierApply, note: "additive \(config) known=\(knownApps.count)a/\(knownDomains.count)d")
+        DebugBreadcrumbs.record(.extensionApplied, note: "additive \(config) known=\(knownApps.count)a/\(knownDomains.count)d")
         switch config {
         case .none:
             // Additive "no shield" = explicit nil. No clearAllSettings.
@@ -89,20 +92,20 @@ struct AdditiveShieldApplier: ShieldApplying {
             store.webContent.blockedByFilter = nil
 
         case .all:
+            store.shield.applications = knownApps.isEmpty ? nil : knownApps
             store.shield.applicationCategories = .all()
-            store.shield.webDomainCategories = .all()
+            store.shield.webDomains = knownDomains.isEmpty ? nil : knownDomains
+            store.shield.webDomainCategories = nil
             store.webContent.blockedByFilter = .all()
-            if !knownApps.isEmpty { store.shield.applications = knownApps }
-            if !knownDomains.isEmpty { store.shield.webDomains = knownDomains }
 
         case .allExcept(let selection):
-            store.shield.applicationCategories = .all(except: selection.applicationTokens)
-            store.shield.webDomainCategories = .all(except: selection.webDomainTokens)
-            store.webContent.blockedByFilter = .all()
             let shieldApps = knownApps.subtracting(selection.applicationTokens)
             let shieldDomains = knownDomains.subtracting(selection.webDomainTokens)
             store.shield.applications = shieldApps.isEmpty ? nil : shieldApps
+            store.shield.applicationCategories = .all(except: selection.applicationTokens)
             store.shield.webDomains = shieldDomains.isEmpty ? nil : shieldDomains
+            store.shield.webDomainCategories = nil
+            store.webContent.blockedByFilter = .all()
         }
     }
 }

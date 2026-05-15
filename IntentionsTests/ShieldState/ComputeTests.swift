@@ -10,54 +10,83 @@ final class ComputeTests: XCTestCase {
         Session(apps: apps, startedAt: t0, endsAt: t0.addingTimeInterval(endOffset))
     }
 
-    // MARK: - No session
-
-    func test_noSession_defaultBlocked_returnsAll() {
-        let log = IntentLog(defaultState: .blocked, activeSession: nil)
-        XCTAssertEqual(compute(log, at: t0), .all)
+    private func snapshot(enabled: Bool, freeAllWeek: Bool) -> ScheduleSnapshot {
+        let intervals: [ScheduleSnapshot.Interval] = freeAllWeek
+            ? [.init(startMinuteOfWeek: 0, durationMinutes: ScheduleSnapshot.minutesPerWeek)]
+            : []
+        return ScheduleSnapshot(isEnabled: enabled, intervals: intervals, timeZoneIdentifier: "UTC")
     }
 
-    func test_noSession_defaultOpen_returnsNone() {
-        let log = IntentLog(defaultState: .open, activeSession: nil)
-        XCTAssertEqual(compute(log, at: t0), .none)
+    // MARK: - No session, no schedule snapshot
+
+    func test_noSession_noSnapshot_returnsAll() {
+        // Legacy fallback: pre-snapshot install that hasn't yet persisted a
+        // schedule. The app's intent is "all apps blocked by default", so
+        // unknown state ⇒ block.
+        let log = IntentLog(activeSession: nil)
+        XCTAssertEqual(compute(log, at: t0), .all)
     }
 
     // MARK: - Active session
 
     func test_sessionActive_returnsAllExceptApps() {
         let picks = FamilyActivitySelection()
-        let log = IntentLog(
-            defaultState: .blocked,
-            activeSession: session(endOffset: 300, apps: picks)
-        )
+        let log = IntentLog(activeSession: session(endOffset: 300, apps: picks))
         guard case .allExcept(let returned) = compute(log, at: t0.addingTimeInterval(100)) else {
             return XCTFail("expected .allExcept")
         }
         XCTAssertEqual(returned, picks)
     }
 
-    func test_sessionActive_independentOfDefault() {
+    func test_sessionActive_independentOfSchedule() {
         let picks = FamilyActivitySelection()
-        let blockedLog = IntentLog(defaultState: .blocked, activeSession: session(endOffset: 300, apps: picks))
-        let openLog    = IntentLog(defaultState: .open,    activeSession: session(endOffset: 300, apps: picks))
-        XCTAssertEqual(compute(blockedLog, at: t0.addingTimeInterval(100)),
-                       compute(openLog,    at: t0.addingTimeInterval(100)))
+        var freeLog = IntentLog(activeSession: session(endOffset: 300, apps: picks))
+        freeLog.weeklySchedule = snapshot(enabled: true, freeAllWeek: true)
+
+        var blockedLog = IntentLog(activeSession: session(endOffset: 300, apps: picks))
+        blockedLog.weeklySchedule = snapshot(enabled: true, freeAllWeek: false)
+
+        XCTAssertEqual(compute(freeLog,    at: t0.addingTimeInterval(100)),
+                       compute(blockedLog, at: t0.addingTimeInterval(100)))
     }
 
     // MARK: - Expiry boundary
 
-    func test_sessionExactlyAtEndsAt_treatedAsExpired() {
-        let log = IntentLog(defaultState: .blocked, activeSession: session(endOffset: 300))
+    func test_sessionExactlyAtEndsAt_treatedAsExpired_noSnapshot_returnsAll() {
+        let log = IntentLog(activeSession: session(endOffset: 300))
         XCTAssertEqual(compute(log, at: t0.addingTimeInterval(300)), .all)
     }
 
-    func test_sessionPastEndsAt_defaultBlocked_returnsAll() {
-        let log = IntentLog(defaultState: .blocked, activeSession: session(endOffset: 300))
+    func test_sessionPastEndsAt_scheduleEnabledOutsideFree_returnsAll() {
+        var log = IntentLog(activeSession: session(endOffset: 300))
+        log.weeklySchedule = snapshot(enabled: true, freeAllWeek: false)
         XCTAssertEqual(compute(log, at: t0.addingTimeInterval(301)), .all)
     }
 
-    func test_sessionPastEndsAt_defaultOpen_returnsNone() {
-        let log = IntentLog(defaultState: .open, activeSession: session(endOffset: 300))
+    func test_sessionPastEndsAt_scheduleDisabled_returnsNone() {
+        var log = IntentLog(activeSession: session(endOffset: 300))
+        log.weeklySchedule = snapshot(enabled: false, freeAllWeek: false)
         XCTAssertEqual(compute(log, at: t0.addingTimeInterval(301)), .none)
+    }
+
+    // MARK: - Schedule (no session)
+
+    func test_scheduleEnabled_outsideFree_returnsAll() {
+        var log = IntentLog(activeSession: nil)
+        log.weeklySchedule = snapshot(enabled: true, freeAllWeek: false)
+        XCTAssertEqual(compute(log, at: t0), .all)
+    }
+
+    func test_scheduleEnabled_inFree_returnsNone() {
+        var log = IntentLog(activeSession: nil)
+        log.weeklySchedule = snapshot(enabled: true, freeAllWeek: true)
+        XCTAssertEqual(compute(log, at: t0), .none)
+    }
+
+    func test_scheduleDisabled_returnsNone() {
+        // Disabled schedule ⇒ "Blocking off" in UI ⇒ nothing blocked.
+        var log = IntentLog(activeSession: nil)
+        log.weeklySchedule = snapshot(enabled: false, freeAllWeek: false)
+        XCTAssertEqual(compute(log, at: t0), .none)
     }
 }

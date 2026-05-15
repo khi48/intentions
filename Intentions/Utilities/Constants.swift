@@ -44,7 +44,7 @@ enum AppConstants {
         static let sessionActivityPrefix = "intentions.session."
         static let sessionThresholdEvent = "intentions.session.threshold"
     }
-    
+
     // MARK: - Session Management
     enum Session {
         /// Default session duration (5 minutes)
