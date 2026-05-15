@@ -60,7 +60,12 @@ struct ScheduleSnapshot: Codable, Sendable, Equatable {
         guard isEnabled else { return nil }
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
-        var probe = date
+        // Align probe to start of minute so returned boundary has second=0.
+        // Free-time intervals are minute-grained; downstream DAM scheduling
+        // extracts hour/minute/second, so a non-aligned probe would fire DAM
+        // events at the input's seconds offset.
+        let alignedComps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        var probe = calendar.date(from: alignedComps) ?? date
         let reference = isBlocking(at: date)
         for _ in 0..<Self.minutesPerWeek {
             probe = calendar.date(byAdding: .minute, value: 1, to: probe)!

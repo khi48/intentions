@@ -76,7 +76,10 @@ final class WeeklySchedule: @preconcurrency Codable {
 
         let calendar = calendarInScheduleTimezone()
         // Probe minute-by-minute over the next 7 days. 10_080 iterations is trivial.
-        var probe = date
+        // Align start to minute boundary so returned date has second=0 — DAM scheduling
+        // extracts hour/minute/second from this value.
+        let alignedComps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        var probe = calendar.date(from: alignedComps) ?? date
         let reference = isBlocking(at: date)
         for _ in 0..<FreeTimeInterval.minutesPerWeek {
             probe = calendar.date(byAdding: .minute, value: 1, to: probe)!
