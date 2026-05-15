@@ -24,11 +24,11 @@
 		<string></string>
 		<key>oh.Intent.IntentWidget</key>
 		<string></string>
-		<key>oh.Intent.IntentShieldConfiguration</key>
+		<key>oh.Intent.ShieldConfiguration</key>
 		<string></string>
-		<key>oh.Intent.IntentShieldAction</key>
+		<key>oh.Intent.ShieldAction</key>
 		<string></string>
-		<key>oh.Intent.IntentDeviceActivityMonitor</key>
+		<key>oh.Intent.DeviceActivity</key>
 		<string></string>
 	</dict>
 </dict>
