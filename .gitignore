@@ -1,3 +1,5 @@
 .superpowers/
+.claude/
 build/
+build-device/
 **/xcuserdata/
