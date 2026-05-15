@@ -11,7 +11,11 @@ import Foundation
 ///      the UI model: "Blocking off ⇒ nothing blocked"), so a disabled schedule
 ///      yields `.none`. Enabled + free interval ⇒ `.none`. Enabled + outside
 ///      free ⇒ `.all`.
-///   3. No snapshot (legacy / pre-snapshot logs) ⇒ fall back to `defaultState`.
+///   3. No snapshot (legacy pre-snapshot logs that haven't yet run a save) ⇒
+///      fall back to `.all`. The app's intent is "all apps blocked by default",
+///      so blocking when state is unknown is the safer fallback. The
+///      schedule-aware path above takes over as soon as the user's schedule
+///      snapshot is persisted into IntentLog.
 func compute(_ log: IntentLog, at now: Date) -> ShieldConfig {
     if let session = log.activeSession, now < session.endsAt {
         return .allExcept(session.apps)
@@ -19,8 +23,5 @@ func compute(_ log: IntentLog, at now: Date) -> ShieldConfig {
     if let schedule = log.weeklySchedule {
         return schedule.isFreeTime(at: now) ? .none : .all
     }
-    switch log.defaultState {
-    case .blocked: return .all
-    case .open:    return .none
-    }
+    return .all
 }

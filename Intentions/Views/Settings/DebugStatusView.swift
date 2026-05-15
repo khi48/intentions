@@ -29,7 +29,6 @@ struct DebugStatusSnapshot: Sendable {
     let capturedAt: Date
 
     // IntentLog
-    let defaultState: String
     let activeSessionId: String?
     let activeSessionStartedAt: Date?
     let activeSessionEndsAt: Date?
@@ -80,7 +79,6 @@ extension DebugStatusSnapshot {
         let log = store.load()
 
         // IntentLog scalars
-        let defaultStateText = log.defaultState.rawValue
         let session = log.activeSession
         let activeId = session?.id.uuidString
         let appCount = session?.apps.applicationTokens.count ?? 0
@@ -117,7 +115,6 @@ extension DebugStatusSnapshot {
 
         return DebugStatusSnapshot(
             capturedAt: now,
-            defaultState: defaultStateText,
             activeSessionId: activeId,
             activeSessionStartedAt: session?.startedAt,
             activeSessionEndsAt: session?.endsAt,
@@ -153,7 +150,6 @@ extension DebugStatusSnapshot {
         out.append("=== Intent Debug Status — \(f.string(from: capturedAt)) ===")
         out.append("")
         out.append("[IntentLog]")
-        out.append("  defaultState:                \(defaultState)")
         if let id = activeSessionId {
             out.append("  activeSession.id:            \(id)")
             out.append("  activeSession.startedAt:     \(activeSessionStartedAt.map { f.string(from: $0) } ?? "nil")")
@@ -361,7 +357,6 @@ struct DebugStatusView: View {
 
     @ViewBuilder
     private func intentLogSection(_ snap: DebugStatusSnapshot) -> some View {
-        SettingsStatusRow("defaultState", value: snap.defaultState)
         if let id = snap.activeSessionId {
             SettingsStatusRow("activeSession.id", value: shortened(id))
             if let started = snap.activeSessionStartedAt {

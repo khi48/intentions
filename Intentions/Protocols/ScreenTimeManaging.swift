@@ -14,11 +14,7 @@ protocol ScreenTimeManaging: Sendable {
     /// Check current authorization status
     /// - Returns: Current authorization status
     func authorizationStatus() async -> AuthorizationStatus
-    
-    /// Block all non-essential apps by default
-    /// - Throws: AppError if blocking fails
-    func blockAllApps() async throws
-    
+
     /// Allow specific apps for a limited duration
     /// - Parameters:
     ///   - tokens: Set of ApplicationTokens to allow
@@ -31,11 +27,7 @@ protocol ScreenTimeManaging: Sendable {
     /// Get currently allowed apps
     /// - Returns: Set of ApplicationTokens that are currently allowed
     func getCurrentlyAllowedApps() async -> Set<ApplicationToken>
-    
-    /// Allow access to all apps (remove all restrictions)
-    /// - Throws: AppError if allowing access fails
-    func allowAllAccess() async throws
-    
+
     /// Check if a specific app is currently allowed
     /// - Parameter token: ApplicationToken to check
     /// - Returns: True if the app is currently allowed

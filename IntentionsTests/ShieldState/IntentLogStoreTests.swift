@@ -1,4 +1,5 @@
 import XCTest
+@preconcurrency import FamilyControls
 @testable import Intentions
 
 final class IntentLogStoreTests: XCTestCase {
@@ -15,29 +16,36 @@ final class IntentLogStoreTests: XCTestCase {
         super.tearDown()
     }
 
-    func test_loadFromEmpty_returnsDefaultBlockedNoSession() {
+    func test_loadFromEmpty_returnsDefaultEmpty() {
         let store = IntentLogStore(suiteName: testSuiteName)
         let log = store.load()
         XCTAssertEqual(log, .empty)
     }
 
-    func test_saveThenLoad_roundTrips() {
+    func test_saveThenLoad_roundTripsScheduleSnapshot() {
         let store = IntentLogStore(suiteName: testSuiteName)
         var log = IntentLog.empty
-        log.defaultState = .open
+        log.weeklySchedule = ScheduleSnapshot(
+            isEnabled: true,
+            intervals: [.init(startMinuteOfWeek: 0, durationMinutes: 60)],
+            timeZoneIdentifier: "UTC"
+        )
         store.save(log)
 
         let reloaded = store.load()
-        XCTAssertEqual(reloaded.defaultState, .open)
+        XCTAssertEqual(reloaded.weeklySchedule?.isEnabled, true)
+        XCTAssertEqual(reloaded.weeklySchedule?.intervals.count, 1)
         XCTAssertNil(reloaded.activeSession)
     }
 
     func test_freshInstancePerRead_avoidsStaleCache() {
         let writer = IntentLogStore(suiteName: testSuiteName)
-        writer.save(IntentLog(defaultState: .open, activeSession: nil))
+        var log = IntentLog.empty
+        log.weeklySchedule = ScheduleSnapshot(isEnabled: true, intervals: [], timeZoneIdentifier: "UTC")
+        writer.save(log)
 
         let reader = IntentLogStore(suiteName: testSuiteName)
-        XCTAssertEqual(reader.load().defaultState, .open)
+        XCTAssertEqual(reader.load().weeklySchedule?.isEnabled, true)
     }
 
     func test_corruptedData_fallsBackToEmpty() {
@@ -46,5 +54,30 @@ final class IntentLogStoreTests: XCTestCase {
 
         let store = IntentLogStore(suiteName: testSuiteName)
         XCTAssertEqual(store.load(), .empty)
+    }
+
+    /// Backwards-compat: blobs persisted before issue #7 stripped `defaultState`
+    /// must still decode cleanly. Codable ignores unknown keys by default;
+    /// IntentLog's CodingKeys deliberately omit `defaultState` so the decoder
+    /// silently drops it.
+    func test_legacyBlob_withDefaultState_decodesCleanly() throws {
+        let defaults = UserDefaults(suiteName: testSuiteName)!
+        let legacyJSON = """
+        {
+            "defaultState": "blocked",
+            "knownApplicationTokens": [],
+            "knownWebDomainTokens": []
+        }
+        """.data(using: .utf8)!
+        defaults.set(legacyJSON, forKey: IntentLogStore.storageKey)
+
+        let store = IntentLogStore(suiteName: testSuiteName)
+        let loaded = store.load()
+
+        // No crash, decodes to an empty-equivalent log: no session, no schedule.
+        XCTAssertNil(loaded.activeSession)
+        XCTAssertNil(loaded.weeklySchedule)
+        XCTAssertTrue(loaded.knownApplicationTokens.isEmpty)
+        XCTAssertTrue(loaded.knownWebDomainTokens.isEmpty)
     }
 }

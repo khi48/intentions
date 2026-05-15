@@ -16,6 +16,24 @@ final class ShieldEngineTests: XCTestCase {
         engine = ShieldEngine(store: store, applier: applier, scheduler: nil)
     }
 
+    private func makeFreeAllWeekSnapshot() -> ScheduleSnapshot {
+        // One interval covering the whole week.
+        ScheduleSnapshot(
+            isEnabled: true,
+            intervals: [.init(startMinuteOfWeek: 0, durationMinutes: ScheduleSnapshot.minutesPerWeek)],
+            timeZoneIdentifier: TimeZone(identifier: "UTC")!.identifier
+        )
+    }
+
+    private func makeBlockedAllWeekSnapshot() -> ScheduleSnapshot {
+        // Enabled but with no intervals → never free.
+        ScheduleSnapshot(isEnabled: true, intervals: [], timeZoneIdentifier: TimeZone(identifier: "UTC")!.identifier)
+    }
+
+    private func makeDisabledSnapshot() -> ScheduleSnapshot {
+        ScheduleSnapshot(isEnabled: false, intervals: [], timeZoneIdentifier: "UTC")
+    }
+
     // MARK: - Start session
 
     func test_startSession_fromNoActive_writesLogAndAppliesAllExcept() {
@@ -46,7 +64,8 @@ final class ShieldEngineTests: XCTestCase {
 
     // MARK: - End session
 
-    func test_endSession_defaultBlocked_appliesAll() {
+    func test_endSession_noSnapshot_appliesAll() {
+        // Pre-snapshot install fallback ⇒ .all.
         engine.startSession(apps: .init(), endsAt: t0.addingTimeInterval(300), now: t0)
         applier.reset()
 
@@ -56,9 +75,10 @@ final class ShieldEngineTests: XCTestCase {
         XCTAssertEqual(applier.calls, [.all])
     }
 
-    func test_endSession_defaultOpen_appliesNone() {
+    func test_endSession_scheduleDisabled_appliesNone() {
+        // Schedule disabled ⇒ free everywhere ⇒ .none after session ends.
         var log = store.load()
-        log.defaultState = .open
+        log.weeklySchedule = makeDisabledSnapshot()
         store.save(log)
 
         engine.startSession(apps: .init(), endsAt: t0.addingTimeInterval(300), now: t0)
@@ -68,35 +88,11 @@ final class ShieldEngineTests: XCTestCase {
 
         XCTAssertNil(store.load().activeSession)
         XCTAssertEqual(applier.calls, [.none])
-    }
-
-    // MARK: - Flip default
-
-    func test_flipDefault_blockedToOpen_cancelsActiveSession_andAppliesNone() {
-        engine.startSession(apps: .init(), endsAt: t0.addingTimeInterval(300), now: t0)
-        applier.reset()
-
-        engine.flipDefault(to: .open, now: t0.addingTimeInterval(60))
-
-        XCTAssertNil(store.load().activeSession)
-        XCTAssertEqual(store.load().defaultState, .open)
-        XCTAssertEqual(applier.calls, [.none])
-    }
-
-    func test_flipDefault_openToBlocked_noActiveSession_appliesAll() {
-        var log = store.load()
-        log.defaultState = .open
-        store.save(log)
-
-        engine.flipDefault(to: .blocked, now: t0)
-
-        XCTAssertEqual(store.load().defaultState, .blocked)
-        XCTAssertEqual(applier.calls, [.all])
     }
 
     // MARK: - Handle expiry (DAM path)
 
-    func test_handleExpiry_sessionPastEndsAt_defaultBlocked_appliesAll() {
+    func test_handleExpiry_sessionPastEndsAt_noSnapshot_appliesAll() {
         engine.startSession(apps: .init(), endsAt: t0.addingTimeInterval(300), now: t0)
         applier.reset()
 
@@ -150,27 +146,13 @@ final class ShieldEngineTests: XCTestCase {
         }
     }
 
-    func test_catchUpOnForeground_noSession_appliesDefault() {
+    func test_catchUpOnForeground_noSession_noSnapshot_appliesAll() {
         engine.catchUpOnForeground(now: t0)
-        // Default-blocked + no session + no schedule → .all
+        // Empty log + no schedule → .all (legacy fallback).
         XCTAssertEqual(applier.calls, [.all])
     }
 
     // MARK: - Schedule-aware compute
-
-    private func makeFreeAllWeekSnapshot() -> ScheduleSnapshot {
-        // One interval covering the whole week.
-        ScheduleSnapshot(
-            isEnabled: true,
-            intervals: [.init(startMinuteOfWeek: 0, durationMinutes: ScheduleSnapshot.minutesPerWeek)],
-            timeZoneIdentifier: TimeZone(identifier: "UTC")!.identifier
-        )
-    }
-
-    private func makeBlockedAllWeekSnapshot() -> ScheduleSnapshot {
-        // Enabled but with no intervals → never free.
-        ScheduleSnapshot(isEnabled: true, intervals: [], timeZoneIdentifier: TimeZone(identifier: "UTC")!.identifier)
-    }
 
     func test_compute_scheduleFreeTime_noSession_returnsNone() {
         var log = store.load()
@@ -203,29 +185,14 @@ final class ShieldEngineTests: XCTestCase {
         }
     }
 
-    func test_compute_scheduleDisabled_returnsNone_regardlessOfDefaultState() {
-        // Schedule disabled ⇒ "Blocking off" in UI ⇒ nothing blocked, even if
-        // defaultState legacy value says .blocked.
+    func test_compute_scheduleDisabled_returnsNone() {
+        // Schedule disabled ⇒ "Blocking off" in UI ⇒ nothing blocked.
         var log = store.load()
-        log.weeklySchedule = ScheduleSnapshot(isEnabled: false, intervals: [], timeZoneIdentifier: "UTC")
-        log.defaultState = .blocked
+        log.weeklySchedule = makeDisabledSnapshot()
         store.save(log)
 
         engine.catchUpOnForeground(now: t0)
         XCTAssertEqual(applier.calls, [.none])
-    }
-
-    func test_compute_scheduleEnabled_outsideFree_returnsAll_evenWithDefaultOpen() {
-        // Regression: defaultState was being checked when schedule said
-        // "not free time", so an .open default short-circuited blocking.
-        // Schedule must override defaultState whenever a snapshot exists.
-        var log = store.load()
-        log.weeklySchedule = makeBlockedAllWeekSnapshot()
-        log.defaultState = .open
-        store.save(log)
-
-        engine.catchUpOnForeground(now: t0)
-        XCTAssertEqual(applier.calls, [.all])
     }
 
     // MARK: - Schedule transition (DAM path)

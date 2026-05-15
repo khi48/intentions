@@ -86,17 +86,6 @@ actor ScreenTimeService: ScreenTimeManaging {
 
     // MARK: - Shield-state transitions (delegated to ShieldEngine)
 
-    func blockAllApps() async throws {
-        try ensureInitialized()
-        guard await authorizationStatus() == .approved else {
-            throw AppError.screenTimeAuthorizationFailed
-        }
-
-        logger.notice("blockAllApps → flipDefault(.blocked)")
-        engine.flipDefault(to: .blocked)
-        updateWidget(blocking: true)
-    }
-
     func allowApps(
         _ tokens: sending Set<ApplicationToken>,
         webDomains: Set<WebDomainToken> = [],
@@ -146,17 +135,6 @@ actor ScreenTimeService: ScreenTimeManaging {
                 // Task.sleep threw — cancellation. No-op.
             }
         }
-    }
-
-    func allowAllAccess() async throws {
-        try ensureInitialized()
-        guard await authorizationStatus() == .approved else {
-            throw AppError.screenTimeAuthorizationFailed
-        }
-
-        logger.notice("allowAllAccess → flipDefault(.open)")
-        engine.flipDefault(to: .open)
-        updateWidget(blocking: false)
     }
 
     // MARK: - Queries (read from IntentLog)

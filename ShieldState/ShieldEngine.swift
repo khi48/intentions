@@ -72,22 +72,6 @@ struct ShieldEngine: Sendable {
         applier.apply(config, knownApps: log.knownApplicationTokens, knownDomains: log.knownWebDomainTokens)
     }
 
-    func flipDefault(to newDefault: DefaultState, now: Date = Date()) {
-        logger.notice("flipDefault to \(newDefault.rawValue, privacy: .public)")
-        scheduler?.cancel()
-
-        var log = store.load()
-        log.defaultState = newDefault
-        log.activeSession = nil
-        store.save(log)
-
-        rescheduleBoundary(log: log, from: now)
-
-        let config = compute(log, at: now)
-        logger.notice("flipDefault: applying \(String(describing: config), privacy: .public)")
-        applier.apply(config, knownApps: log.knownApplicationTokens, knownDomains: log.knownWebDomainTokens)
-    }
-
     /// Persist the latest schedule snapshot and (re-)register the next-boundary
     /// DAM monitor. Called by the main app on schedule edits and on
     /// scenePhase → .active to recover from missed boundaries / OS resets.

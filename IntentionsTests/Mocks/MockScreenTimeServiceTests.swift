@@ -66,18 +66,4 @@ final class MockScreenTimeServiceTests: XCTestCase {
         XCTAssertTrue(isAuthorized)
     }
 
-    func testBlockAllAppsWithoutInitialization() async throws {
-        // Given - Uninitialized service
-        
-        // When/Then - Should throw initialization error
-        do {
-            try await mockService.blockAllApps()
-            XCTFail("Expected AppError.screenTimeAuthorizationFailed")
-        } catch AppError.screenTimeAuthorizationFailed {
-            // Expected error
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
-    }
-    
 }
