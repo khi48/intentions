@@ -8,6 +8,7 @@
 import ManagedSettings
 import ManagedSettingsUI
 import UIKit
+import os
 
 /// Shield configuration for blocked apps and web domains.
 ///
@@ -20,6 +21,8 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         static let appGroupId = "group.oh.Intent"
         static let intentionQuoteKey = "intentions.shield.intentionQuote"
     }
+
+    private static let log = Logger(subsystem: "oh.Intent.IntentShieldConfiguration", category: "appGroup")
 
     // MARK: - Application
 
@@ -81,10 +84,17 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     }
 
     private func storedIntentionQuote() -> String? {
-        guard let shared = UserDefaults(suiteName: Shared.appGroupId) else { return nil }
+        guard let shared = UserDefaults(suiteName: Shared.appGroupId) else {
+            Self.log.error("probe: UserDefaults(suiteName:) returned nil — App Group entitlement missing in signed extension")
+            return nil
+        }
         let raw = shared.string(forKey: Shared.intentionQuoteKey)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let raw, !raw.isEmpty else { return nil }
+        guard let raw, !raw.isEmpty else {
+            Self.log.info("probe: key=\(Shared.intentionQuoteKey, privacy: .public) value=<nil> — fallback subtitle")
+            return nil
+        }
+        Self.log.info("probe: key=\(Shared.intentionQuoteKey, privacy: .public) resolved length=\(raw.count, privacy: .public) prefix=\(String(raw.prefix(8)), privacy: .private)")
         return raw
     }
 

@@ -2,6 +2,7 @@ import Foundation
 import SwiftData
 import FamilyControls
 import ManagedSettings
+import os
 
 // MARK: - Data Persistence Protocol
 protocol DataPersisting: Sendable {
@@ -246,13 +247,20 @@ protocol DataPersisting: Sendable {
     /// Mirrors the user's intention quote into App Group UserDefaults so the
     /// ShieldConfiguration extension can read it without decoding the full
     /// WeeklySchedule (which lives only in the main app target).
+    private static let appGroupLog = Logger(subsystem: "oh.Intent", category: "appGroup")
+
     private static func mirrorIntentionQuoteToSharedDefaults(_ quote: String?) {
-        guard let shared = UserDefaults(suiteName: SharedConstants.appGroupId) else { return }
+        guard let shared = UserDefaults(suiteName: SharedConstants.appGroupId) else {
+            appGroupLog.error("probe-write: UserDefaults(suiteName:) returned nil — App Group entitlement missing in main app")
+            return
+        }
         let trimmed = quote?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let trimmed, !trimmed.isEmpty {
             shared.set(trimmed, forKey: SharedConstants.ShieldKeys.intentionQuote)
+            appGroupLog.info("probe-write: key=\(SharedConstants.ShieldKeys.intentionQuote, privacy: .public) action=set length=\(trimmed.count, privacy: .public) prefix=\(String(trimmed.prefix(8)), privacy: .private)")
         } else {
             shared.removeObject(forKey: SharedConstants.ShieldKeys.intentionQuote)
+            appGroupLog.info("probe-write: key=\(SharedConstants.ShieldKeys.intentionQuote, privacy: .public) action=remove")
         }
     }
 
