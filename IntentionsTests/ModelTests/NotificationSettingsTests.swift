@@ -309,8 +309,8 @@ final class NotificationSettingsTests: XCTestCase {
     }
 
     func testNotificationTypeDisplayNames() {
-        XCTAssertEqual(NotificationType.sessionWarning.displayName, "Session Warnings")
-        XCTAssertEqual(NotificationType.sessionCompletion.displayName, "Session Complete")
+        XCTAssertEqual(NotificationType.sessionWarning.displayName, "Ending Warnings")
+        XCTAssertEqual(NotificationType.sessionCompletion.displayName, "End Notifications")
     }
 
     func testNotificationTypeSystemImages() {

@@ -86,18 +86,18 @@ enum NotificationType: String, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .sessionWarning:
-            return "Session Warnings"
+            return "Ending Warnings"
         case .sessionCompletion:
-            return "Session Complete"
+            return "End Notifications"
         }
     }
 
     var description: String {
         switch self {
         case .sessionWarning:
-            return "Get notified 1 minute before your session ends"
+            return "Get notified before sessions and free time end"
         case .sessionCompletion:
-            return "Know when your session is complete"
+            return "Know when sessions and free time end"
         }
     }
 
