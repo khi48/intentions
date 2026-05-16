@@ -118,6 +118,15 @@ private struct QuickActionsSection: View {
             } else if !quickActionsViewModel.quickActions.isEmpty {
                 // Show available quick actions with drag-to-reorder
                 VStack(spacing: 16) {
+                    if let reason = viewModel.cannotStartReason {
+                        Text(reason)
+                            .font(.caption)
+                            .foregroundColor(AppConstants.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal)
+                            .accessibilityLabel(reason)
+                    }
                     LazyVGrid(columns: [
                         GridItem(.flexible()),
                         GridItem(.flexible())
@@ -128,7 +137,8 @@ private struct QuickActionsSection: View {
                                 subtitle: quickAction.subtitle ?? quickAction.formattedDuration,
                                 icon: quickAction.iconName,
                                 color: quickAction.color,
-                                isReady: viewModel.isScreenTimeServiceReady,
+                                isReady: viewModel.isScreenTimeServiceReady && viewModel.canStartSession,
+                                disabledReason: cardDisabledReason,
                                 isRunning: isQuickActionRunning(quickAction),
                                 onTap: {
                                     Task {
@@ -313,6 +323,16 @@ private struct QuickActionsSection: View {
         }
     }
     
+    /// Reason the quick-action cards are disabled, in priority order:
+    /// - Screen Time service not yet ready beats schedule-state messaging.
+    /// - Otherwise show `cannotStartReason` (e.g. blocking-disabled copy).
+    private var cardDisabledReason: String {
+        if !viewModel.isScreenTimeServiceReady {
+            return "Screen Time not ready"
+        }
+        return viewModel.cannotStartReason ?? "Double tap to start session"
+    }
+
     private func isQuickActionRunning(_ quickAction: QuickAction) -> Bool {
         guard let session = viewModel.activeSession, session.isActive,
               case .quickAction(let qa) = session.source else { return false }
@@ -453,6 +473,7 @@ private struct QuickActionCard: View {
     let icon: String
     let color: Color
     let isReady: Bool
+    let disabledReason: String
     let isRunning: Bool
     let onTap: () -> Void
     let onEdit: () -> Void
@@ -488,7 +509,7 @@ private struct QuickActionCard: View {
         .animation(.easeInOut(duration: 0.3), value: isReady)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title), \(subtitle)")
-        .accessibilityHint(isReady ? "Double tap to start session" : "Screen Time not ready")
+        .accessibilityHint(isReady ? "Double tap to start session" : disabledReason)
         .contextMenu {
             if isRunning {
                 Label("Session in progress", systemImage: "lock.fill")

@@ -312,6 +312,72 @@ final class ContentViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.isLoading)
     }
     
+    // MARK: - Session Start Guard Tests (#28)
+
+    @MainActor
+    func testCanStartSessionTrueWhenScheduleEnabled() async throws {
+        // Given - View model with default (enabled) schedule
+        try createViewModel()
+        await mockScreenTimeService.setMockAuthorizationStatus(.approved)
+        await viewModel.initializeApp()
+
+        var schedule = WeeklySchedule()
+        schedule.isEnabled = true
+        try await mockDataService.saveWeeklySchedule(schedule)
+        await viewModel.updateWeeklySchedule(schedule)
+
+        // Then
+        XCTAssertTrue(viewModel.canStartSession)
+        XCTAssertNil(viewModel.cannotStartReason)
+    }
+
+    @MainActor
+    func testCanStartSessionFalseWhenScheduleDisabled() async throws {
+        // Given - schedule.isEnabled = false (blocking off → all apps unlocked)
+        try createViewModel()
+        await mockScreenTimeService.setMockAuthorizationStatus(.approved)
+        await viewModel.initializeApp()
+
+        var schedule = WeeklySchedule()
+        schedule.isEnabled = false
+        try await mockDataService.saveWeeklySchedule(schedule)
+        await viewModel.updateWeeklySchedule(schedule)
+
+        // Then
+        XCTAssertFalse(viewModel.canStartSession)
+        XCTAssertEqual(
+            viewModel.cannotStartReason,
+            "All apps are unlocked — turn blocking on to start a session."
+        )
+    }
+
+    @MainActor
+    func testStartSessionRefusedWhenScheduleDisabled() async throws {
+        // Given - blocking disabled, no active session
+        try createViewModel()
+        await mockScreenTimeService.setMockAuthorizationStatus(.approved)
+        await viewModel.initializeApp()
+
+        var schedule = WeeklySchedule()
+        schedule.isEnabled = false
+        try await mockDataService.saveWeeklySchedule(schedule)
+        await viewModel.updateWeeklySchedule(schedule)
+        XCTAssertNil(viewModel.activeSession)
+
+        let testSession = try IntentionSession(appGroups: [], applications: [], duration: 1800)
+
+        // When - user attempts to start a session
+        await viewModel.startSession(testSession)
+
+        // Then - guard refused; no session became active and nothing was persisted
+        XCTAssertNil(viewModel.activeSession, "startSession must early-return when canStartSession is false")
+        let savedSessions = try await mockDataService.loadIntentionSessions()
+        XCTAssertTrue(
+            savedSessions.isEmpty,
+            "No session should be persisted when guard refused start"
+        )
+    }
+
     // MARK: - Schedule Update Tests
 
     @MainActor

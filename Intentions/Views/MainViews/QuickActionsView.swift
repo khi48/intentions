@@ -54,6 +54,18 @@ struct QuickActionsView: View {
                 // Search bar
                 searchBar
 
+                // Banner when blocking is off / a session can't be started.
+                if let reason = contentViewModel.cannotStartReason {
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundColor(AppConstants.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        .accessibilityLabel(reason)
+                }
+
                 if viewModel.isLoading {
                     loadingView
                 } else if viewModel.quickActions.isEmpty {
@@ -213,6 +225,7 @@ struct QuickActionsView: View {
                     QuickActionRowView(
                         quickAction: quickAction,
                         isRunning: isRunning,
+                        canStart: contentViewModel.canStartSession,
                         onTap: {
                             Task {
                                 await startQuickAction(quickAction)
@@ -327,9 +340,12 @@ struct QuickActionsView: View {
 private struct QuickActionRowView: View {
     let quickAction: QuickAction
     let isRunning: Bool
+    let canStart: Bool
     let onTap: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
+
+    private var isTappable: Bool { !isRunning && canStart }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -405,10 +421,10 @@ private struct QuickActionRowView: View {
         .padding()
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .opacity(isRunning ? 0.5 : 1.0)
+        .opacity(isTappable ? 1.0 : 0.5)
         .contentShape(Rectangle())
         .onTapGesture {
-            if !isRunning { onTap() }
+            if isTappable { onTap() }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             if !isRunning {
