@@ -97,6 +97,10 @@ final class NotificationService: NSObject, Sendable {
         // and need to be re-synced explicitly on every settings change.
         if let schedule = try? await dataService.loadWeeklySchedule() {
             await rescheduleFreeTimeNotifications(schedule: schedule)
+            // Re-sync R3 pre-scheduled banner against the new settings — a
+            // settings toggle (e.g. completion-disabled) must wipe a stale
+            // pending banner; re-enabling must rebuild it.
+            await rescheduleR3MutexTeardownBannerForActiveSession(schedule: schedule)
         }
     }
 
@@ -153,6 +157,112 @@ final class NotificationService: NSObject, Sendable {
         if settings.sessionCompletionEnabled {
             await scheduleCompletionNotification(sessionId: sessionId, remainingTime: remainingTime)
         }
+
+        // Pre-schedule R3 mutex teardown banner (#30) — fires at the first
+        // free-time boundary inside the session window. iOS owns the trigger
+        // so it fires reliably even when the main app is killed at the boundary.
+        if let schedule = try? await dataService.loadWeeklySchedule() {
+            await addR3MutexTeardownBanner(for: session, schedule: schedule)
+        }
+    }
+
+    /// Re-schedule the per-session R3 mutex teardown banner against a freshly-edited
+    /// schedule. Looks up the currently-active session via persistence; no-op if
+    /// none is active. Wipes the existing per-session R3 banner and re-pre-schedules
+    /// against the new free-time boundary. Call from schedule-mutation paths
+    /// (`ContentViewModel.updateWeeklySchedule`, hydration, `SettingsViewModel`,
+    /// settings hook) so mid-session schedule edits move the banner to the new
+    /// boundary time.
+    func rescheduleR3MutexTeardownBannerForActiveSession(schedule: WeeklySchedule) async {
+        guard settings.isEnabled && isAuthorized else { return }
+        guard let activeSession = await loadActiveSessionForR3Reschedule() else { return }
+        await cancelR3MutexTeardownBanner(sessionId: activeSession.id)
+        await addR3MutexTeardownBanner(for: activeSession, schedule: schedule)
+    }
+
+    private func loadActiveSessionForR3Reschedule() async -> IntentionSession? {
+        do {
+            let sessions = try await dataService.loadIntentionSessions()
+            return sessions.first { $0.isActive }
+        } catch {
+            Self.log.warning("R3 reschedule: failed to load active session: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    /// Post the R3 mutex teardown banner with an immediate (1s) trigger. Used by
+    /// the CASE B path where the user edits the schedule mid-session to introduce
+    /// free-time at `now`: the pre-scheduled banner was for the ORIGINAL boundary
+    /// and was wiped alongside the session by `cancelAllSessionNotifications`,
+    /// so this re-adds a fresh per-session banner that fires immediately.
+    /// CASE A (boundary arrives naturally) is handled by the pre-scheduled banner
+    /// owned by iOS, with no need for this path.
+    func postImmediateR3MutexTeardownBanner(sessionId: UUID) async {
+        guard isAuthorized,
+              let request = SessionEndNotification.sessionTerminatedByFreeTimeRequest(
+                settings: settings,
+                sessionId: sessionId,
+                triggerInterval: 1.0
+              ) else { return }
+        do {
+            try await notificationCenter.add(request)
+        } catch {
+            Self.log.error("Failed to post immediate R3 mutex teardown banner: \(error.localizedDescription)")
+        }
+    }
+
+    /// Pure decision + add for the R3 mutex teardown banner. Skip cases:
+    /// - schedule disabled (R3 doesn't apply without a schedule)
+    /// - session start moment is NOT in blocking (defensive — #27 guard prevents
+    ///   session start during free time, but session may have been hydrated past
+    ///   the boundary)
+    /// - no boundary in the next week
+    /// - boundary falls at or after session end (session ends naturally first)
+    /// - trigger interval < 1.0s (UNTimeIntervalNotificationTrigger requirement)
+    /// - spec-builder gating denies (settings master / completion toggle off)
+    private func addR3MutexTeardownBanner(for session: IntentionSession, schedule: WeeklySchedule) async {
+        guard schedule.isEnabled else {
+            Self.log.notice("R3 pre-schedule skipped: schedule disabled")
+            return
+        }
+        guard schedule.isBlocking(at: session.startTime) else {
+            Self.log.notice("R3 pre-schedule skipped: session start \(session.startTime) not in blocking state")
+            return
+        }
+        guard let boundary = schedule.nextBoundary(after: session.startTime) else {
+            Self.log.notice("R3 pre-schedule skipped: no boundary in next week")
+            return
+        }
+        guard boundary < session.endTime else {
+            Self.log.notice("R3 pre-schedule skipped: boundary \(boundary) at-or-after session end \(session.endTime)")
+            return
+        }
+
+        let triggerInterval = boundary.timeIntervalSince(Date())
+        guard let request = SessionEndNotification.sessionTerminatedByFreeTimeRequest(
+            settings: settings,
+            sessionId: session.id,
+            triggerInterval: triggerInterval
+        ) else {
+            Self.log.notice("R3 pre-schedule skipped: spec-builder denied (gating or trigger<1.0s, interval=\(triggerInterval))")
+            return
+        }
+
+        do {
+            try await notificationCenter.add(request)
+            Self.log.notice("R3 pre-scheduled: session \(session.id.uuidString) boundary \(boundary) interval \(triggerInterval)s")
+        } catch {
+            Self.log.error("Failed to pre-schedule R3 mutex teardown banner: \(error.localizedDescription)")
+        }
+    }
+
+    /// Cancel just the per-session R3 mutex teardown banner. Used by the
+    /// reschedule path so warning + completion banners are untouched.
+    private func cancelR3MutexTeardownBanner(sessionId: UUID) async {
+        let identifier = SessionEndNotification.sessionTerminatedByFreeTimeIdentifier(sessionId: sessionId)
+        let pending = await notificationCenter.pendingNotificationRequests()
+        guard pending.contains(where: { $0.identifier == identifier }) else { return }
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
     }
 
     private func scheduleWarningNotifications(sessionId: String, remainingTime: TimeInterval) async {
@@ -266,53 +376,6 @@ final class NotificationService: NSObject, Sendable {
         }
     }
 
-    /// Fixed identifier for the R3 mutex teardown banner. Single-shot — repeated
-    /// fires in the same window replace rather than stack.
-    static let sessionTerminatedByFreeTimeIdentifier = "session_terminated_by_freetime"
-
-    /// Pure spec-builder for the R3 mutex teardown banner.
-    ///
-    /// Returns nil when settings gating denies the banner — caller does not need
-    /// to wipe pending state (single-shot identifier replaces on re-fire).
-    /// Mirrors the `freeTimeNotificationRequests` pattern: value-type inputs,
-    /// no `UNUserNotificationCenter` contact, unit-testable.
-    ///
-    /// Gating: `isEnabled && sessionCompletionEnabled`. This is a session-end
-    /// event, so it follows the same toggle as the regular completion banner.
-    /// Authorization is checked separately by the caller (instance-only state).
-    static func sessionTerminatedByFreeTimeRequest(settings: NotificationSettings) -> UNNotificationRequest? {
-        guard settings.isEnabled && settings.sessionCompletionEnabled else { return nil }
-
-        let content = UNMutableNotificationContent()
-        content.title = "Session Ended"
-        content.body = "Free time started — your session ended."
-        content.sound = .default
-        content.categoryIdentifier = NotificationType.sessionCompletion.rawValue
-
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
-        return UNNotificationRequest(
-            identifier: sessionTerminatedByFreeTimeIdentifier,
-            content: content,
-            trigger: trigger
-        )
-    }
-
-    /// Send immediate notification when an active session was terminated because
-    /// a free-time window started (R3, #27 — free-time and session are mutually
-    /// exclusive). See `sessionTerminatedByFreeTimeRequest` for gating + shape.
-    func sendSessionTerminatedByFreeTimeNotification() async {
-        guard isAuthorized,
-              let request = Self.sessionTerminatedByFreeTimeRequest(settings: settings) else {
-            return
-        }
-
-        do {
-            try await notificationCenter.add(request)
-        } catch {
-            Self.log.error("Failed to schedule session-terminated-by-free-time notification: \(error.localizedDescription)")
-        }
-    }
-
     // MARK: - Notification Cancellation
 
     /// Cancel ALL pending session notifications for any session.
@@ -325,29 +388,27 @@ final class NotificationService: NSObject, Sendable {
                 $0.contains("session_warning_")
                     || $0.contains("session_completion_")
                     || $0.hasPrefix("session_expired")
-                    || $0 == "session_terminated_by_freetime"
+                    || $0.hasPrefix(SessionEndNotification.sessionTerminatedByFreeTimeIdentifierPrefix)
             }
 
         notificationCenter.removePendingNotificationRequests(withIdentifiers: sessionIdentifiers)
     }
 
     /// Cancel every pending notification tied to a specific session — warnings AND
-    /// the pre-scheduled completion trigger. Use for manual-end and replace flows
-    /// where we explicitly do NOT want the "Session Complete" banner to fire.
+    /// the pre-scheduled completion trigger AND the pre-scheduled R3 banner. Use
+    /// for manual-end and replace flows where we explicitly do NOT want any
+    /// session banner to fire.
     func cancelAllSessionNotifications(sessionId: UUID) async {
         let sessionIdString = sessionId.uuidString
+        let r3Identifier = SessionEndNotification.sessionTerminatedByFreeTimeIdentifier(sessionId: sessionId)
         let pendingRequests = await notificationCenter.pendingNotificationRequests()
         let identifiers = pendingRequests
             .map { $0.identifier }
             .filter { id in
-                // Session-specific identifiers end with the session UUID (warnings
-                // also include a "_<N>min" suffix). Also sweep the generic
-                // "session_expired" + "session_terminated_by_freetime" fallback
-                // identifiers to be safe.
                 id.contains("session_warning_\(sessionIdString)")
                     || id == "session_completion_\(sessionIdString)"
                     || id == "session_expired"
-                    || id == "session_terminated_by_freetime"
+                    || id == r3Identifier
             }
 
         if !identifiers.isEmpty {
