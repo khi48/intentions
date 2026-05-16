@@ -193,6 +193,13 @@ final class ContentViewModel: Sendable {
         // Push fresh snapshot to ShieldEngine so DAM extension reads it from
         // the IntentLog plist and the next schedule boundary is registered.
         await screenTimeService.refreshSchedule(weeklySchedule.snapshot())
+
+        // Free-time end notifications (#24) are persistent across launches
+        // (repeats:true UNCalendarNotificationTrigger), but rebuilding on
+        // hydration heals state if pending was wiped by iOS, the user's
+        // settings changed via the notifications page on the last run, or
+        // the schedule was edited while pending was already drained.
+        await NotificationService.shared.rescheduleFreeTimeNotifications(schedule: weeklySchedule)
     }
     
     /// Load any existing active session from persistence
@@ -323,6 +330,11 @@ final class ContentViewModel: Sendable {
         if authorizationStatus == .approved {
             await applyDefaultBlocking()
         }
+
+        // Re-sync free-time end notifications (#24). The schedule's interval set
+        // may have changed; pending freetime_* notifications must be rebuilt so
+        // warning + completion banners track the new windows.
+        await NotificationService.shared.rescheduleFreeTimeNotifications(schedule: schedule)
     }
 
     // MARK: - Authorization Management

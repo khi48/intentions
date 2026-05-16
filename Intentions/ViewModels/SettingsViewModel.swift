@@ -73,6 +73,11 @@ final class SettingsViewModel: Sendable {
         do {
             try await dataService.saveWeeklySchedule(schedule)
             weeklySchedule = schedule
+            // Free-time end notifications (#24) are persistent (repeats:true).
+            // Re-sync pending state on every schedule mutation so warnings +
+            // completions match the new set of intervals. Wipes by `freetime_`
+            // prefix internally — covers the schedule-disabled toggle-off case.
+            await NotificationService.shared.rescheduleFreeTimeNotifications(schedule: schedule)
         } catch {
             errorMessage = "Failed to save schedule: \(error.localizedDescription)"
         }
