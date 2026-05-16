@@ -192,9 +192,9 @@ actor ScreenTimeService: ScreenTimeManaging {
     /// Push the latest weekly-schedule snapshot to the engine. The engine
     /// persists it, re-registers the next schedule-boundary DAM monitor, and
     /// re-applies the current shield config.
-    func refreshSchedule(_ snapshot: ScheduleSnapshot) async {
+    func refreshSchedule(_ snapshot: ScheduleSnapshot) async -> ScheduleTransitionResult {
         logger.notice("refreshSchedule → engine.refreshScheduleMonitoring")
-        engine.refreshScheduleMonitoring(snapshot)
+        return engine.refreshScheduleMonitoring(snapshot)
     }
 
     // MARK: - Vestigial protocol methods (no-ops)
