@@ -172,17 +172,17 @@ final class ShieldEngineTests: XCTestCase {
         XCTAssertEqual(applier.calls, [.all])
     }
 
-    func test_compute_sessionWinsOverSchedule_freeTime() {
-        // Session active during free time — session apps unlocked, others shielded.
+    func test_compute_freeTimeWinsOverSession() {
+        // R3 (#27): free-time has precedence over an active session. A session
+        // armed during a free-time window MUST yield .none — free-time means
+        // all apps free. Mutex is enforced by ShieldEngine clearing the session
+        // on free-time entry; compute() is the pure-function half of that rule.
         var log = store.load()
         log.weeklySchedule = makeFreeAllWeekSnapshot()
         store.save(log)
 
         engine.startSession(apps: .init(), endsAt: t0.addingTimeInterval(300), now: t0)
-        // Last apply call is from startSession.
-        guard case .allExcept = applier.calls.last else {
-            return XCTFail("expected session to take priority over free time → .allExcept")
-        }
+        XCTAssertEqual(applier.calls.last, .none, "free-time wins over session — expected .none")
     }
 
     func test_compute_scheduleDisabled_returnsNone() {
