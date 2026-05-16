@@ -58,7 +58,7 @@ struct NotificationSettingsView: View {
                     )
 
                     if settings.isEnabled {
-                        SettingsSectionHeader(title: "Session Reminders")
+                        SettingsSectionHeader(title: "Reminders")
                         SettingsToggleRow(
                             NotificationType.sessionWarning.displayName,
                             subtitle: NotificationType.sessionWarning.description,
