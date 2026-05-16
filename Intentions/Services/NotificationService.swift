@@ -266,17 +266,22 @@ final class NotificationService: NSObject, Sendable {
         }
     }
 
-    /// Send immediate notification when an active session was terminated because
-    /// a free-time window started (R3, #27 — free-time and session are mutually
-    /// exclusive). Single-shot with a fixed identifier so repeated mutex fires
-    /// in the same window replace rather than stack.
+    /// Fixed identifier for the R3 mutex teardown banner. Single-shot — repeated
+    /// fires in the same window replace rather than stack.
+    static let sessionTerminatedByFreeTimeIdentifier = "session_terminated_by_freetime"
+
+    /// Pure spec-builder for the R3 mutex teardown banner.
     ///
-    /// Gated by `sessionCompletionEnabled` — this is a session-end event, so it
-    /// follows the same user toggle as the regular completion banner.
-    func sendSessionTerminatedByFreeTimeNotification() async {
-        guard settings.isEnabled && isAuthorized && settings.sessionCompletionEnabled else {
-            return
-        }
+    /// Returns nil when settings gating denies the banner — caller does not need
+    /// to wipe pending state (single-shot identifier replaces on re-fire).
+    /// Mirrors the `freeTimeNotificationRequests` pattern: value-type inputs,
+    /// no `UNUserNotificationCenter` contact, unit-testable.
+    ///
+    /// Gating: `isEnabled && sessionCompletionEnabled`. This is a session-end
+    /// event, so it follows the same toggle as the regular completion banner.
+    /// Authorization is checked separately by the caller (instance-only state).
+    static func sessionTerminatedByFreeTimeRequest(settings: NotificationSettings) -> UNNotificationRequest? {
+        guard settings.isEnabled && settings.sessionCompletionEnabled else { return nil }
 
         let content = UNMutableNotificationContent()
         content.title = "Session Ended"
@@ -285,11 +290,21 @@ final class NotificationService: NSObject, Sendable {
         content.categoryIdentifier = NotificationType.sessionCompletion.rawValue
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
-        let request = UNNotificationRequest(
-            identifier: "session_terminated_by_freetime",
+        return UNNotificationRequest(
+            identifier: sessionTerminatedByFreeTimeIdentifier,
             content: content,
             trigger: trigger
         )
+    }
+
+    /// Send immediate notification when an active session was terminated because
+    /// a free-time window started (R3, #27 — free-time and session are mutually
+    /// exclusive). See `sessionTerminatedByFreeTimeRequest` for gating + shape.
+    func sendSessionTerminatedByFreeTimeNotification() async {
+        guard isAuthorized,
+              let request = Self.sessionTerminatedByFreeTimeRequest(settings: settings) else {
+            return
+        }
 
         do {
             try await notificationCenter.add(request)

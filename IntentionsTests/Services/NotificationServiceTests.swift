@@ -391,4 +391,48 @@ final class NotificationServiceTests: XCTestCase {
         XCTAssertEqual(c.hour, 23)
         XCTAssertEqual(c.minute, 59)
     }
+
+    // MARK: - R3 mutex teardown banner (#27) — pure spec-builder
+
+    func testTerminatedByFreeTimeReturnsNilWhenMasterDisabled() {
+        let request = NotificationService.sessionTerminatedByFreeTimeRequest(
+            settings: settings(master: false)
+        )
+        XCTAssertNil(request)
+    }
+
+    func testTerminatedByFreeTimeReturnsNilWhenCompletionDisabled() {
+        let request = NotificationService.sessionTerminatedByFreeTimeRequest(
+            settings: settings(completion: false)
+        )
+        XCTAssertNil(request)
+    }
+
+    func testTerminatedByFreeTimeIgnoresWarningToggle() {
+        // Warning toggle off should NOT silence the teardown — it's a completion-class event.
+        let request = NotificationService.sessionTerminatedByFreeTimeRequest(
+            settings: settings(warnings: false, completion: true)
+        )
+        XCTAssertNotNil(request)
+    }
+
+    func testTerminatedByFreeTimeBuildsRequestWhenEnabled() {
+        let request = NotificationService.sessionTerminatedByFreeTimeRequest(settings: settings())
+        XCTAssertNotNil(request)
+
+        XCTAssertEqual(request?.identifier, "session_terminated_by_freetime")
+        XCTAssertEqual(request?.identifier, NotificationService.sessionTerminatedByFreeTimeIdentifier)
+        XCTAssertEqual(request?.content.title, "Session Ended")
+        XCTAssertEqual(request?.content.body, "Free time started — your session ended.")
+        XCTAssertEqual(request?.content.categoryIdentifier, NotificationType.sessionCompletion.rawValue)
+        XCTAssertNotNil(request?.content.sound)
+    }
+
+    func testTerminatedByFreeTimeTriggerIsImmediateNonRepeating() {
+        let request = NotificationService.sessionTerminatedByFreeTimeRequest(settings: settings())
+        let trigger = request?.trigger as? UNTimeIntervalNotificationTrigger
+        XCTAssertNotNil(trigger)
+        XCTAssertFalse(trigger?.repeats ?? true)
+        XCTAssertEqual(trigger?.timeInterval, 1.0)
+    }
 }
