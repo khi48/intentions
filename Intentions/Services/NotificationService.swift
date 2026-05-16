@@ -88,6 +88,15 @@ final class NotificationService: NSObject, Sendable {
         // If notifications were disabled, cancel all scheduled notifications
         if !newSettings.isEnabled {
             await cancelAllNotifications()
+            return
+        }
+
+        // Rebuild free-time pending state to match the new settings. Session
+        // notifications are scheduled per-session-start so they self-heal on
+        // the next session; free-time notifications are persistent (repeats:true)
+        // and need to be re-synced explicitly on every settings change.
+        if let schedule = try? await dataService.loadWeeklySchedule() {
+            await rescheduleFreeTimeNotifications(schedule: schedule)
         }
     }
 
