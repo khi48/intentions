@@ -373,10 +373,179 @@ final class NotificationService: NSObject, Sendable {
 
     func cancelAllNotifications() async {
         let pendingRequests = await notificationCenter.pendingNotificationRequests()
-        let sessionIdentifiers = pendingRequests
+        let identifiers = pendingRequests
             .map { $0.identifier }
-            .filter { $0.hasPrefix("session_") }
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: sessionIdentifiers)
+            .filter { $0.hasPrefix("session_") || $0.hasPrefix(Self.freeTimeIdentifierPrefix) }
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
+    }
+
+    // MARK: - Free-Time Notifications (#24)
+
+    /// All free-time-related identifiers start with this. Wipe-by-prefix relies
+    /// on it; do not change without migrating delivered/pending state.
+    static let freeTimeIdentifierPrefix = "freetime_"
+    static let freeTimeWarningIdentifierPrefix = "freetime_warning_"
+    static let freeTimeCompletionIdentifierPrefix = "freetime_completion_"
+
+    /// Rebuild the pending free-time notifications from the current schedule +
+    /// settings. Wipes every pending `freetime_*` identifier first, then re-adds
+    /// fresh ones built by `freeTimeNotificationRequests(schedule:settings:)`.
+    ///
+    /// Call on every mutation that could change the set of free-time intervals
+    /// (schedule save, hydration on app launch, notification-settings toggle).
+    /// No-op when the schedule is disabled or notifications are turned off —
+    /// the wipe still runs so toggling off cancels pending notifications.
+    func rescheduleFreeTimeNotifications(schedule: WeeklySchedule) async {
+        // Always wipe first so toggle-off / schedule-disabled paths clear pending.
+        await cancelFreeTimeNotifications()
+
+        guard settings.isEnabled && isAuthorized && schedule.isEnabled else {
+            return
+        }
+
+        let requests = Self.freeTimeNotificationRequests(
+            isScheduleEnabled: schedule.isEnabled,
+            intervals: schedule.intervals,
+            timeZone: schedule.timeZone,
+            settings: settings
+        )
+
+        for request in requests {
+            do {
+                try await notificationCenter.add(request)
+            } catch {
+                Self.log.error("Failed to schedule free-time notification \(request.identifier): \(error.localizedDescription)")
+            }
+        }
+
+        if !requests.isEmpty {
+            Self.log.info("Scheduled \(requests.count) free-time notifications across \(schedule.intervals.count) intervals")
+        }
+    }
+
+    /// Cancel every pending free-time notification (both warnings and completions).
+    /// Used internally by `rescheduleFreeTimeNotifications` and as the cancel path
+    /// when the schedule is toggled off entirely.
+    func cancelFreeTimeNotifications() async {
+        let pending = await notificationCenter.pendingNotificationRequests()
+        let identifiers = pending
+            .map { $0.identifier }
+            .filter { $0.hasPrefix(Self.freeTimeIdentifierPrefix) }
+
+        if !identifiers.isEmpty {
+            notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
+            Self.log.info("Cancelled \(identifiers.count) free-time notifications")
+        }
+    }
+
+    /// Pure spec-builder for free-time-window warning + completion notifications.
+    ///
+    /// Inputs are value types; no UNUserNotificationCenter contact. The returned
+    /// `UNNotificationRequest`s use `UNCalendarNotificationTrigger` with
+    /// `repeats: true` and `DateComponents` carrying the schedule's `timeZone`
+    /// so the trigger fires weekly at the wall-clock end of each interval.
+    ///
+    /// Per-interval logic:
+    ///   - End minute-of-week = (start + duration) mod minutesPerWeek.
+    ///   - For each `warningMinutes` in `settings.warningIntervals`:
+    ///       skip if `interval.durationMinutes <= warningMinutes`
+    ///         (the warning would land at-or-before the interval start, which
+    ///         is meaningless for an "ending soon" cue),
+    ///       else fire at (end - warningMinutes + minutesPerWeek) mod minutesPerWeek.
+    ///   - Completion always fires at the end minute-of-week
+    ///     (gated only by `sessionCompletionEnabled`).
+    ///
+    /// Returns an empty array when notifications are off, master toggle is off,
+    /// or the schedule is disabled — callers still need to wipe pending state
+    /// separately.
+    static func freeTimeNotificationRequests(
+        isScheduleEnabled: Bool,
+        intervals: [FreeTimeInterval],
+        timeZone: TimeZone,
+        settings: NotificationSettings
+    ) -> [UNNotificationRequest] {
+        guard settings.isEnabled && isScheduleEnabled else { return [] }
+        guard settings.sessionWarningsEnabled || settings.sessionCompletionEnabled else { return [] }
+
+        var requests: [UNNotificationRequest] = []
+
+        for interval in intervals {
+            let endMinuteOfWeek = (interval.startMinuteOfWeek + interval.durationMinutes) % FreeTimeInterval.minutesPerWeek
+
+            // Warnings — one per configured interval, skipped per-warning when
+            // the free-time window is too short to make the warning meaningful.
+            if settings.sessionWarningsEnabled {
+                for warningMinutes in settings.sortedWarningIntervals {
+                    guard warningMinutes > 0 else { continue }
+                    guard interval.durationMinutes > warningMinutes else { continue }
+
+                    let warningMinuteOfWeek = (endMinuteOfWeek - warningMinutes + FreeTimeInterval.minutesPerWeek) % FreeTimeInterval.minutesPerWeek
+                    let components = dateComponents(forMinuteOfWeek: warningMinuteOfWeek, timeZone: timeZone)
+
+                    let content = UNMutableNotificationContent()
+                    content.title = "Free Time Ending Soon"
+                    content.body = formatFreeTimeWarningBody(minutes: warningMinutes)
+                    content.sound = .default
+                    content.categoryIdentifier = NotificationType.sessionWarning.rawValue
+                    if warningMinutes <= 1 {
+                        content.interruptionLevel = .timeSensitive
+                    }
+
+                    let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+                    let identifier = "\(freeTimeWarningIdentifierPrefix)\(interval.id.uuidString)_\(warningMinutes)min"
+                    requests.append(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
+                }
+            }
+
+            // Completion — single one per interval, always at the window end.
+            if settings.sessionCompletionEnabled {
+                let components = dateComponents(forMinuteOfWeek: endMinuteOfWeek, timeZone: timeZone)
+
+                let content = UNMutableNotificationContent()
+                content.title = "Free Time Ended"
+                content.body = "Apps are now blocked again."
+                content.sound = .default
+                content.categoryIdentifier = NotificationType.sessionCompletion.rawValue
+
+                let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+                let identifier = "\(freeTimeCompletionIdentifierPrefix)\(interval.id.uuidString)"
+                requests.append(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
+            }
+        }
+
+        return requests
+    }
+
+    /// Convert a minute-of-week (0..<10080, Monday=0) to `DateComponents` suitable
+    /// for `UNCalendarNotificationTrigger(dateMatching:repeats:)`. Weekday is the
+    /// Foundation convention (Sun=1..Sat=7).
+    static func dateComponents(forMinuteOfWeek minuteOfWeek: Int, timeZone: TimeZone) -> DateComponents {
+        let normalised = ((minuteOfWeek % FreeTimeInterval.minutesPerWeek) + FreeTimeInterval.minutesPerWeek) % FreeTimeInterval.minutesPerWeek
+        let mondayZeroDayIndex = normalised / FreeTimeInterval.minutesPerDay
+        let minuteOfDay = normalised % FreeTimeInterval.minutesPerDay
+        let hour = minuteOfDay / 60
+        let minute = minuteOfDay % 60
+
+        // Foundation weekday: Sun=1..Sat=7. Monday-zero index: Mon=0..Sun=6.
+        //   mondayZero=0 (Mon) → 2; mondayZero=5 (Sat) → 7; mondayZero=6 (Sun) → 1.
+        let foundationWeekday = ((mondayZeroDayIndex + 1) % 7) + 1
+
+        var components = DateComponents()
+        components.weekday = foundationWeekday
+        components.hour = hour
+        components.minute = minute
+        components.second = 0
+        components.timeZone = timeZone
+        return components
+    }
+
+    private static func formatFreeTimeWarningBody(minutes: Int) -> String {
+        switch minutes {
+        case 1:
+            return "1 minute left of free time"
+        default:
+            return "\(minutes) minutes left of free time"
+        }
     }
 
 }
