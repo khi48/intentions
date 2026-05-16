@@ -225,17 +225,143 @@ final class ShieldEngineTests: XCTestCase {
 
     func test_refreshScheduleMonitoring_persistsSnapshotAndApplies() {
         let snap = makeFreeAllWeekSnapshot()
-        engine.refreshScheduleMonitoring(snap, now: t0)
+        let result = engine.refreshScheduleMonitoring(snap, now: t0)
 
+        XCTAssertEqual(result, .noSessionChange)
         XCTAssertEqual(store.load().weeklySchedule, snap)
         XCTAssertEqual(applier.calls, [.none])
     }
 
     func test_refreshScheduleMonitoring_idempotent() {
         let snap = makeBlockedAllWeekSnapshot()
-        engine.refreshScheduleMonitoring(snap, now: t0)
-        engine.refreshScheduleMonitoring(snap, now: t0)
+        _ = engine.refreshScheduleMonitoring(snap, now: t0)
+        _ = engine.refreshScheduleMonitoring(snap, now: t0)
         XCTAssertEqual(applier.calls, [.all, .all])
         XCTAssertEqual(store.load().weeklySchedule, snap)
+    }
+
+    // MARK: - Free-time / session mutex (R3, #27)
+
+    /// Helper: inject an active session directly into the in-memory log. Used
+    /// to set up the "session somehow exists" precondition without going
+    /// through startSession (which now itself fires compute() under R3).
+    private func injectActiveSession(endsAt: Date) {
+        var log = store.load()
+        log.activeSession = Session(apps: .init(), startedAt: t0, endsAt: endsAt)
+        store.save(log)
+    }
+
+    /// Build a snapshot whose free-time window covers an exact wall-clock
+    /// interval relative to t0. Used so the engine's lookback probe sees a
+    /// real free↔blocking boundary at `now`.
+    private func snapshotFree(fromOffset: TimeInterval, durationSec: TimeInterval) -> ScheduleSnapshot {
+        // ScheduleSnapshot intervals are minute-of-week — derive that for t0.
+        // t0 = 1_700_000_000 = 2023-11-14 22:13:20 UTC (Tuesday).
+        // Compute MoW at t0 + fromOffset.
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        let date = t0.addingTimeInterval(fromOffset)
+        let wd = cal.component(.weekday, from: date)
+        // Foundation Sun=1..Sat=7 → Mon=0..Sun=6
+        let mondayZero = (wd == 1) ? 6 : wd - 2
+        let h = cal.component(.hour, from: date)
+        let m = cal.component(.minute, from: date)
+        let startMoW = mondayZero * ScheduleSnapshot.minutesPerDay + h * 60 + m
+        return ScheduleSnapshot(
+            isEnabled: true,
+            intervals: [.init(startMinuteOfWeek: startMoW, durationMinutes: Int(durationSec / 60))],
+            timeZoneIdentifier: "UTC"
+        )
+    }
+
+    func test_handleScheduleTransition_entersFreeTimeWithActiveSession_clearsSessionReturnsTerminated() {
+        // DAM fires `handleScheduleTransition` at the moment we enter a
+        // free-time window. Snapshot at `now` is in free-time; session is in
+        // log. R3: terminate it.
+        var log = store.load()
+        log.weeklySchedule = makeFreeAllWeekSnapshot()
+        store.save(log)
+        injectActiveSession(endsAt: t0.addingTimeInterval(600))
+        applier.reset()
+
+        let result = engine.handleScheduleTransition(now: t0.addingTimeInterval(60))
+
+        XCTAssertEqual(result, .sessionTerminatedByFreeTime)
+        XCTAssertNil(store.load().activeSession, "session must be cleared in log on free-time entry")
+        XCTAssertEqual(applier.calls, [.none])
+    }
+
+    func test_handleScheduleTransition_exitsFreeTimeWithActiveSession_clearsSessionReturnsTerminated() {
+        // Mutex is symmetric: exiting free-time also terminates an in-log
+        // session. Engine detects "just left free-time" by probing the snapshot
+        // a minute before `now`. Construct: free 22:00–22:30 UTC (covers t0
+        // through t0+1000s), then fire transition at t0+1900s (exit was at
+        // t0+1000s; 60s lookback catches sessions left over from a missed
+        // entry-fire — but we test farther out to ensure the simpler "fired
+        // post-exit" still terminates).
+        //
+        // For this test we use an exact free-window so isFreeTime(now - 60s)
+        // is true while isFreeTime(now) is false.
+        let freeSnapshot = snapshotFree(fromOffset: 0, durationSec: 120)
+        var log = store.load()
+        log.weeklySchedule = freeSnapshot
+        store.save(log)
+        injectActiveSession(endsAt: t0.addingTimeInterval(600))
+        applier.reset()
+
+        // Fire 30s after the window ends. now - 60s = 30s before window end
+        // (still in free-time) → lookback catches it.
+        let now = t0.addingTimeInterval(120 + 30)
+        let result = engine.handleScheduleTransition(now: now)
+
+        XCTAssertEqual(result, .sessionTerminatedByFreeTime)
+        XCTAssertNil(store.load().activeSession, "session must be cleared in log on free-time exit")
+        XCTAssertEqual(applier.calls, [.all])
+    }
+
+    func test_handleScheduleTransition_noSession_returnsNoChange() {
+        var log = store.load()
+        log.weeklySchedule = makeFreeAllWeekSnapshot()
+        store.save(log)
+
+        let result = engine.handleScheduleTransition(now: t0)
+
+        XCTAssertEqual(result, .noSessionChange)
+    }
+
+    func test_handleScheduleTransition_sessionInBlockingWindow_returnsNoChange() {
+        // Schedule never enters free-time (always-blocking) — even though a
+        // session is active, no mutex violation can occur.
+        var log = store.load()
+        log.weeklySchedule = makeBlockedAllWeekSnapshot()
+        store.save(log)
+
+        engine.startSession(apps: .init(), endsAt: t0.addingTimeInterval(600), now: t0)
+        applier.reset()
+
+        let result = engine.handleScheduleTransition(now: t0.addingTimeInterval(60))
+
+        XCTAssertEqual(result, .noSessionChange)
+        XCTAssertNotNil(store.load().activeSession)
+    }
+
+    func test_refreshScheduleMonitoring_userEditCreatesRetroactiveFreeTime_terminatesSession() {
+        // Symmetric path: user edits the schedule to add a free-time window
+        // that covers the present moment — should terminate the active session
+        // exactly like DAM-driven entry. (Q3 in design.)
+        var log = store.load()
+        log.weeklySchedule = makeBlockedAllWeekSnapshot()
+        store.save(log)
+
+        engine.startSession(apps: .init(), endsAt: t0.addingTimeInterval(600), now: t0)
+        applier.reset()
+
+        // User saves a new schedule: now in free-time at the edit moment.
+        let newSnapshot = makeFreeAllWeekSnapshot()
+        let result = engine.refreshScheduleMonitoring(newSnapshot, now: t0.addingTimeInterval(60))
+
+        XCTAssertEqual(result, .sessionTerminatedByFreeTime)
+        XCTAssertNil(store.load().activeSession)
+        XCTAssertEqual(applier.calls, [.none])
     }
 }
