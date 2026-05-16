@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Edit-free-time modal sheet. Lets the user pick start/end day and time with a 10-minute snap.
+/// Edit-free-time modal sheet. Lets the user pick start/end day and time with a 5-minute snap.
 /// Visual format mirrors the v7 mockup: title, two inline picker rows, action row, primary Confirm button.
 struct EditFreeTimeSheet: View {
     @Binding var editing: DraftInterval
