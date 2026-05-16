@@ -270,8 +270,11 @@ final class NotificationService: NSObject, Sendable {
     /// a free-time window started (R3, #27 — free-time and session are mutually
     /// exclusive). Single-shot with a fixed identifier so repeated mutex fires
     /// in the same window replace rather than stack.
+    ///
+    /// Gated by `sessionCompletionEnabled` — this is a session-end event, so it
+    /// follows the same user toggle as the regular completion banner.
     func sendSessionTerminatedByFreeTimeNotification() async {
-        guard settings.isEnabled && isAuthorized else {
+        guard settings.isEnabled && isAuthorized && settings.sessionCompletionEnabled else {
             return
         }
 
