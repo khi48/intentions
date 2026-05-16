@@ -200,6 +200,10 @@ final class ContentViewModel: Sendable {
         // settings changed via the notifications page on the last run, or
         // the schedule was edited while pending was already drained.
         await NotificationService.shared.rescheduleFreeTimeNotifications(schedule: weeklySchedule)
+        // Re-sync the R3 pre-scheduled banner (#30) on hydration. If a session
+        // is active from a previous launch and the schedule has changed since
+        // its boundary was computed, this moves the banner to the new boundary.
+        await NotificationService.shared.rescheduleR3MutexTeardownBannerForActiveSession(schedule: weeklySchedule)
     }
     
     /// Load any existing active session from persistence
@@ -335,6 +339,10 @@ final class ContentViewModel: Sendable {
         // may have changed; pending freetime_* notifications must be rebuilt so
         // warning + completion banners track the new windows.
         await NotificationService.shared.rescheduleFreeTimeNotifications(schedule: schedule)
+        // Re-sync the R3 pre-scheduled banner (#30) — if the schedule edit
+        // shifted the next free-time boundary, move the banner to the new time
+        // (or wipe it if the new schedule no longer has a boundary in-window).
+        await NotificationService.shared.rescheduleR3MutexTeardownBannerForActiveSession(schedule: schedule)
     }
 
     // MARK: - Authorization Management
@@ -526,22 +534,29 @@ final class ContentViewModel: Sendable {
     }
 
     /// Tear down session state after the ShieldEngine mutex (R3, #27) terminated
-    /// the active session because a free-time window started. Mirrors
-    /// `cancelActiveSessionForDisable` but fires the user-facing banner
-    /// ("Free time started — your session ended.") so the user knows why their
-    /// session ended.
+    /// the active session because a free-time window started. This is CASE B:
+    /// the user re-saved the schedule mid-session and the new schedule
+    /// introduces free-time at `now`. The pre-scheduled R3 banner (#30) was
+    /// armed for the ORIGINAL boundary and is wiped alongside the session by
+    /// `cancelAllSessionNotifications`; we then post a fresh immediate banner
+    /// so the user sees "free time started — your session ended" right now.
+    /// (CASE A — boundary arrives naturally during a session — is handled by
+    /// iOS firing the pre-scheduled banner without this path running.)
     private func handleSessionTerminatedByFreeTime(session: IntentionSession) async {
         let sessionId = session.id
         logger.notice("🛑 handleSessionTerminatedByFreeTime: session \(sessionId) cleared by free-time mutex")
         // Cancel pending session notifications BEFORE mutating state so the
-        // pre-scheduled completion trigger cannot leak in the racing window.
+        // pre-scheduled completion + R3 triggers cannot leak in the racing
+        // window.
         await NotificationService.shared.cancelAllSessionNotifications(sessionId: sessionId)
         await screenTimeService.cancelSessionTimers()
         session.cancel()
         try? await dataService.saveIntentionSession(session)
         await teardownSessionState()
-        // Notify the user — single-shot, fixed identifier.
-        await NotificationService.shared.sendSessionTerminatedByFreeTimeNotification()
+        // CASE B banner: post immediate R3 teardown notification since the
+        // pre-scheduled one (if any) was for the original boundary and has
+        // been wiped along with the session.
+        await NotificationService.shared.postImmediateR3MutexTeardownBanner(sessionId: sessionId)
     }
 
     // MARK: - Session Teardown Helpers

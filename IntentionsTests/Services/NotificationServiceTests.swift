@@ -392,47 +392,91 @@ final class NotificationServiceTests: XCTestCase {
         XCTAssertEqual(c.minute, 59)
     }
 
-    // MARK: - R3 mutex teardown banner (#27) — pure spec-builder
+    // MARK: - R3 mutex teardown banner (#30) — per-session pre-scheduled spec-builder
+
+    private var fixedSessionId: UUID { UUID(uuidString: "12345678-1234-1234-1234-123456789012")! }
 
     func testTerminatedByFreeTimeReturnsNilWhenMasterDisabled() {
-        let request = NotificationService.sessionTerminatedByFreeTimeRequest(
-            settings: settings(master: false)
+        let request = SessionEndNotification.sessionTerminatedByFreeTimeRequest(
+            settings: settings(master: false),
+            sessionId: fixedSessionId,
+            triggerInterval: 600
         )
         XCTAssertNil(request)
     }
 
     func testTerminatedByFreeTimeReturnsNilWhenCompletionDisabled() {
-        let request = NotificationService.sessionTerminatedByFreeTimeRequest(
-            settings: settings(completion: false)
+        let request = SessionEndNotification.sessionTerminatedByFreeTimeRequest(
+            settings: settings(completion: false),
+            sessionId: fixedSessionId,
+            triggerInterval: 600
         )
         XCTAssertNil(request)
     }
 
     func testTerminatedByFreeTimeIgnoresWarningToggle() {
-        // Warning toggle off should NOT silence the teardown — it's a completion-class event.
-        let request = NotificationService.sessionTerminatedByFreeTimeRequest(
-            settings: settings(warnings: false, completion: true)
+        let request = SessionEndNotification.sessionTerminatedByFreeTimeRequest(
+            settings: settings(warnings: false, completion: true),
+            sessionId: fixedSessionId,
+            triggerInterval: 600
         )
         XCTAssertNotNil(request)
     }
 
+    func testTerminatedByFreeTimeReturnsNilWhenTriggerBelowOneSecond() {
+        // UNTimeIntervalNotificationTrigger requires timeInterval >= 1.0; the
+        // spec-builder must reject smaller values rather than crash at add-time.
+        let request = SessionEndNotification.sessionTerminatedByFreeTimeRequest(
+            settings: settings(),
+            sessionId: fixedSessionId,
+            triggerInterval: 0.5
+        )
+        XCTAssertNil(request)
+    }
+
+    func testTerminatedByFreeTimeIdentifierCarriesSessionId() {
+        let sessionId = fixedSessionId
+        let request = SessionEndNotification.sessionTerminatedByFreeTimeRequest(
+            settings: settings(),
+            sessionId: sessionId,
+            triggerInterval: 600
+        )
+
+        XCTAssertEqual(request?.identifier, "session_terminated_by_freetime_\(sessionId.uuidString)")
+        XCTAssertTrue(request?.identifier.hasPrefix(SessionEndNotification.sessionTerminatedByFreeTimeIdentifierPrefix) ?? false)
+    }
+
     func testTerminatedByFreeTimeBuildsRequestWhenEnabled() {
-        let request = NotificationService.sessionTerminatedByFreeTimeRequest(settings: settings())
+        let request = SessionEndNotification.sessionTerminatedByFreeTimeRequest(
+            settings: settings(),
+            sessionId: fixedSessionId,
+            triggerInterval: 600
+        )
         XCTAssertNotNil(request)
 
-        XCTAssertEqual(request?.identifier, "session_terminated_by_freetime")
-        XCTAssertEqual(request?.identifier, NotificationService.sessionTerminatedByFreeTimeIdentifier)
         XCTAssertEqual(request?.content.title, "Session Ended")
         XCTAssertEqual(request?.content.body, "Free time started — your session ended.")
         XCTAssertEqual(request?.content.categoryIdentifier, NotificationType.sessionCompletion.rawValue)
         XCTAssertNotNil(request?.content.sound)
     }
 
-    func testTerminatedByFreeTimeTriggerIsImmediateNonRepeating() {
-        let request = NotificationService.sessionTerminatedByFreeTimeRequest(settings: settings())
+    func testTerminatedByFreeTimeTriggerUsesPassedInterval() {
+        let request = SessionEndNotification.sessionTerminatedByFreeTimeRequest(
+            settings: settings(),
+            sessionId: fixedSessionId,
+            triggerInterval: 1234.5
+        )
         let trigger = request?.trigger as? UNTimeIntervalNotificationTrigger
         XCTAssertNotNil(trigger)
         XCTAssertFalse(trigger?.repeats ?? true)
-        XCTAssertEqual(trigger?.timeInterval, 1.0)
+        XCTAssertEqual(trigger?.timeInterval, 1234.5)
+    }
+
+    func testTerminatedByFreeTimeIdentifierDiffersBySession() {
+        let id1 = SessionEndNotification.sessionTerminatedByFreeTimeIdentifier(sessionId: UUID())
+        let id2 = SessionEndNotification.sessionTerminatedByFreeTimeIdentifier(sessionId: UUID())
+        XCTAssertNotEqual(id1, id2)
+        XCTAssertTrue(id1.hasPrefix(SessionEndNotification.sessionTerminatedByFreeTimeIdentifierPrefix))
+        XCTAssertTrue(id2.hasPrefix(SessionEndNotification.sessionTerminatedByFreeTimeIdentifierPrefix))
     }
 }

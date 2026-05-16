@@ -78,6 +78,11 @@ final class SettingsViewModel: Sendable {
             // completions match the new set of intervals. Wipes by `freetime_`
             // prefix internally — covers the schedule-disabled toggle-off case.
             await NotificationService.shared.rescheduleFreeTimeNotifications(schedule: schedule)
+            // Re-sync the R3 pre-scheduled banner (#30) if a session is active.
+            // Edits via the Settings tab follow the same pattern as the
+            // home-tab edit: shift the banner to the new boundary time so it
+            // still fires correctly if the session outlives the edit.
+            await NotificationService.shared.rescheduleR3MutexTeardownBannerForActiveSession(schedule: schedule)
         } catch {
             errorMessage = "Failed to save schedule: \(error.localizedDescription)"
         }
