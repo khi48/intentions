@@ -99,8 +99,8 @@ struct ShieldEngine: Sendable {
     /// retroactive overlap with the active session).
     @discardableResult
     func refreshScheduleMonitoring(_ snapshot: ScheduleSnapshot, now: Date = Date()) -> ScheduleTransitionResult {
-        DebugBreadcrumbs.record(.engineRefreshSchedule, note: "isEnabled=\(snapshot.isEnabled) intervals=\(snapshot.intervals.count)")
-        logger.notice("refreshScheduleMonitoring: isEnabled=\(snapshot.isEnabled, privacy: .public) intervals=\(snapshot.intervals.count, privacy: .public)")
+        DebugBreadcrumbs.record(.engineRefreshSchedule, note: "isEnabled=\(snapshot.isEnabled) routines=\(snapshot.routines.count)")
+        logger.notice("refreshScheduleMonitoring: isEnabled=\(snapshot.isEnabled, privacy: .public) routines=\(snapshot.routines.count, privacy: .public)")
 
         var log = store.load()
         log.weeklySchedule = snapshot

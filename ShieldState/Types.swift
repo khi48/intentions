@@ -22,16 +22,23 @@ struct Session: Codable, Sendable, Equatable, Identifiable {
 /// in a form the DAM extension can read out of the App Group plist.
 struct ScheduleSnapshot: Codable, Sendable, Equatable {
     static let minutesPerDay = 1440
-    static let minutesPerWeek = 10_080
 
-    /// Start + duration in minutes from Monday 00:00 in the schedule's timezone.
-    struct Interval: Codable, Sendable, Equatable {
-        let startMinuteOfWeek: Int
+    /// One recurring free-time window: time-of-day range that fires on the named weekdays.
+    struct Routine: Codable, Sendable, Equatable {
+        let startMinute: Int
         let durationMinutes: Int
+        let days: Set<Weekday>
+
+        var endMinute: Int { startMinute + durationMinutes }
+
+        func isActive(weekday: Weekday, minuteOfDay: Int) -> Bool {
+            guard days.contains(weekday) else { return false }
+            return minuteOfDay >= startMinute && minuteOfDay < endMinute
+        }
     }
 
     var isEnabled: Bool
-    var intervals: [Interval]
+    var routines: [Routine]
     /// TimeZone identifier (e.g. "Pacific/Auckland"). Stored as String for Sendable.
     var timeZoneIdentifier: String
 
@@ -40,12 +47,12 @@ struct ScheduleSnapshot: Codable, Sendable, Equatable {
     }
 
     /// Disabled snapshot ⇒ blocking is off everywhere. Used as a no-op default.
-    static let disabled = ScheduleSnapshot(isEnabled: false, intervals: [], timeZoneIdentifier: TimeZone.current.identifier)
+    static let disabled = ScheduleSnapshot(isEnabled: false, routines: [], timeZoneIdentifier: TimeZone.current.identifier)
 
     func isFreeTime(at date: Date) -> Bool {
         guard isEnabled else { return true }
-        let mow = minuteOfWeek(for: date)
-        return intervals.contains { Self.contains(interval: $0, minuteOfWeek: mow) }
+        let (weekday, minuteOfDay) = weekdayAndMinuteOfDay(for: date)
+        return routines.contains { $0.isActive(weekday: weekday, minuteOfDay: minuteOfDay) }
     }
 
     func isBlocking(at date: Date) -> Bool {
@@ -67,7 +74,7 @@ struct ScheduleSnapshot: Codable, Sendable, Equatable {
         let alignedComps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
         var probe = calendar.date(from: alignedComps) ?? date
         let reference = isBlocking(at: date)
-        for _ in 0..<Self.minutesPerWeek {
+        for _ in 0..<(Self.minutesPerDay * 7) {
             probe = calendar.date(byAdding: .minute, value: 1, to: probe)!
             if isBlocking(at: probe) != reference {
                 return probe
@@ -76,36 +83,14 @@ struct ScheduleSnapshot: Codable, Sendable, Equatable {
         return nil
     }
 
-    private func minuteOfWeek(for date: Date) -> Int {
+    private func weekdayAndMinuteOfDay(for date: Date) -> (Weekday, Int) {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         let calendarWeekday = calendar.component(.weekday, from: date)
-        // Foundation: Sun=1..Sat=7. Normalise to Monday=0..Sunday=6.
-        let mondayZeroIndex: Int
-        switch calendarWeekday {
-        case 1: mondayZeroIndex = 6
-        case 2: mondayZeroIndex = 0
-        case 3: mondayZeroIndex = 1
-        case 4: mondayZeroIndex = 2
-        case 5: mondayZeroIndex = 3
-        case 6: mondayZeroIndex = 4
-        case 7: mondayZeroIndex = 5
-        default: mondayZeroIndex = 0
-        }
+        let weekday = Weekday.from(calendarWeekday: calendarWeekday)
         let hour = calendar.component(.hour, from: date)
         let minute = calendar.component(.minute, from: date)
-        return mondayZeroIndex * Self.minutesPerDay + hour * 60 + minute
-    }
-
-    private static func contains(interval: Interval, minuteOfWeek: Int) -> Bool {
-        let end = interval.startMinuteOfWeek + interval.durationMinutes
-        if end <= Self.minutesPerWeek {
-            return minuteOfWeek >= interval.startMinuteOfWeek && minuteOfWeek < end
-        } else {
-            // Wraps Sunday→Monday boundary.
-            let wrappedEnd = end - Self.minutesPerWeek
-            return minuteOfWeek >= interval.startMinuteOfWeek || minuteOfWeek < wrappedEnd
-        }
+        return (weekday, hour * 60 + minute)
     }
 }
 
@@ -157,7 +142,14 @@ extension IntentLog {
         // Tolerate logs saved before these fields existed.
         self.knownApplicationTokens = try c.decodeIfPresent(Set<ApplicationToken>.self, forKey: .knownApplicationTokens) ?? []
         self.knownWebDomainTokens = try c.decodeIfPresent(Set<WebDomainToken>.self, forKey: .knownWebDomainTokens) ?? []
-        self.weeklySchedule = try c.decodeIfPresent(ScheduleSnapshot.self, forKey: .weeklySchedule)
+        // Old IntentLog blobs stored an Interval-based snapshot under the same key.
+        // Type-mismatch on decode falls back to nil; the main app will re-snapshot
+        // on the next saveWeeklySchedule call and the DAM will pick it up.
+        do {
+            self.weeklySchedule = try c.decodeIfPresent(ScheduleSnapshot.self, forKey: .weeklySchedule)
+        } catch {
+            self.weeklySchedule = nil
+        }
     }
 }
 

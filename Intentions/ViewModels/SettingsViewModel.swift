@@ -50,14 +50,7 @@ final class SettingsViewModel: Sendable {
         errorMessage = nil
 
         do {
-            let loaded = try await dataService.loadWeeklySchedule() ?? WeeklySchedule()
-            // One-shot upgrade: populate weekend blocks for users persisted on the
-            // Mon–Fri default from earlier builds. Idempotent; guarded by a flag.
-            let didBackfill = loaded.backfillWeekendsIfNeeded()
-            weeklySchedule = loaded
-            if didBackfill {
-                try? await dataService.saveWeeklySchedule(loaded)
-            }
+            weeklySchedule = try await dataService.loadWeeklySchedule() ?? WeeklySchedule()
 
             // Update statistics from persisted sessions
             await updateStatistics()
@@ -146,19 +139,16 @@ final class SettingsViewModel: Sendable {
 
     var scheduleSummary: String {
         guard weeklySchedule.isEnabled else { return "Blocking is off" }
-        let count = weeklySchedule.intervals.count
+        let count = weeklySchedule.routines.count
         switch count {
-        case 0: return "No free time set"
+        case 0: return "No routines set"
         case 1:
-            let i = weeklySchedule.intervals[0]
-            return "\(i.startDayOfWeek.shortName) \(formattedTime(hour: i.startHour, minute: i.startMinute))–\(formattedTime(hour: i.endHour, minute: i.endMinute))"
+            let r = weeklySchedule.routines[0]
+            let dayLabel = r.days.count == 1 ? r.days.first!.shortName : "\(r.days.count) days"
+            return "\(dayLabel) \(r.startTimeOfDayString)–\(r.endTimeOfDayString)"
         default:
-            return "\(count) free time blocks"
+            return "\(count) routines"
         }
-    }
-
-    private func formattedTime(hour: Int, minute: Int) -> String {
-        String(format: "%02d:%02d", hour, minute)
     }
 
     // MARK: - Disable Confirmation Data

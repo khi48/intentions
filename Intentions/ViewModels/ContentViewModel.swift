@@ -296,7 +296,7 @@ final class ContentViewModel: Sendable {
         if persisted != snapshot {
             DebugBreadcrumbs.record(
                 .weeklyScheduleVerified,
-                note: "MISMATCH saved enabled=\(snapshot.isEnabled)/intervals=\(snapshot.intervals.count) log enabled=\(persisted?.isEnabled.description ?? "nil")/intervals=\(persisted?.intervals.count.description ?? "nil")"
+                note: "MISMATCH saved enabled=\(snapshot.isEnabled)/routines=\(snapshot.routines.count) log enabled=\(persisted?.isEnabled.description ?? "nil")/routines=\(persisted?.routines.count.description ?? "nil")"
             )
             handleError(AppError.persistenceError(
                 "Schedule was saved but the shield engine did not persist it. Please retry."
@@ -305,7 +305,7 @@ final class ContentViewModel: Sendable {
         }
         DebugBreadcrumbs.record(
             .weeklyScheduleVerified,
-            note: "ok enabled=\(snapshot.isEnabled) intervals=\(snapshot.intervals.count)"
+            note: "ok enabled=\(snapshot.isEnabled) routines=\(snapshot.routines.count)"
         )
 
         // R3 (#27): if the engine terminated the session because the new

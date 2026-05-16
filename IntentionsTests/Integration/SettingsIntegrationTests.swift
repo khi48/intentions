@@ -39,21 +39,25 @@ final class SettingsIntegrationTests: XCTestCase {
         await viewModel.toggleScheduleEnabled()
         XCTAssertFalse(viewModel.weeklySchedule.isEnabled)
 
-        // 3. Create a weekday-only schedule
+        // 3. Create a weekday-only schedule: one routine recurring Mon-Fri.
         let weekdaySchedule = WeeklySchedule()
         weekdaySchedule.isEnabled = true
-        weekdaySchedule.intervals = (0...4).map { dayIndex in
-            FreeTimeInterval(
+        weekdaySchedule.routines = [
+            FreeTimeRoutine(
                 id: UUID(),
-                startMinuteOfWeek: dayIndex * FreeTimeInterval.minutesPerDay + 9 * 60,
-                durationMinutes: 8 * 60
+                name: nil,
+                startMinute: 9 * 60,
+                durationMinutes: 8 * 60,
+                days: [.monday, .tuesday, .wednesday, .thursday, .friday],
+                sortIndex: 0
             )
-        }
+        ]
 
         // 4. Update schedule
         await viewModel.updateSchedule(weekdaySchedule)
         XCTAssertTrue(viewModel.weeklySchedule.isEnabled)
-        XCTAssertEqual(viewModel.weeklySchedule.intervals.count, 5)
+        XCTAssertEqual(viewModel.weeklySchedule.routines.count, 1)
+        XCTAssertEqual(viewModel.weeklySchedule.routines.first?.days.count, 5)
     }
 
     func testErrorHandlingWorkflow() async throws {
@@ -98,22 +102,43 @@ final class SettingsIntegrationTests: XCTestCase {
         XCTAssertEqual(viewModel.scheduleSummary, "Blocking is off")
 
         viewModel.weeklySchedule.isEnabled = true
-        viewModel.weeklySchedule.intervals = []
-        XCTAssertEqual(viewModel.scheduleSummary, "No free time set")
+        viewModel.weeklySchedule.routines = []
+        XCTAssertEqual(viewModel.scheduleSummary, "No routines set")
 
-        // 2. Test multiple intervals
-        viewModel.weeklySchedule.intervals = [
-            FreeTimeInterval(id: UUID(), startMinuteOfWeek: 9 * 60, durationMinutes: 60),
-            FreeTimeInterval(id: UUID(), startMinuteOfWeek: 14 * 60, durationMinutes: 60)
+        // 2. Test multiple routines
+        viewModel.weeklySchedule.routines = [
+            FreeTimeRoutine(
+                id: UUID(),
+                name: nil,
+                startMinute: 9 * 60,
+                durationMinutes: 60,
+                days: [.monday],
+                sortIndex: 0
+            ),
+            FreeTimeRoutine(
+                id: UUID(),
+                name: nil,
+                startMinute: 14 * 60,
+                durationMinutes: 60,
+                days: [.monday],
+                sortIndex: 1
+            )
         ]
         XCTAssertTrue(viewModel.scheduleSummary.contains("2"))
 
-        // 3. Test single interval produces a non-empty summary
-        viewModel.weeklySchedule.intervals = [
-            FreeTimeInterval(id: UUID(), startMinuteOfWeek: 17 * 60, durationMinutes: 4 * 60 + 30)
+        // 3. Test single routine produces a non-empty summary
+        viewModel.weeklySchedule.routines = [
+            FreeTimeRoutine(
+                id: UUID(),
+                name: nil,
+                startMinute: 17 * 60,
+                durationMinutes: 4 * 60 + 30,
+                days: [.friday],
+                sortIndex: 0
+            )
         ]
         XCTAssertFalse(viewModel.scheduleSummary.isEmpty)
-        XCTAssertNotEqual(viewModel.scheduleSummary, "No free time set")
+        XCTAssertNotEqual(viewModel.scheduleSummary, "No routines set")
         XCTAssertNotEqual(viewModel.scheduleSummary, "Blocking is off")
     }
 }

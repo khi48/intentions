@@ -66,18 +66,6 @@ enum AppConstants {
     
     // MARK: - Schedule Settings
     enum Schedule {
-        /// Seed intervals for a brand-new install. Mon–Fri 17:00–21:30.
-        static var defaultIntervals: [FreeTimeInterval] {
-            // Mon–Sun 17:30–23:00
-            (0...6).map { dayIndex in
-                FreeTimeInterval(
-                    id: UUID(),
-                    startMinuteOfWeek: dayIndex * FreeTimeInterval.minutesPerDay + 17 * 60 + 30,
-                    durationMinutes: 5 * 60 + 30
-                )
-            }
-        }
-
         /// Valid hour range for scheduling
         static let validHourRange: ClosedRange<Int> = 0...23
 

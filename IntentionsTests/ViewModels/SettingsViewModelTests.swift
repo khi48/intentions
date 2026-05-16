@@ -36,9 +36,11 @@ final class SettingsViewModelTests: XCTestCase {
     }
 
     func testDefaultWeeklySchedule() {
+        // FreeTimeRoutine migration: WeeklySchedule.init starts with no
+        // routines. The Mon-Fri seed previously baked into the default was
+        // dropped — routine creation is now user-driven.
         XCTAssertTrue(viewModel.weeklySchedule.isEnabled)
-        XCTAssertEqual(viewModel.weeklySchedule.intervals.count, 5) // Mon-Fri seed
-        XCTAssertTrue(viewModel.weeklySchedule.intervals.allSatisfy { $0.durationMinutes == 4 * 60 + 30 })
+        XCTAssertTrue(viewModel.weeklySchedule.routines.isEmpty)
     }
 
     // MARK: - Data Loading Tests
@@ -75,14 +77,21 @@ final class SettingsViewModelTests: XCTestCase {
     func testUpdateSchedule() async {
         let newSchedule = WeeklySchedule()
         newSchedule.isEnabled = false
-        newSchedule.intervals = [
-            FreeTimeInterval(id: UUID(), startMinuteOfWeek: 9 * 60, durationMinutes: 8 * 60)
+        newSchedule.routines = [
+            FreeTimeRoutine(
+                id: UUID(),
+                name: nil,
+                startMinute: 9 * 60,
+                durationMinutes: 8 * 60,
+                days: [.monday],
+                sortIndex: 0
+            )
         ]
 
         await viewModel.updateSchedule(newSchedule)
 
         XCTAssertFalse(viewModel.weeklySchedule.isEnabled)
-        XCTAssertEqual(viewModel.weeklySchedule.intervals.count, 1)
+        XCTAssertEqual(viewModel.weeklySchedule.routines.count, 1)
         XCTAssertTrue(mockDataService.saveWeeklyScheduleCalled)
     }
 
@@ -132,17 +141,31 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.scheduleSummary, "Blocking is off")
     }
 
-    func testScheduleSummaryNoIntervals() {
+    func testScheduleSummaryNoRoutines() {
         viewModel.weeklySchedule.isEnabled = true
-        viewModel.weeklySchedule.intervals = []
-        XCTAssertEqual(viewModel.scheduleSummary, "No free time set")
+        viewModel.weeklySchedule.routines = []
+        XCTAssertEqual(viewModel.scheduleSummary, "No routines set")
     }
 
-    func testScheduleSummaryMultipleIntervals() {
+    func testScheduleSummaryMultipleRoutines() {
         viewModel.weeklySchedule.isEnabled = true
-        viewModel.weeklySchedule.intervals = [
-            FreeTimeInterval(id: UUID(), startMinuteOfWeek: 9 * 60, durationMinutes: 60),
-            FreeTimeInterval(id: UUID(), startMinuteOfWeek: 14 * 60, durationMinutes: 60)
+        viewModel.weeklySchedule.routines = [
+            FreeTimeRoutine(
+                id: UUID(),
+                name: nil,
+                startMinute: 9 * 60,
+                durationMinutes: 60,
+                days: [.monday],
+                sortIndex: 0
+            ),
+            FreeTimeRoutine(
+                id: UUID(),
+                name: nil,
+                startMinute: 14 * 60,
+                durationMinutes: 60,
+                days: [.monday],
+                sortIndex: 1
+            )
         ]
         XCTAssertTrue(viewModel.scheduleSummary.contains("2"))
     }

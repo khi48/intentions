@@ -380,17 +380,20 @@ final class ContentViewModelTests: XCTestCase {
 
     // MARK: - Free-time mutex Tests (#27)
 
-    /// Build a WeeklySchedule whose single free-time interval covers the entire
-    /// week — so `isFreeTime(at: Date())` is always true.
+    /// Build a WeeklySchedule whose routine covers all weekdays for the full
+    /// day — so `isFreeTime(at: Date())` is always true.
     @MainActor
     private func makeAlwaysFreeSchedule() -> WeeklySchedule {
         let schedule = WeeklySchedule()
         schedule.isEnabled = true
-        schedule.intervals = [
-            FreeTimeInterval(
+        schedule.routines = [
+            FreeTimeRoutine(
                 id: UUID(),
-                startMinuteOfWeek: 0,
-                durationMinutes: FreeTimeInterval.minutesPerWeek - 1
+                name: nil,
+                startMinute: 0,
+                durationMinutes: FreeTimeRoutine.minutesPerDay,
+                days: Set(Weekday.allCases),
+                sortIndex: 0
             )
         ]
         return schedule
@@ -446,7 +449,7 @@ final class ContentViewModelTests: XCTestCase {
 
         let blockingSchedule = WeeklySchedule()
         blockingSchedule.isEnabled = true
-        blockingSchedule.intervals = [] // never free
+        blockingSchedule.routines = [] // never free
         try await mockDataService.saveWeeklySchedule(blockingSchedule)
         await viewModel.updateWeeklySchedule(blockingSchedule)
 

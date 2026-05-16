@@ -39,7 +39,7 @@ struct DebugStatusSnapshot: Sendable {
 
     // ScheduleSnapshot in IntentLog
     let scheduleIsEnabled: Bool?
-    let scheduleIntervalCount: Int?
+    let scheduleRoutineCount: Int?
     let scheduleTimeZone: String?
     let scheduleIsFreeTimeNow: Bool?
     let scheduleNextBoundary: Date?
@@ -123,7 +123,7 @@ extension DebugStatusSnapshot {
             knownAppTokenCount: log.knownApplicationTokens.count,
             knownDomainTokenCount: log.knownWebDomainTokens.count,
             scheduleIsEnabled: snapshot?.isEnabled,
-            scheduleIntervalCount: snapshot?.intervals.count,
+            scheduleRoutineCount: snapshot?.routines.count,
             scheduleTimeZone: snapshot?.timeZoneIdentifier,
             scheduleIsFreeTimeNow: isFreeTimeNow,
             scheduleNextBoundary: nextBoundary,
@@ -165,7 +165,7 @@ extension DebugStatusSnapshot {
         out.append("[Schedule snapshot]")
         if let isEnabled = scheduleIsEnabled {
             out.append("  isEnabled:                   \(isEnabled)")
-            out.append("  intervals.count:             \(scheduleIntervalCount ?? -1)")
+            out.append("  routines.count:              \(scheduleRoutineCount ?? -1)")
             out.append("  timeZone:                    \(scheduleTimeZone ?? "nil")")
             out.append("  isFreeTime(now):             \(scheduleIsFreeTimeNow.map { String($0) } ?? "n/a")")
             out.append("  nextBoundary(after now):     \(scheduleNextBoundary.map { f.string(from: $0) } ?? "nil")")
@@ -380,7 +380,7 @@ struct DebugStatusView: View {
     private func scheduleSection(_ snap: DebugStatusSnapshot) -> some View {
         if let isEnabled = snap.scheduleIsEnabled {
             SettingsStatusRow("isEnabled", value: "\(isEnabled)")
-            SettingsStatusRow("intervals.count", value: "\(snap.scheduleIntervalCount ?? -1)")
+            SettingsStatusRow("routines.count", value: "\(snap.scheduleRoutineCount ?? -1)")
             SettingsStatusRow("timeZone", value: snap.scheduleTimeZone ?? "nil")
             if let isFree = snap.scheduleIsFreeTimeNow {
                 SettingsStatusRow(
