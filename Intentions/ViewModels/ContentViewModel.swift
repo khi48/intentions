@@ -361,8 +361,42 @@ final class ContentViewModel: Sendable {
     
     // MARK: - Session Management
 
+    // MARK: Session Start Guard (#28)
+    //
+    // Preventive guard that blocks session start when blocking is off entirely.
+    // The reactive cancel-on-disable path (`cancelActiveSessionForDisable`) is
+    // the safety net for "user disables blocking while a session is running" —
+    // this guard prevents the inverse "user starts a session while blocking is
+    // already disabled," which would create a session that has nothing to
+    // manage. #27 will extend this to also refuse during free-time intervals.
+
+    /// Whether the user is currently allowed to start a new intention session.
+    /// Returns false when the weekly schedule is disabled (all apps unlocked).
+    var canStartSession: Bool {
+        // For #28 only the `isEnabled` branch is enforced.
+        // After #27 lands, this also checks `!weeklySchedule.isFreeTime(at: Date())`.
+        weeklySchedule.isEnabled
+    }
+
+    /// Human-readable reason why a session cannot be started, or nil when it can.
+    /// Surfaced as a caption on disabled session-start affordances in the UI.
+    var cannotStartReason: String? {
+        if !weeklySchedule.isEnabled {
+            return "All apps are unlocked — turn blocking on to start a session."
+        }
+        // #27 adds the free-time branch here:
+        // if weeklySchedule.isFreeTime(at: Date()) {
+        //     return "All apps are unlocked during free time."
+        // }
+        return nil
+    }
+
     /// Start a new intention session
     func startSession(_ session: IntentionSession) async {
+        guard canStartSession else {
+            logger.notice("startSession refused: \(self.cannotStartReason ?? "unknown")")
+            return
+        }
         await withLoading {
             do {
                 // If there's an existing active session, this is a replace flow.
