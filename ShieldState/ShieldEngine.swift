@@ -3,6 +3,21 @@ import OSLog
 @preconcurrency import FamilyControls
 @preconcurrency import ManagedSettings
 
+/// Result of a schedule-transition fire (DAM boundary or user edit). Returned
+/// to the caller so the main app can react to mutex-driven session termination
+/// (R3, #27) — e.g. fire a banner notifying the user the session ended because
+/// free-time started. The engine itself stays free of any UI/notification
+/// dependency; the result is the seam.
+enum ScheduleTransitionResult: Sendable, Equatable {
+    /// No change to the session — either there was no session, or the
+    /// schedule transition did not involve a free-time boundary.
+    case noSessionChange
+    /// An active session was terminated because the schedule entered (or just
+    /// exited) a free-time window. R3: free-time and session are mutually
+    /// exclusive.
+    case sessionTerminatedByFreeTime
+}
+
 /// Orchestrator that owns all transitions in the shield state machine.
 /// Reads/writes the intent log, calls the applier, optionally schedules DAM.
 ///
@@ -76,12 +91,43 @@ struct ShieldEngine: Sendable {
     /// DAM monitor. Called by the main app on schedule edits and on
     /// scenePhase → .active to recover from missed boundaries / OS resets.
     /// Idempotent.
-    func refreshScheduleMonitoring(_ snapshot: ScheduleSnapshot, now: Date = Date()) {
+    ///
+    /// R3 (#27) mutex: if the newly-persisted snapshot puts us in a free-time
+    /// window at `now` and an active session exists in the log, the session
+    /// is terminated and `.sessionTerminatedByFreeTime` is returned. This
+    /// covers the user-edit path (Q3 — saving a schedule that creates
+    /// retroactive overlap with the active session).
+    @discardableResult
+    func refreshScheduleMonitoring(_ snapshot: ScheduleSnapshot, now: Date = Date()) -> ScheduleTransitionResult {
         DebugBreadcrumbs.record(.engineRefreshSchedule, note: "isEnabled=\(snapshot.isEnabled) intervals=\(snapshot.intervals.count)")
         logger.notice("refreshScheduleMonitoring: isEnabled=\(snapshot.isEnabled, privacy: .public) intervals=\(snapshot.intervals.count, privacy: .public)")
 
         var log = store.load()
         log.weeklySchedule = snapshot
+
+        // Mutex check (R3): if the freshly-saved schedule is in free-time at
+        // `now` and a session is in the log, free-time wins — clear the
+        // session before persisting + applying. For user-edits we only check
+        // the current moment (not the lookback) — the edit is a discrete
+        // event and doesn't represent an "exit" transition.
+        //
+        // Disabled-schedule precedence (#27 vs #28): `isFreeTime` returns true
+        // when `!isEnabled`, but disabling blocking is semantically distinct
+        // from entering a free-time window. The R3 banner ("Free time started
+        // — your session ended.") would be wrong copy for that case. We still
+        // clear the session below (compute() yields .none, so the session is
+        // a stale state), but we report `.noSessionChange` so the caller routes
+        // through the silent disable-cancel path (#28's
+        // `cancelActiveSessionForDisable`) instead of the R3 banner.
+        var result: ScheduleTransitionResult = .noSessionChange
+        if log.activeSession != nil && snapshot.isFreeTime(at: now) {
+            logger.notice("refreshScheduleMonitoring: clearing session — schedule puts us in free-time at \(now, privacy: .public) (isEnabled=\(snapshot.isEnabled, privacy: .public))")
+            log.activeSession = nil
+            if snapshot.isEnabled {
+                result = .sessionTerminatedByFreeTime
+            }
+        }
+
         store.save(log)
 
         rescheduleBoundary(log: log, from: now)
@@ -89,6 +135,7 @@ struct ShieldEngine: Sendable {
         let config = compute(log, at: now)
         logger.notice("refreshScheduleMonitoring: applying \(String(describing: config), privacy: .public)")
         applier.apply(config, knownApps: log.knownApplicationTokens, knownDomains: log.knownWebDomainTokens)
+        return result
     }
 
     // MARK: - System-driven transitions
@@ -121,16 +168,42 @@ struct ShieldEngine: Sendable {
 
     /// Called by the DAM extension when a schedule-boundary `intervalDidStart`
     /// fires. Idempotent reapply + chain to the next boundary.
-    func handleScheduleTransition(now: Date = Date()) {
+    ///
+    /// R3 (#27) mutex: if a session is in the log and the snapshot says we're
+    /// in free-time at `now` (entry case) OR we just left a free-time window
+    /// within the last minute (exit case — covers a missed entry-fire), the
+    /// session is terminated and `.sessionTerminatedByFreeTime` is returned.
+    /// The lookback window (60s) is wider than the observed DAM fire slop
+    /// (2-9s on iOS 26.5) so the symmetric "exit" path catches genuinely
+    ///-stale sessions.
+    @discardableResult
+    func handleScheduleTransition(now: Date = Date()) -> ScheduleTransitionResult {
         DebugBreadcrumbs.record(.engineScheduleTransition)
         logger.notice("handleScheduleTransition called at \(now, privacy: .public)")
-        let log = store.load()
+        var log = store.load()
+
+        // Disabled snapshots short-circuit out of the R3 mutex path entirely
+        // (see refreshScheduleMonitoring for the rationale): free-time-by-disable
+        // is owned by the silent disable-cancel UX, not the R3 banner.
+        var result: ScheduleTransitionResult = .noSessionChange
+        if log.activeSession != nil,
+           let snapshot = log.weeklySchedule,
+           snapshot.isEnabled {
+            let lookback = now.addingTimeInterval(-60)
+            if snapshot.isFreeTime(at: now) || snapshot.isFreeTime(at: lookback) {
+                logger.notice("handleScheduleTransition: clearing session — free-time mutex triggered")
+                log.activeSession = nil
+                store.save(log)
+                result = .sessionTerminatedByFreeTime
+            }
+        }
 
         rescheduleBoundary(log: log, from: now)
 
         let config = compute(log, at: now)
         logger.notice("handleScheduleTransition: applying \(String(describing: config), privacy: .public)")
         applier.apply(config, knownApps: log.knownApplicationTokens, knownDomains: log.knownWebDomainTokens)
+        return result
     }
 
     /// Called by the main app on scenePhase → .active.

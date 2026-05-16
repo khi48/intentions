@@ -257,6 +257,35 @@ final class NotificationService: NSObject, Sendable {
         }
     }
 
+    /// Send immediate notification when an active session was terminated because
+    /// a free-time window started (R3, #27 — free-time and session are mutually
+    /// exclusive). Single-shot with a fixed identifier so repeated mutex fires
+    /// in the same window replace rather than stack.
+    func sendSessionTerminatedByFreeTimeNotification() async {
+        guard settings.isEnabled && isAuthorized else {
+            return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Session Ended"
+        content.body = "Free time started — your session ended."
+        content.sound = .default
+        content.categoryIdentifier = NotificationType.sessionCompletion.rawValue
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "session_terminated_by_freetime",
+            content: content,
+            trigger: trigger
+        )
+
+        do {
+            try await notificationCenter.add(request)
+        } catch {
+            Self.log.error("Failed to schedule session-terminated-by-free-time notification: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Notification Cancellation
 
     /// Cancel ALL pending session notifications for any session.
@@ -265,7 +294,12 @@ final class NotificationService: NSObject, Sendable {
         let pendingRequests = await notificationCenter.pendingNotificationRequests()
         let sessionIdentifiers = pendingRequests
             .map { $0.identifier }
-            .filter { $0.contains("session_warning_") || $0.contains("session_completion_") || $0.hasPrefix("session_expired") }
+            .filter {
+                $0.contains("session_warning_")
+                    || $0.contains("session_completion_")
+                    || $0.hasPrefix("session_expired")
+                    || $0 == "session_terminated_by_freetime"
+            }
 
         notificationCenter.removePendingNotificationRequests(withIdentifiers: sessionIdentifiers)
     }
@@ -281,10 +315,12 @@ final class NotificationService: NSObject, Sendable {
             .filter { id in
                 // Session-specific identifiers end with the session UUID (warnings
                 // also include a "_<N>min" suffix). Also sweep the generic
-                // "session_expired" fallback identifier to be safe.
+                // "session_expired" + "session_terminated_by_freetime" fallback
+                // identifiers to be safe.
                 id.contains("session_warning_\(sessionIdString)")
                     || id == "session_completion_\(sessionIdString)"
                     || id == "session_expired"
+                    || id == "session_terminated_by_freetime"
             }
 
         if !identifiers.isEmpty {

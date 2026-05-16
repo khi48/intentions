@@ -79,5 +79,10 @@ protocol ScreenTimeManaging: Sendable {
     /// (re-)register the next schedule-boundary DAM monitor, and re-apply the
     /// current shield config via `compute()`. Call on schedule edits and on
     /// scenePhase → .active.
-    func refreshSchedule(_ snapshot: ScheduleSnapshot) async
+    ///
+    /// Returns the engine's transition result so callers (ContentViewModel)
+    /// can react to mutex-driven session termination — e.g. fire the
+    /// "free time started — your session ended" banner (R3, #27).
+    @discardableResult
+    func refreshSchedule(_ snapshot: ScheduleSnapshot) async -> ScheduleTransitionResult
 }

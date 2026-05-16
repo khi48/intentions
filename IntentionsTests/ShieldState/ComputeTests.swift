@@ -38,16 +38,37 @@ final class ComputeTests: XCTestCase {
         XCTAssertEqual(returned, picks)
     }
 
-    func test_sessionActive_independentOfSchedule() {
+    // MARK: - Session vs free-time mutex (R3, #27)
+
+    func test_sessionActive_inFreeTime_returnsNone() {
+        // R3: free-time wins over session. An active session during a free-time
+        // window should NOT shield other apps — free-time means all apps free.
+        // ShieldEngine clears the in-log session on the actual transition; this
+        // test pins the compute() precedence.
         let picks = FamilyActivitySelection()
-        var freeLog = IntentLog(activeSession: session(endOffset: 300, apps: picks))
-        freeLog.weeklySchedule = snapshot(enabled: true, freeAllWeek: true)
+        var log = IntentLog(activeSession: session(endOffset: 300, apps: picks))
+        log.weeklySchedule = snapshot(enabled: true, freeAllWeek: true)
+        XCTAssertEqual(compute(log, at: t0.addingTimeInterval(100)), .none)
+    }
 
-        var blockedLog = IntentLog(activeSession: session(endOffset: 300, apps: picks))
-        blockedLog.weeklySchedule = snapshot(enabled: true, freeAllWeek: false)
+    func test_sessionActive_scheduleDisabled_returnsNone() {
+        // Schedule disabled ⇒ "blocking off" ⇒ all free. Session cannot
+        // override that — free-time wins.
+        let picks = FamilyActivitySelection()
+        var log = IntentLog(activeSession: session(endOffset: 300, apps: picks))
+        log.weeklySchedule = snapshot(enabled: false, freeAllWeek: false)
+        XCTAssertEqual(compute(log, at: t0.addingTimeInterval(100)), .none)
+    }
 
-        XCTAssertEqual(compute(freeLog,    at: t0.addingTimeInterval(100)),
-                       compute(blockedLog, at: t0.addingTimeInterval(100)))
+    func test_sessionActive_outsideFree_returnsAllExceptApps() {
+        // Session inside a blocking window — session is the correct precedence
+        // (free-time mutex only applies when the schedule is in free-time).
+        let picks = FamilyActivitySelection()
+        var log = IntentLog(activeSession: session(endOffset: 300, apps: picks))
+        log.weeklySchedule = snapshot(enabled: true, freeAllWeek: false)
+        guard case .allExcept = compute(log, at: t0.addingTimeInterval(100)) else {
+            return XCTFail("expected .allExcept — schedule is in blocking window so session wins")
+        }
     }
 
     // MARK: - Expiry boundary

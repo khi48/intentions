@@ -194,7 +194,22 @@ actor MockScreenTimeService: ScreenTimeManaging {
         print("Mock: clearAllShields — all shield entries flushed")
     }
 
-    func refreshSchedule(_ snapshot: ScheduleSnapshot) async {
+    func refreshSchedule(_ snapshot: ScheduleSnapshot) async -> ScheduleTransitionResult {
         print("Mock: refreshSchedule — isEnabled=\(snapshot.isEnabled) intervals=\(snapshot.intervals.count)")
+        // Mirror the engine's mutex check so tests that exercise the user-edit
+        // path (R3, #27) get the same transition-result signal as production.
+        // The mock proxy for "active session" is whether the mock session task
+        // is currently running.
+        //
+        // Disabled-schedule short-circuit (see ShieldEngine.refreshScheduleMonitoring):
+        // a disabled snapshot is "blocking off", not "entered free-time", and
+        // must NOT trip R3 — caller should route through #28's silent disable-cancel.
+        if mockSessionTask != nil && snapshot.isFreeTime(at: Date()) {
+            mockSessionTask?.cancel()
+            mockSessionTask = nil
+            mockCurrentlyAllowedApps.removeAll()
+            return snapshot.isEnabled ? .sessionTerminatedByFreeTime : .noSessionChange
+        }
+        return .noSessionChange
     }
 }
