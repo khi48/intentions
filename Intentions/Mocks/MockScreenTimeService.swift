@@ -200,11 +200,15 @@ actor MockScreenTimeService: ScreenTimeManaging {
         // path (R3, #27) get the same transition-result signal as production.
         // The mock proxy for "active session" is whether the mock session task
         // is currently running.
+        //
+        // Disabled-schedule short-circuit (see ShieldEngine.refreshScheduleMonitoring):
+        // a disabled snapshot is "blocking off", not "entered free-time", and
+        // must NOT trip R3 — caller should route through #28's silent disable-cancel.
         if mockSessionTask != nil && snapshot.isFreeTime(at: Date()) {
             mockSessionTask?.cancel()
             mockSessionTask = nil
             mockCurrentlyAllowedApps.removeAll()
-            return .sessionTerminatedByFreeTime
+            return snapshot.isEnabled ? .sessionTerminatedByFreeTime : .noSessionChange
         }
         return .noSessionChange
     }

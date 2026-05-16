@@ -110,11 +110,22 @@ struct ShieldEngine: Sendable {
         // session before persisting + applying. For user-edits we only check
         // the current moment (not the lookback) — the edit is a discrete
         // event and doesn't represent an "exit" transition.
+        //
+        // Disabled-schedule precedence (#27 vs #28): `isFreeTime` returns true
+        // when `!isEnabled`, but disabling blocking is semantically distinct
+        // from entering a free-time window. The R3 banner ("Free time started
+        // — your session ended.") would be wrong copy for that case. We still
+        // clear the session below (compute() yields .none, so the session is
+        // a stale state), but we report `.noSessionChange` so the caller routes
+        // through the silent disable-cancel path (#28's
+        // `cancelActiveSessionForDisable`) instead of the R3 banner.
         var result: ScheduleTransitionResult = .noSessionChange
         if log.activeSession != nil && snapshot.isFreeTime(at: now) {
-            logger.notice("refreshScheduleMonitoring: clearing session — schedule puts us in free-time at \(now, privacy: .public)")
+            logger.notice("refreshScheduleMonitoring: clearing session — schedule puts us in free-time at \(now, privacy: .public) (isEnabled=\(snapshot.isEnabled, privacy: .public))")
             log.activeSession = nil
-            result = .sessionTerminatedByFreeTime
+            if snapshot.isEnabled {
+                result = .sessionTerminatedByFreeTime
+            }
         }
 
         store.save(log)
@@ -171,8 +182,13 @@ struct ShieldEngine: Sendable {
         logger.notice("handleScheduleTransition called at \(now, privacy: .public)")
         var log = store.load()
 
+        // Disabled snapshots short-circuit out of the R3 mutex path entirely
+        // (see refreshScheduleMonitoring for the rationale): free-time-by-disable
+        // is owned by the silent disable-cancel UX, not the R3 banner.
         var result: ScheduleTransitionResult = .noSessionChange
-        if log.activeSession != nil, let snapshot = log.weeklySchedule {
+        if log.activeSession != nil,
+           let snapshot = log.weeklySchedule,
+           snapshot.isEnabled {
             let lookback = now.addingTimeInterval(-60)
             if snapshot.isFreeTime(at: now) || snapshot.isFreeTime(at: lookback) {
                 logger.notice("handleScheduleTransition: clearing session — free-time mutex triggered")

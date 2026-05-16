@@ -364,4 +364,59 @@ final class ShieldEngineTests: XCTestCase {
         XCTAssertNil(store.load().activeSession)
         XCTAssertEqual(applier.calls, [.none])
     }
+
+    // MARK: - Disabled-schedule precedence over R3 mutex (#27 collision with #28)
+    //
+    // `WeeklySchedule.isFreeTime(at:)` and `ScheduleSnapshot.isFreeTime(at:)`
+    // both return `true` when `!isEnabled` ("Blocking off ⇒ nothing blocked").
+    // That is correct for compute() but WRONG as an R3-mutex trigger:
+    // disabling blocking is semantically distinct from "entering a free-time
+    // window" and has its own UX — the user-facing reason is "you turned
+    // blocking off", not "free time started".
+    //
+    // The engine MUST NOT signal `.sessionTerminatedByFreeTime` when the
+    // snapshot has `isEnabled == false`. That signal exists exclusively for
+    // the R3 banner ("Free time started — your session ended."). The silent
+    // cancel for a disabled-blocking edit is owned by ContentViewModel's
+    // existing `cancelActiveSessionForDisable` path (#28).
+
+    func test_refreshScheduleMonitoring_disabledScheduleWithActiveSession_returnsNoChange() {
+        // Pre-existing session in log + user disables blocking → engine still
+        // clears the session (compute() puts us in `.none`, so the session is
+        // a stale state) but the RESULT must be `.noSessionChange` so the
+        // caller routes through the silent disable-cancel path, not the R3
+        // banner path.
+        var log = store.load()
+        log.weeklySchedule = makeBlockedAllWeekSnapshot()
+        store.save(log)
+
+        engine.startSession(apps: .init(), endsAt: t0.addingTimeInterval(600), now: t0)
+        applier.reset()
+
+        // User saves a disabled schedule.
+        let result = engine.refreshScheduleMonitoring(makeDisabledSnapshot(), now: t0.addingTimeInterval(60))
+
+        XCTAssertEqual(result, .noSessionChange,
+                       "disabling blocking is not an R3 free-time event — caller must route to silent cancel")
+        XCTAssertEqual(applier.calls, [.none], "disabled schedule yields .none from compute()")
+    }
+
+    func test_handleScheduleTransition_disabledScheduleWithActiveSession_returnsNoChange() {
+        // DAM-path symmetry: if the persisted snapshot is disabled and somehow
+        // a session lingered, the boundary fire must NOT report
+        // `.sessionTerminatedByFreeTime`. Disabled snapshots can't even
+        // schedule a boundary in production (nextBoundary returns nil), but the
+        // engine is the layer that owns the rule — we lock it down here so a
+        // future caller that synthesises this state can't leak the banner.
+        var log = store.load()
+        log.weeklySchedule = makeDisabledSnapshot()
+        store.save(log)
+        injectActiveSession(endsAt: t0.addingTimeInterval(600))
+        applier.reset()
+
+        let result = engine.handleScheduleTransition(now: t0.addingTimeInterval(60))
+
+        XCTAssertEqual(result, .noSessionChange,
+                       "disabled schedule must never trip the R3 mutex signal")
+    }
 }

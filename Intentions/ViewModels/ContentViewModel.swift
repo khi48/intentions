@@ -300,12 +300,15 @@ final class ContentViewModel: Sendable {
         // R3 (#27): if the engine terminated the session because the new
         // schedule creates a free-time overlap at `now`, tear down the in-app
         // session state to match (the engine already cleared the log half)
-        // and notify the user with the free-time copy. Disabled-schedule case
-        // ALSO trips the engine mutex (a disabled ScheduleSnapshot has
-        // isFreeTime == true), but the user-facing reason is different —
-        // route it through the silent #28 disable-cancel path instead.
+        // and notify the user with the free-time copy.
+        //
+        // Engine guarantees `.sessionTerminatedByFreeTime` is only returned
+        // when the snapshot is enabled (see ShieldEngine.refreshScheduleMonitoring).
+        // The disabled-schedule case (`!schedule.isEnabled`) is routed through
+        // the silent #28 disable-cancel path below, regardless of what the
+        // engine returned — its UX copy is "you turned blocking off", not
+        // "free time started".
         if transition == .sessionTerminatedByFreeTime,
-           schedule.isEnabled,
            let session = activeSession, session.isActive {
             await handleSessionTerminatedByFreeTime(session: session)
         }
