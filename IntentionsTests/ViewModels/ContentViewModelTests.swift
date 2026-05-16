@@ -378,6 +378,91 @@ final class ContentViewModelTests: XCTestCase {
         )
     }
 
+    // MARK: - Free-time mutex Tests (#27)
+
+    /// Build a WeeklySchedule whose single free-time interval covers the entire
+    /// week — so `isFreeTime(at: Date())` is always true.
+    @MainActor
+    private func makeAlwaysFreeSchedule() -> WeeklySchedule {
+        let schedule = WeeklySchedule()
+        schedule.isEnabled = true
+        schedule.intervals = [
+            FreeTimeInterval(
+                id: UUID(),
+                startMinuteOfWeek: 0,
+                durationMinutes: FreeTimeInterval.minutesPerWeek - 1
+            )
+        ]
+        return schedule
+    }
+
+    @MainActor
+    func testCanStartSessionFalseWhenInFreeTime() async throws {
+        // Given - schedule enabled, all-week free-time window (we are always in free-time)
+        try createViewModel()
+        await mockScreenTimeService.setMockAuthorizationStatus(.approved)
+        await viewModel.initializeApp()
+
+        let schedule = makeAlwaysFreeSchedule()
+        try await mockDataService.saveWeeklySchedule(schedule)
+        await viewModel.updateWeeklySchedule(schedule)
+
+        // Then - guard refuses, caption is the free-time copy
+        XCTAssertFalse(viewModel.canStartSession, "expected canStartSession false during free-time")
+        XCTAssertEqual(
+            viewModel.cannotStartReason,
+            "All apps are unlocked during free time."
+        )
+    }
+
+    @MainActor
+    func testStartSessionRefusedWhenInFreeTime() async throws {
+        // Given - in a free-time window, no active session
+        try createViewModel()
+        await mockScreenTimeService.setMockAuthorizationStatus(.approved)
+        await viewModel.initializeApp()
+
+        let schedule = makeAlwaysFreeSchedule()
+        try await mockDataService.saveWeeklySchedule(schedule)
+        await viewModel.updateWeeklySchedule(schedule)
+
+        let testSession = try IntentionSession(appGroups: [], applications: [], duration: 1800)
+
+        // When - user attempts to start a session
+        await viewModel.startSession(testSession)
+
+        // Then - guard refused; no session and nothing persisted
+        XCTAssertNil(viewModel.activeSession, "startSession must early-return in free-time")
+        let savedSessions = try await mockDataService.loadIntentionSessions()
+        XCTAssertTrue(savedSessions.isEmpty, "no session should be persisted when guard refused")
+    }
+
+    @MainActor
+    func testActiveSessionClearedWhenScheduleEditCreatesFreeTimeOverlap() async throws {
+        // Given - active session running, no free-time at edit time
+        try createViewModel()
+        await mockScreenTimeService.setMockAuthorizationStatus(.approved)
+        await viewModel.initializeApp()
+
+        let blockingSchedule = WeeklySchedule()
+        blockingSchedule.isEnabled = true
+        blockingSchedule.intervals = [] // never free
+        try await mockDataService.saveWeeklySchedule(blockingSchedule)
+        await viewModel.updateWeeklySchedule(blockingSchedule)
+
+        let testSession = try IntentionSession(appGroups: [], applications: [], duration: 1800)
+        await viewModel.startSession(testSession)
+        XCTAssertNotNil(viewModel.activeSession, "precondition: session should be active before the edit")
+
+        // When - user saves a new schedule that puts us in free-time at now
+        let freeSchedule = makeAlwaysFreeSchedule()
+        try await mockDataService.saveWeeklySchedule(freeSchedule)
+        await viewModel.updateWeeklySchedule(freeSchedule)
+
+        // Then - session terminated by mutex (Q3, R3 symmetry)
+        XCTAssertNil(viewModel.activeSession, "session must be cleared when retroactive overlap is created")
+    }
+
     // MARK: - Schedule Update Tests
 
     @MainActor

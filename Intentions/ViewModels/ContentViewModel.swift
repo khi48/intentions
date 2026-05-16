@@ -277,7 +277,7 @@ final class ContentViewModel: Sendable {
         // Push fresh snapshot to ShieldEngine — persists in IntentLog,
         // re-registers next schedule-boundary DAM monitor, re-applies shield.
         let snapshot = schedule.snapshot()
-        await screenTimeService.refreshSchedule(snapshot)
+        let transition = await screenTimeService.refreshSchedule(snapshot)
 
         // Verify the engine actually persisted the snapshot. If not, the
         // edit-flow has silently lost the user's change; surface it.
@@ -296,6 +296,19 @@ final class ContentViewModel: Sendable {
             .weeklyScheduleVerified,
             note: "ok enabled=\(snapshot.isEnabled) intervals=\(snapshot.intervals.count)"
         )
+
+        // R3 (#27): if the engine terminated the session because the new
+        // schedule creates a free-time overlap at `now`, tear down the in-app
+        // session state to match (the engine already cleared the log half)
+        // and notify the user with the free-time copy. Disabled-schedule case
+        // ALSO trips the engine mutex (a disabled ScheduleSnapshot has
+        // isFreeTime == true), but the user-facing reason is different —
+        // route it through the silent #28 disable-cancel path instead.
+        if transition == .sessionTerminatedByFreeTime,
+           schedule.isEnabled,
+           let session = activeSession, session.isActive {
+            await handleSessionTerminatedByFreeTime(session: session)
+        }
 
         // If blocking was disabled and there's an active session, cancel it —
         // session exists to manage blocking, so no blocking means no session.
@@ -361,21 +374,24 @@ final class ContentViewModel: Sendable {
     
     // MARK: - Session Management
 
-    // MARK: Session Start Guard (#28)
+    // MARK: Session Start Guard (#28, #27)
     //
-    // Preventive guard that blocks session start when blocking is off entirely.
-    // The reactive cancel-on-disable path (`cancelActiveSessionForDisable`) is
-    // the safety net for "user disables blocking while a session is running" —
-    // this guard prevents the inverse "user starts a session while blocking is
-    // already disabled," which would create a session that has nothing to
-    // manage. #27 will extend this to also refuse during free-time intervals.
+    // Preventive guard that blocks session start when the user couldn't actually
+    // benefit from one. Two preconditions, both surfaced as a caption on the
+    // disabled session-start affordance:
+    //   (#28) Blocking disabled — "Blocking off" means nothing to manage.
+    //   (#27) Currently in a free-time window — R3 makes free-time and session
+    //         mutually exclusive; starting one would be immediately overridden
+    //         by free-time precedence in `compute()`.
+    // The reactive cancel-on-disable path (`cancelActiveSessionForDisable`) and
+    // the engine's mutex (terminates the session on free-time entry, surfaced
+    // through `ScheduleTransitionResult.sessionTerminatedByFreeTime`) are the
+    // matching safety nets for the inverse direction (state already running,
+    // now violated).
 
     /// Whether the user is currently allowed to start a new intention session.
-    /// Returns false when the weekly schedule is disabled (all apps unlocked).
     var canStartSession: Bool {
-        // For #28 only the `isEnabled` branch is enforced.
-        // After #27 lands, this also checks `!weeklySchedule.isFreeTime(at: Date())`.
-        weeklySchedule.isEnabled
+        cannotStartReason == nil
     }
 
     /// Human-readable reason why a session cannot be started, or nil when it can.
@@ -384,10 +400,9 @@ final class ContentViewModel: Sendable {
         if !weeklySchedule.isEnabled {
             return "All apps are unlocked — turn blocking on to start a session."
         }
-        // #27 adds the free-time branch here:
-        // if weeklySchedule.isFreeTime(at: Date()) {
-        //     return "All apps are unlocked during free time."
-        // }
+        if weeklySchedule.isFreeTime(at: Date()) {
+            return "All apps are unlocked during free time."
+        }
         return nil
     }
 
@@ -493,6 +508,25 @@ final class ContentViewModel: Sendable {
         session.cancel()
         try? await dataService.saveIntentionSession(session)
         await teardownSessionState()
+    }
+
+    /// Tear down session state after the ShieldEngine mutex (R3, #27) terminated
+    /// the active session because a free-time window started. Mirrors
+    /// `cancelActiveSessionForDisable` but fires the user-facing banner
+    /// ("Free time started — your session ended.") so the user knows why their
+    /// session ended.
+    private func handleSessionTerminatedByFreeTime(session: IntentionSession) async {
+        let sessionId = session.id
+        logger.notice("🛑 handleSessionTerminatedByFreeTime: session \(sessionId) cleared by free-time mutex")
+        // Cancel pending session notifications BEFORE mutating state so the
+        // pre-scheduled completion trigger cannot leak in the racing window.
+        await NotificationService.shared.cancelAllSessionNotifications(sessionId: sessionId)
+        await screenTimeService.cancelSessionTimers()
+        session.cancel()
+        try? await dataService.saveIntentionSession(session)
+        await teardownSessionState()
+        // Notify the user — single-shot, fixed identifier.
+        await NotificationService.shared.sendSessionTerminatedByFreeTimeNotification()
     }
 
     // MARK: - Session Teardown Helpers
