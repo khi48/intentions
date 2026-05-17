@@ -140,7 +140,7 @@ struct SettingsView: View {
                     case .greyscale:
                         GreyscaleGuideView()
                     case .scheduleEditor:
-                        WeekScheduleEditorView(
+                        RoutinesView(
                             schedule: viewModel.weeklySchedule,
                             isReadOnly: viewModel.weeklySchedule.isEnabled,
                             onSave: { updated in
@@ -148,7 +148,6 @@ struct SettingsView: View {
                                     await viewModel.updateSchedule(updated)
                                     await onScheduleSettingsChanged?(updated)
                                 }
-                                navigationManager.resetSettingsNavigation()
                             }
                         )
                     case .intentionQuote:

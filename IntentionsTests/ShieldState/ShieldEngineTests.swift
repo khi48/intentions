@@ -17,21 +17,27 @@ final class ShieldEngineTests: XCTestCase {
     }
 
     private func makeFreeAllWeekSnapshot() -> ScheduleSnapshot {
-        // One interval covering the whole week.
+        // One routine on every weekday, full day → always free.
         ScheduleSnapshot(
             isEnabled: true,
-            intervals: [.init(startMinuteOfWeek: 0, durationMinutes: ScheduleSnapshot.minutesPerWeek)],
+            routines: [
+                .init(
+                    startMinute: 0,
+                    durationMinutes: ScheduleSnapshot.minutesPerDay,
+                    days: Set(Weekday.allCases)
+                )
+            ],
             timeZoneIdentifier: TimeZone(identifier: "UTC")!.identifier
         )
     }
 
     private func makeBlockedAllWeekSnapshot() -> ScheduleSnapshot {
-        // Enabled but with no intervals → never free.
-        ScheduleSnapshot(isEnabled: true, intervals: [], timeZoneIdentifier: TimeZone(identifier: "UTC")!.identifier)
+        // Enabled but with no routines → never free.
+        ScheduleSnapshot(isEnabled: true, routines: [], timeZoneIdentifier: TimeZone(identifier: "UTC")!.identifier)
     }
 
     private func makeDisabledSnapshot() -> ScheduleSnapshot {
-        ScheduleSnapshot(isEnabled: false, intervals: [], timeZoneIdentifier: "UTC")
+        ScheduleSnapshot(isEnabled: false, routines: [], timeZoneIdentifier: "UTC")
     }
 
     // MARK: - Start session
@@ -255,21 +261,21 @@ final class ShieldEngineTests: XCTestCase {
     /// interval relative to t0. Used so the engine's lookback probe sees a
     /// real free↔blocking boundary at `now`.
     private func snapshotFree(fromOffset: TimeInterval, durationSec: TimeInterval) -> ScheduleSnapshot {
-        // ScheduleSnapshot intervals are minute-of-week — derive that for t0.
-        // t0 = 1_700_000_000 = 2023-11-14 22:13:20 UTC (Tuesday).
-        // Compute MoW at t0 + fromOffset.
+        // Routines are single-day, so derive (weekday, minute-of-day) at
+        // t0 + fromOffset and clamp the duration so it doesn't cross midnight.
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
         let date = t0.addingTimeInterval(fromOffset)
-        let wd = cal.component(.weekday, from: date)
-        // Foundation Sun=1..Sat=7 → Mon=0..Sun=6
-        let mondayZero = (wd == 1) ? 6 : wd - 2
+        let calendarWeekday = cal.component(.weekday, from: date)
+        let weekday = Weekday.from(calendarWeekday: calendarWeekday)
         let h = cal.component(.hour, from: date)
         let m = cal.component(.minute, from: date)
-        let startMoW = mondayZero * ScheduleSnapshot.minutesPerDay + h * 60 + m
+        let startMinute = h * 60 + m
+        let maxDuration = ScheduleSnapshot.minutesPerDay - startMinute
+        let duration = min(Int(durationSec / 60), maxDuration)
         return ScheduleSnapshot(
             isEnabled: true,
-            intervals: [.init(startMinuteOfWeek: startMoW, durationMinutes: Int(durationSec / 60))],
+            routines: [.init(startMinute: startMinute, durationMinutes: duration, days: [weekday])],
             timeZoneIdentifier: "UTC"
         )
     }
@@ -294,11 +300,7 @@ final class ShieldEngineTests: XCTestCase {
     func test_handleScheduleTransition_exitsFreeTimeWithActiveSession_clearsSessionReturnsTerminated() {
         // Mutex is symmetric: exiting free-time also terminates an in-log
         // session. Engine detects "just left free-time" by probing the snapshot
-        // a minute before `now`. Construct: free 22:00–22:30 UTC (covers t0
-        // through t0+1000s), then fire transition at t0+1900s (exit was at
-        // t0+1000s; 60s lookback catches sessions left over from a missed
-        // entry-fire — but we test farther out to ensure the simpler "fired
-        // post-exit" still terminates).
+        // a minute before `now`.
         //
         // For this test we use an exact free-window so isFreeTime(now - 60s)
         // is true while isFreeTime(now) is false.

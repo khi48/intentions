@@ -8,42 +8,74 @@ final class WeeklyScheduleTests: XCTestCase {
 
     /// 2024-01-01 is a Monday — offsets from there give deterministic weekdays.
     private func date(weekday: Weekday, hour: Int, minute: Int = 0) -> Date {
-        let offset = FreeTimeInterval.mondayDayIndex(for: weekday)
+        let offset = Self.mondayDayIndex(for: weekday)
         let calendar = Calendar.current
         let monday = calendar.date(from: DateComponents(year: 2024, month: 1, day: 1))!
         let day = calendar.date(byAdding: .day, value: offset, to: monday)!
         return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)!
     }
 
-    private func interval(start day: Weekday, _ hour: Int, duration minutes: Int) -> FreeTimeInterval {
-        let mow = FreeTimeInterval.mondayDayIndex(for: day) * 1440 + hour * 60
-        return FreeTimeInterval(id: UUID(), startMinuteOfWeek: mow, durationMinutes: minutes)
+    /// 0 = Monday … 6 = Sunday. Used to advance a calendar-anchored Monday into
+    /// the correct test weekday.
+    private static func mondayDayIndex(for weekday: Weekday) -> Int {
+        switch weekday {
+        case .monday: return 0
+        case .tuesday: return 1
+        case .wednesday: return 2
+        case .thursday: return 3
+        case .friday: return 4
+        case .saturday: return 5
+        case .sunday: return 6
+        }
+    }
+
+    /// Build a single-day routine on the given weekdays, starting at `startHour:00`
+    /// for `durationMinutes` minutes. Single-day only — duration may not cross
+    /// midnight in the new model.
+    private func routine(
+        days: Set<Weekday>,
+        startHour: Int,
+        durationMinutes: Int
+    ) -> FreeTimeRoutine {
+        FreeTimeRoutine(
+            id: UUID(),
+            name: nil,
+            startMinute: startHour * 60,
+            durationMinutes: durationMinutes,
+            days: days,
+            sortIndex: 0
+        )
     }
 
     // MARK: - isFreeTime
 
-    func testIsFreeTimeWithSingleWeekdayInterval() {
+    func testIsFreeTimeWithSingleWeekdayRoutine() {
         let schedule = WeeklySchedule()
-        schedule.intervals = [interval(start: .monday, 9, duration: 8 * 60)] // Mon 09:00-17:00
+        schedule.routines = [routine(days: [.monday], startHour: 9, durationMinutes: 8 * 60)] // Mon 09:00-17:00
 
         XCTAssertTrue(schedule.isFreeTime(at: date(weekday: .monday, hour: 10)))
         XCTAssertFalse(schedule.isFreeTime(at: date(weekday: .monday, hour: 18)))
         XCTAssertFalse(schedule.isFreeTime(at: date(weekday: .tuesday, hour: 10)))
     }
 
-    func testIsFreeTimeWithWrappingInterval() {
+    func testIsFreeTimeAcrossMultipleDays() {
+        // A single routine with multiple weekdays is the new model's replacement
+        // for what used to require multiple intervals.
         let schedule = WeeklySchedule()
-        // Fri 22:00 → Sat 02:00
-        schedule.intervals = [interval(start: .friday, 22, duration: 4 * 60)]
+        schedule.routines = [
+            routine(days: [.monday, .wednesday, .friday], startHour: 9, durationMinutes: 8 * 60)
+        ]
 
-        XCTAssertTrue(schedule.isFreeTime(at: date(weekday: .friday, hour: 23)))
-        XCTAssertTrue(schedule.isFreeTime(at: date(weekday: .saturday, hour: 1)))
-        XCTAssertFalse(schedule.isFreeTime(at: date(weekday: .saturday, hour: 3)))
+        XCTAssertTrue(schedule.isFreeTime(at: date(weekday: .monday, hour: 10)))
+        XCTAssertTrue(schedule.isFreeTime(at: date(weekday: .wednesday, hour: 10)))
+        XCTAssertTrue(schedule.isFreeTime(at: date(weekday: .friday, hour: 10)))
+        XCTAssertFalse(schedule.isFreeTime(at: date(weekday: .tuesday, hour: 10)))
+        XCTAssertFalse(schedule.isFreeTime(at: date(weekday: .saturday, hour: 10)))
     }
 
     func testIsFreeTimeWhenDisabled() {
         let schedule = WeeklySchedule()
-        schedule.intervals = [interval(start: .monday, 0, duration: 10080)] // all week
+        schedule.routines = [routine(days: Set(Weekday.allCases), startHour: 0, durationMinutes: FreeTimeRoutine.minutesPerDay)]
         schedule.isEnabled = false
 
         // Disabled schedule means blocking is off entirely — treat as "always free"
@@ -54,7 +86,7 @@ final class WeeklyScheduleTests: XCTestCase {
 
     func testIsBlockingIsInverseOfIsFreeTimeWhenEnabled() {
         let schedule = WeeklySchedule()
-        schedule.intervals = [interval(start: .monday, 9, duration: 8 * 60)]
+        schedule.routines = [routine(days: [.monday], startHour: 9, durationMinutes: 8 * 60)]
 
         XCTAssertFalse(schedule.isBlocking(at: date(weekday: .monday, hour: 10)))
         XCTAssertTrue(schedule.isBlocking(at: date(weekday: .monday, hour: 18)))
@@ -63,7 +95,7 @@ final class WeeklyScheduleTests: XCTestCase {
     func testIsBlockingWhenDisabled() {
         let schedule = WeeklySchedule()
         schedule.isEnabled = false
-        schedule.intervals = []
+        schedule.routines = []
         XCTAssertFalse(schedule.isBlocking(at: date(weekday: .monday, hour: 10)))
     }
 
@@ -71,7 +103,7 @@ final class WeeklyScheduleTests: XCTestCase {
 
     func testProtectedMinutesDaytimeWindow() {
         let schedule = WeeklySchedule()
-        schedule.intervals = [interval(start: .monday, 9, duration: 8 * 60)] // Mon 09-17
+        schedule.routines = [routine(days: [.monday], startHour: 9, durationMinutes: 8 * 60)] // Mon 09-17
 
         // Mon 20:00: 9h blocked morning + 3h blocked evening = 12h = 720
         XCTAssertEqual(schedule.protectedMinutes(at: date(weekday: .monday, hour: 20)), 12 * 60)
@@ -83,25 +115,25 @@ final class WeeklyScheduleTests: XCTestCase {
 
     func testProtectedMinutesOnDayWithNoFreeTime() {
         let schedule = WeeklySchedule()
-        schedule.intervals = [interval(start: .monday, 9, duration: 8 * 60)]
+        schedule.routines = [routine(days: [.monday], startHour: 9, durationMinutes: 8 * 60)]
         // Tuesday has no free time → entire elapsed day is blocked
         XCTAssertEqual(schedule.protectedMinutes(at: date(weekday: .tuesday, hour: 12)), 12 * 60)
     }
 
     // MARK: - nextBoundary
 
-    func testNextBoundaryReturnsStartOfNextInterval() {
+    func testNextBoundaryReturnsStartOfNextRoutine() {
         let schedule = WeeklySchedule()
-        schedule.intervals = [interval(start: .monday, 9, duration: 8 * 60)] // Mon 09-17
+        schedule.routines = [routine(days: [.monday], startHour: 9, durationMinutes: 8 * 60)] // Mon 09-17
 
         let now = date(weekday: .monday, hour: 8)
         let next = schedule.nextBoundary(after: now)
         XCTAssertEqual(next, date(weekday: .monday, hour: 9))
     }
 
-    func testNextBoundaryReturnsEndOfCurrentInterval() {
+    func testNextBoundaryReturnsEndOfCurrentRoutine() {
         let schedule = WeeklySchedule()
-        schedule.intervals = [interval(start: .monday, 9, duration: 8 * 60)]
+        schedule.routines = [routine(days: [.monday], startHour: 9, durationMinutes: 8 * 60)]
 
         let now = date(weekday: .monday, hour: 12)
         let next = schedule.nextBoundary(after: now)
@@ -110,7 +142,7 @@ final class WeeklyScheduleTests: XCTestCase {
 
     func testNextBoundaryWrapsToFollowingWeek() {
         let schedule = WeeklySchedule()
-        schedule.intervals = [interval(start: .monday, 9, duration: 8 * 60)]
+        schedule.routines = [routine(days: [.monday], startHour: 9, durationMinutes: 8 * 60)]
 
         // Sun 20:00: no boundary left this week after this moment; wrap to next Mon 09:00
         let now = date(weekday: .sunday, hour: 20)
@@ -125,7 +157,7 @@ final class WeeklyScheduleTests: XCTestCase {
     func testNextBoundaryReturnsNilWhenDisabled() {
         let schedule = WeeklySchedule()
         schedule.isEnabled = false
-        schedule.intervals = [interval(start: .monday, 9, duration: 8 * 60)]
+        schedule.routines = [routine(days: [.monday], startHour: 9, durationMinutes: 8 * 60)]
         XCTAssertNil(schedule.nextBoundary(after: date(weekday: .monday, hour: 10)))
     }
 
@@ -133,15 +165,15 @@ final class WeeklyScheduleTests: XCTestCase {
 
     func testCodableRoundTrip() throws {
         let original = WeeklySchedule()
-        original.intervals = [
-            interval(start: .monday, 9, duration: 8 * 60),
-            interval(start: .friday, 22, duration: 4 * 60)
+        original.routines = [
+            routine(days: [.monday], startHour: 9, durationMinutes: 8 * 60),
+            routine(days: [.friday], startHour: 22, durationMinutes: 2 * 60)
         ]
         original.intentionQuote = "Test"
 
         let data = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(WeeklySchedule.self, from: data)
-        XCTAssertEqual(decoded.intervals.count, 2)
+        XCTAssertEqual(decoded.routines.count, 2)
         XCTAssertEqual(decoded.intentionQuote, "Test")
         XCTAssertEqual(decoded.isEnabled, true)
     }

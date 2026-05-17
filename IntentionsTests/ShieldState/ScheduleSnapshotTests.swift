@@ -14,25 +14,44 @@ final class ScheduleSnapshotTests: XCTestCase {
         return Calendar(identifier: .gregorian).date(from: c)!
     }
 
+    /// Convenience: a routine with one weekday.
+    private func routine(
+        startMinute: Int,
+        durationMinutes: Int,
+        days: Set<Weekday>
+    ) -> ScheduleSnapshot.Routine {
+        ScheduleSnapshot.Routine(startMinute: startMinute, durationMinutes: durationMinutes, days: days)
+    }
+
+    /// Convenience: a routine covering every weekday for the full day. Closest
+    /// "free all week" analog in the routine model.
+    private func allWeekFreeRoutine() -> ScheduleSnapshot.Routine {
+        ScheduleSnapshot.Routine(
+            startMinute: 0,
+            durationMinutes: ScheduleSnapshot.minutesPerDay,
+            days: Set(Weekday.allCases)
+        )
+    }
+
     // MARK: - isFreeTime / isBlocking
 
     func test_disabledSchedule_isBlockingFalse_isFreeTimeTrue() {
-        let snap = ScheduleSnapshot(isEnabled: false, intervals: [], timeZoneIdentifier: utc.identifier)
+        let snap = ScheduleSnapshot(isEnabled: false, routines: [], timeZoneIdentifier: utc.identifier)
         let now = mondayMidnightUTC()
         XCTAssertFalse(snap.isBlocking(at: now))
         XCTAssertTrue(snap.isFreeTime(at: now))
     }
 
-    func test_enabledNoIntervals_isAlwaysBlocking() {
-        let snap = ScheduleSnapshot(isEnabled: true, intervals: [], timeZoneIdentifier: utc.identifier)
+    func test_enabledNoRoutines_isAlwaysBlocking() {
+        let snap = ScheduleSnapshot(isEnabled: true, routines: [], timeZoneIdentifier: utc.identifier)
         XCTAssertTrue(snap.isBlocking(at: mondayMidnightUTC()))
     }
 
-    func test_singleMondayMorningInterval_isFreeOnlyDuringWindow() {
+    func test_singleMondayMorningRoutine_isFreeOnlyDuringWindow() {
         // Free 09:00–11:00 Monday only.
         let snap = ScheduleSnapshot(
             isEnabled: true,
-            intervals: [.init(startMinuteOfWeek: 9 * 60, durationMinutes: 120)],
+            routines: [routine(startMinute: 9 * 60, durationMinutes: 120, days: [.monday])],
             timeZoneIdentifier: utc.identifier
         )
         let monday = mondayMidnightUTC()
@@ -47,19 +66,19 @@ final class ScheduleSnapshotTests: XCTestCase {
     // MARK: - nextBoundary
 
     func test_nextBoundary_disabled_returnsNil() {
-        let snap = ScheduleSnapshot(isEnabled: false, intervals: [], timeZoneIdentifier: utc.identifier)
+        let snap = ScheduleSnapshot(isEnabled: false, routines: [], timeZoneIdentifier: utc.identifier)
         XCTAssertNil(snap.nextBoundary(after: mondayMidnightUTC()))
     }
 
     func test_nextBoundary_alwaysBlocking_returnsNil() {
-        let snap = ScheduleSnapshot(isEnabled: true, intervals: [], timeZoneIdentifier: utc.identifier)
+        let snap = ScheduleSnapshot(isEnabled: true, routines: [], timeZoneIdentifier: utc.identifier)
         XCTAssertNil(snap.nextBoundary(after: mondayMidnightUTC()))
     }
 
     func test_nextBoundary_alwaysFree_returnsNil() {
         let snap = ScheduleSnapshot(
             isEnabled: true,
-            intervals: [.init(startMinuteOfWeek: 0, durationMinutes: ScheduleSnapshot.minutesPerWeek)],
+            routines: [allWeekFreeRoutine()],
             timeZoneIdentifier: utc.identifier
         )
         XCTAssertNil(snap.nextBoundary(after: mondayMidnightUTC()))
@@ -69,7 +88,7 @@ final class ScheduleSnapshotTests: XCTestCase {
         // Free 09:00–11:00 Monday only. From 08:00 Monday, next boundary is 09:00 Mon.
         let snap = ScheduleSnapshot(
             isEnabled: true,
-            intervals: [.init(startMinuteOfWeek: 9 * 60, durationMinutes: 120)],
+            routines: [routine(startMinute: 9 * 60, durationMinutes: 120, days: [.monday])],
             timeZoneIdentifier: utc.identifier
         )
         let monday = mondayMidnightUTC()
@@ -82,7 +101,7 @@ final class ScheduleSnapshotTests: XCTestCase {
         // From 10:00 Monday during a 09:00–11:00 free window, next boundary = 11:00.
         let snap = ScheduleSnapshot(
             isEnabled: true,
-            intervals: [.init(startMinuteOfWeek: 9 * 60, durationMinutes: 120)],
+            routines: [routine(startMinute: 9 * 60, durationMinutes: 120, days: [.monday])],
             timeZoneIdentifier: utc.identifier
         )
         let monday = mondayMidnightUTC()
@@ -91,13 +110,12 @@ final class ScheduleSnapshotTests: XCTestCase {
         XCTAssertEqual(snap.nextBoundary(after: from), expected)
     }
 
-    func test_nextBoundary_skipsToNextWeekIfNoIntervalThisWeek() {
-        // Free only on Sunday 10:00–11:00. From Sunday 12:00, boundary is next Monday's
-        // schedule — actually the window itself the following Sunday.
-        let sundayMOW = 6 * ScheduleSnapshot.minutesPerDay + 10 * 60
+    func test_nextBoundary_skipsToNextWeekIfNoRoutineUntilThen() {
+        // Free only on Sunday 10:00–11:00. From Sunday 12:00, boundary is the
+        // same window the following Sunday.
         let snap = ScheduleSnapshot(
             isEnabled: true,
-            intervals: [.init(startMinuteOfWeek: sundayMOW, durationMinutes: 60)],
+            routines: [routine(startMinute: 10 * 60, durationMinutes: 60, days: [.sunday])],
             timeZoneIdentifier: utc.identifier
         )
         let monday = mondayMidnightUTC()

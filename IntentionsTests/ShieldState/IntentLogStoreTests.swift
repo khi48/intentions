@@ -27,21 +27,28 @@ final class IntentLogStoreTests: XCTestCase {
         var log = IntentLog.empty
         log.weeklySchedule = ScheduleSnapshot(
             isEnabled: true,
-            intervals: [.init(startMinuteOfWeek: 0, durationMinutes: 60)],
+            routines: [
+                .init(startMinute: 9 * 60, durationMinutes: 60, days: [.monday]),
+                .init(startMinute: 14 * 60, durationMinutes: 90, days: [.tuesday, .thursday])
+            ],
             timeZoneIdentifier: "UTC"
         )
         store.save(log)
 
         let reloaded = store.load()
         XCTAssertEqual(reloaded.weeklySchedule?.isEnabled, true)
-        XCTAssertEqual(reloaded.weeklySchedule?.intervals.count, 1)
+        XCTAssertEqual(reloaded.weeklySchedule?.routines.count, 2)
+        XCTAssertEqual(reloaded.weeklySchedule?.routines.first?.startMinute, 9 * 60)
+        XCTAssertEqual(reloaded.weeklySchedule?.routines.first?.durationMinutes, 60)
+        XCTAssertEqual(reloaded.weeklySchedule?.routines.first?.days, [.monday])
+        XCTAssertEqual(reloaded.weeklySchedule?.routines.last?.days, [.tuesday, .thursday])
         XCTAssertNil(reloaded.activeSession)
     }
 
     func test_freshInstancePerRead_avoidsStaleCache() {
         let writer = IntentLogStore(suiteName: testSuiteName)
         var log = IntentLog.empty
-        log.weeklySchedule = ScheduleSnapshot(isEnabled: true, intervals: [], timeZoneIdentifier: "UTC")
+        log.weeklySchedule = ScheduleSnapshot(isEnabled: true, routines: [], timeZoneIdentifier: "UTC")
         writer.save(log)
 
         let reader = IntentLogStore(suiteName: testSuiteName)

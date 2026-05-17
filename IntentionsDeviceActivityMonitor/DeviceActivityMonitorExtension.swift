@@ -31,6 +31,10 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         }
         if DAMScheduler.isScheduleBoundaryActivity(activity) {
             logger.notice("intervalDidStart: schedule boundary")
+            // handleScheduleTransition → rescheduleBoundary → scheduleNextBoundary
+            // cancels the current boundary activity first then registers the next.
+            // That kills the [intervalStart, intervalEnd] window so iOS can't
+            // replay intervalDidStart on subsequent ext relaunches.
             ShieldEngine.damExtension().handleScheduleTransition()
             return
         }

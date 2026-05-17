@@ -493,7 +493,7 @@ final class NotificationService: NSObject, Sendable {
 
         let requests = Self.freeTimeNotificationRequests(
             isScheduleEnabled: schedule.isEnabled,
-            intervals: schedule.intervals,
+            routines: schedule.routines,
             timeZone: schedule.timeZone,
             settings: settings
         )
@@ -507,7 +507,7 @@ final class NotificationService: NSObject, Sendable {
         }
 
         if !requests.isEmpty {
-            Self.log.info("Scheduled \(requests.count) free-time notifications across \(schedule.intervals.count) intervals")
+            Self.log.info("Scheduled \(requests.count) free-time notifications across \(schedule.routines.count) routines")
         }
     }
 
@@ -531,24 +531,25 @@ final class NotificationService: NSObject, Sendable {
     /// Inputs are value types; no UNUserNotificationCenter contact. The returned
     /// `UNNotificationRequest`s use `UNCalendarNotificationTrigger` with
     /// `repeats: true` and `DateComponents` carrying the schedule's `timeZone`
-    /// so the trigger fires weekly at the wall-clock end of each interval.
+    /// so the trigger fires weekly at the wall-clock end of each routine occurrence.
     ///
-    /// Per-interval logic:
-    ///   - End minute-of-week = (start + duration) mod minutesPerWeek.
-    ///   - For each `warningMinutes` in `settings.warningIntervals`:
-    ///       skip if `interval.durationMinutes <= warningMinutes`
-    ///         (the warning would land at-or-before the interval start, which
-    ///         is meaningless for an "ending soon" cue),
-    ///       else fire at (end - warningMinutes + minutesPerWeek) mod minutesPerWeek.
-    ///   - Completion always fires at the end minute-of-week
-    ///     (gated only by `sessionCompletionEnabled`).
+    /// Per-routine-per-day logic:
+    ///   - For each weekday `d` in `routine.days`, emit a separate weekly trigger
+    ///     keyed by (routine.id, weekday).
+    ///   - End-of-day minute = `routine.endMinute`. If this equals 1440 (routine
+    ///     ends at midnight), the trigger rolls into the next weekday at 00:00.
+    ///   - Warnings: skip when `routine.durationMinutes <= warningMinutes` (the
+    ///     warning would land at-or-before the routine start). Otherwise fire at
+    ///     `endMinute - warningMinutes` on the same day as the routine.
+    ///   - Completion fires at end minute on the same day (gated only by
+    ///     `sessionCompletionEnabled`).
     ///
     /// Returns an empty array when notifications are off, master toggle is off,
     /// or the schedule is disabled — callers still need to wipe pending state
     /// separately.
     static func freeTimeNotificationRequests(
         isScheduleEnabled: Bool,
-        intervals: [FreeTimeInterval],
+        routines: [FreeTimeRoutine],
         timeZone: TimeZone,
         settings: NotificationSettings
     ) -> [UNNotificationRequest] {
@@ -557,69 +558,78 @@ final class NotificationService: NSObject, Sendable {
 
         var requests: [UNNotificationRequest] = []
 
-        for interval in intervals {
-            let endMinuteOfWeek = (interval.startMinuteOfWeek + interval.durationMinutes) % FreeTimeInterval.minutesPerWeek
+        for routine in routines {
+            let endMinute = routine.endMinute
 
-            // Warnings — one per configured interval, skipped per-warning when
-            // the free-time window is too short to make the warning meaningful.
-            if settings.sessionWarningsEnabled {
-                for warningMinutes in settings.sortedWarningIntervals {
-                    guard warningMinutes > 0 else { continue }
-                    guard interval.durationMinutes > warningMinutes else { continue }
+            for weekday in routine.days {
+                // Warnings — one per configured interval, skipped per-warning when
+                // the routine is too short to make the warning meaningful.
+                if settings.sessionWarningsEnabled {
+                    for warningMinutes in settings.sortedWarningIntervals {
+                        guard warningMinutes > 0 else { continue }
+                        guard routine.durationMinutes > warningMinutes else { continue }
 
-                    let warningMinuteOfWeek = (endMinuteOfWeek - warningMinutes + FreeTimeInterval.minutesPerWeek) % FreeTimeInterval.minutesPerWeek
-                    let components = dateComponents(forMinuteOfWeek: warningMinuteOfWeek, timeZone: timeZone)
+                        let warningMinuteOfDay = endMinute - warningMinutes
+                        let components = dateComponents(
+                            weekday: weekday,
+                            minuteOfDay: warningMinuteOfDay,
+                            timeZone: timeZone
+                        )
+
+                        let content = UNMutableNotificationContent()
+                        content.title = "Free Time Ending Soon"
+                        content.body = formatFreeTimeWarningBody(minutes: warningMinutes)
+                        content.sound = .default
+                        content.categoryIdentifier = NotificationType.sessionWarning.rawValue
+                        if warningMinutes <= 1 {
+                            content.interruptionLevel = .timeSensitive
+                        }
+
+                        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+                        let identifier = "\(freeTimeWarningIdentifierPrefix)\(routine.id.uuidString)_\(weekday.rawValue)_\(warningMinutes)min"
+                        requests.append(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
+                    }
+                }
+
+                // Completion — at routine end. If endMinute == 1440 the components
+                // roll into the next weekday at 00:00.
+                if settings.sessionCompletionEnabled {
+                    let components = dateComponents(weekday: weekday, minuteOfDay: endMinute, timeZone: timeZone)
 
                     let content = UNMutableNotificationContent()
-                    content.title = "Free Time Ending Soon"
-                    content.body = formatFreeTimeWarningBody(minutes: warningMinutes)
+                    content.title = "Free Time Ended"
+                    content.body = "Apps are now blocked again."
                     content.sound = .default
-                    content.categoryIdentifier = NotificationType.sessionWarning.rawValue
-                    if warningMinutes <= 1 {
-                        content.interruptionLevel = .timeSensitive
-                    }
+                    content.categoryIdentifier = NotificationType.sessionCompletion.rawValue
 
                     let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
-                    let identifier = "\(freeTimeWarningIdentifierPrefix)\(interval.id.uuidString)_\(warningMinutes)min"
+                    let identifier = "\(freeTimeCompletionIdentifierPrefix)\(routine.id.uuidString)_\(weekday.rawValue)"
                     requests.append(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
                 }
-            }
-
-            // Completion — single one per interval, always at the window end.
-            if settings.sessionCompletionEnabled {
-                let components = dateComponents(forMinuteOfWeek: endMinuteOfWeek, timeZone: timeZone)
-
-                let content = UNMutableNotificationContent()
-                content.title = "Free Time Ended"
-                content.body = "Apps are now blocked again."
-                content.sound = .default
-                content.categoryIdentifier = NotificationType.sessionCompletion.rawValue
-
-                let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
-                let identifier = "\(freeTimeCompletionIdentifierPrefix)\(interval.id.uuidString)"
-                requests.append(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
             }
         }
 
         return requests
     }
 
-    /// Convert a minute-of-week (0..<10080, Monday=0) to `DateComponents` suitable
-    /// for `UNCalendarNotificationTrigger(dateMatching:repeats:)`. Weekday is the
-    /// Foundation convention (Sun=1..Sat=7).
-    static func dateComponents(forMinuteOfWeek minuteOfWeek: Int, timeZone: TimeZone) -> DateComponents {
-        let normalised = ((minuteOfWeek % FreeTimeInterval.minutesPerWeek) + FreeTimeInterval.minutesPerWeek) % FreeTimeInterval.minutesPerWeek
-        let mondayZeroDayIndex = normalised / FreeTimeInterval.minutesPerDay
-        let minuteOfDay = normalised % FreeTimeInterval.minutesPerDay
-        let hour = minuteOfDay / 60
-        let minute = minuteOfDay % 60
-
-        // Foundation weekday: Sun=1..Sat=7. Monday-zero index: Mon=0..Sun=6.
-        //   mondayZero=0 (Mon) → 2; mondayZero=5 (Sat) → 7; mondayZero=6 (Sun) → 1.
-        let foundationWeekday = ((mondayZeroDayIndex + 1) % 7) + 1
+    /// Build `DateComponents` suitable for `UNCalendarNotificationTrigger(dateMatching:repeats:)`
+    /// for a given weekday + minute-of-day. Weekday output is the Foundation convention
+    /// (Sun=1..Sat=7). If `minuteOfDay >= 1440` the components roll forward into the next
+    /// calendar weekday at 00:00 — used by completion notifications for routines that
+    /// end exactly at midnight.
+    static func dateComponents(weekday: Weekday, minuteOfDay: Int, timeZone: TimeZone) -> DateComponents {
+        var adjustedMinute = minuteOfDay
+        var adjustedWeekday = weekday
+        if adjustedMinute >= FreeTimeRoutine.minutesPerDay {
+            adjustedMinute -= FreeTimeRoutine.minutesPerDay
+            let nextCalendarWeekday = (adjustedWeekday.calendarWeekday % 7) + 1
+            adjustedWeekday = Weekday.from(calendarWeekday: nextCalendarWeekday)
+        }
+        let hour = adjustedMinute / 60
+        let minute = adjustedMinute % 60
 
         var components = DateComponents()
-        components.weekday = foundationWeekday
+        components.weekday = adjustedWeekday.calendarWeekday
         components.hour = hour
         components.minute = minute
         components.second = 0

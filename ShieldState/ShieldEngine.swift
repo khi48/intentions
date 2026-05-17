@@ -99,8 +99,8 @@ struct ShieldEngine: Sendable {
     /// retroactive overlap with the active session).
     @discardableResult
     func refreshScheduleMonitoring(_ snapshot: ScheduleSnapshot, now: Date = Date()) -> ScheduleTransitionResult {
-        DebugBreadcrumbs.record(.engineRefreshSchedule, note: "isEnabled=\(snapshot.isEnabled) intervals=\(snapshot.intervals.count)")
-        logger.notice("refreshScheduleMonitoring: isEnabled=\(snapshot.isEnabled, privacy: .public) intervals=\(snapshot.intervals.count, privacy: .public)")
+        DebugBreadcrumbs.record(.engineRefreshSchedule, note: "isEnabled=\(snapshot.isEnabled) routines=\(snapshot.routines.count)")
+        logger.notice("refreshScheduleMonitoring: isEnabled=\(snapshot.isEnabled, privacy: .public) routines=\(snapshot.routines.count, privacy: .public)")
 
         var log = store.load()
         log.weeklySchedule = snapshot
@@ -293,15 +293,30 @@ extension ShieldEngine {
     }
 
     /// Production engine used by the DAM extension. Self-perpetuates the
-    /// schedule-boundary chain: each `intervalDidStart` registers the NEXT
-    /// boundary monitor via `DAMScheduler` from within the extension process.
-    /// Uses `AdditiveShieldApplier` (no clearAllSettings). In our iOS 26
-    /// testing, additive `.all()` writes from the extension render reliably
-    /// but the obvious extension-process flush has not been observed
-    /// re-rendering the springboard cache — so today the main app does the
-    /// flush via `ManagedSettingsShieldApplier`. See `AdditiveShieldApplier`
-    /// for the longer note (and an open question about the pattern other
-    /// Family Controls apps use to unshield from the extension).
+    /// boundary chain: `handleScheduleTransition` calls `rescheduleBoundary`,
+    /// which registers the next boundary via `DAMScheduler` from inside the
+    /// extension process. Critical when the phone is backgrounded for a
+    /// whole routine window — without ext-side scheduling, the routine-end
+    /// boundary is never registered and reshield is gated on the user
+    /// opening the app.
+    ///
+    /// Main app also reschedules in `catchUpOnForeground` as defense-in-depth:
+    /// if ext-side scheduling failed (crash, FC auth lost, DAC unavailable),
+    /// next foreground self-heals.
+    ///
+    /// Concurrency note: prior diagnosis attributed observed 30-60s hangs
+    /// in `handleScheduleTransition` to concurrent main+ext `startMonitoring`
+    /// on the same activity name. Re-eval after fixing two co-contributors:
+    /// (a) duplicate apply at foreground (`catchUpOnForeground` +
+    /// `reapplyCurrentState` → 8 ManagedSettings XPC writes back-to-back),
+    /// (b) boundary replay (single fire → N re-fires across the 15m30s
+    /// monitoring window, now killed by `scheduleNextBoundary`'s internal
+    /// cancel-first). With both removed, ext-side scheduling is back on.
+    /// If hang returns, throttle main-app reschedule via App Group
+    /// `lastBoundaryScheduleAt` timestamp.
+    ///
+    /// Uses `AdditiveShieldApplier` (no clearAllSettings) — see that type for
+    /// the rationale around extension-side rendering on iOS 26.
     static func damExtension() -> ShieldEngine {
         ShieldEngine(
             store: IntentLogStore(),

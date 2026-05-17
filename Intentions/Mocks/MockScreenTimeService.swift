@@ -195,7 +195,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
     }
 
     func refreshSchedule(_ snapshot: ScheduleSnapshot) async -> ScheduleTransitionResult {
-        print("Mock: refreshSchedule — isEnabled=\(snapshot.isEnabled) intervals=\(snapshot.intervals.count)")
+        print("Mock: refreshSchedule — isEnabled=\(snapshot.isEnabled) routines=\(snapshot.routines.count)")
         // Mirror the engine's mutex check so tests that exercise the user-edit
         // path (R3, #27) get the same transition-result signal as production.
         // The mock proxy for "active session" is whether the mock session task

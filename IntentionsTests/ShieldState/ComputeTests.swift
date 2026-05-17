@@ -11,10 +11,14 @@ final class ComputeTests: XCTestCase {
     }
 
     private func snapshot(enabled: Bool, freeAllWeek: Bool) -> ScheduleSnapshot {
-        let intervals: [ScheduleSnapshot.Interval] = freeAllWeek
-            ? [.init(startMinuteOfWeek: 0, durationMinutes: ScheduleSnapshot.minutesPerWeek)]
+        let routines: [ScheduleSnapshot.Routine] = freeAllWeek
+            ? [.init(
+                startMinute: 0,
+                durationMinutes: ScheduleSnapshot.minutesPerDay,
+                days: Set(Weekday.allCases)
+              )]
             : []
-        return ScheduleSnapshot(isEnabled: enabled, intervals: intervals, timeZoneIdentifier: "UTC")
+        return ScheduleSnapshot(isEnabled: enabled, routines: routines, timeZoneIdentifier: "UTC")
     }
 
     // MARK: - No session, no schedule snapshot

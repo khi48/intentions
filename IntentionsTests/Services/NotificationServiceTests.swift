@@ -7,6 +7,10 @@
 //  contact — the builder is static + side-effect free so it can be unit-tested
 //  without permissions or a notification-center fake.
 //
+//  After the FreeTimeRoutine migration: routines are single-day and recur on
+//  the configured weekday set. The spec-builder emits one (warning + completion)
+//  per routine × per weekday in `routine.days`.
+//
 
 import XCTest
 @preconcurrency import UserNotifications
@@ -17,10 +21,21 @@ final class NotificationServiceTests: XCTestCase {
 
     // MARK: - Helpers
 
-    /// Interval starting Monday 09:00 with the given duration.
-    /// Monday-zero day index 0; 9*60 = 540 minutes into the week.
-    private func mondayInterval(durationMinutes: Int, id: UUID = UUID()) -> FreeTimeInterval {
-        FreeTimeInterval(id: id, startMinuteOfWeek: 9 * 60, durationMinutes: durationMinutes)
+    /// Routine starting at 09:00 with the given duration on the supplied weekdays
+    /// (default: Monday only). Produces a stable id when caller supplies one.
+    private func morningRoutine(
+        durationMinutes: Int,
+        days: Set<Weekday> = [.monday],
+        id: UUID = UUID()
+    ) -> FreeTimeRoutine {
+        FreeTimeRoutine(
+            id: id,
+            name: nil,
+            startMinute: 9 * 60,
+            durationMinutes: durationMinutes,
+            days: days,
+            sortIndex: 0
+        )
     }
 
     /// A NotificationSettings with explicit warning intervals.
@@ -45,7 +60,7 @@ final class NotificationServiceTests: XCTestCase {
     func testReturnsEmptyWhenMasterDisabled() {
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [mondayInterval(durationMinutes: 120)],
+            routines: [morningRoutine(durationMinutes: 120)],
             timeZone: utc,
             settings: settings(master: false)
         )
@@ -55,7 +70,7 @@ final class NotificationServiceTests: XCTestCase {
     func testReturnsEmptyWhenScheduleDisabled() {
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: false,
-            intervals: [mondayInterval(durationMinutes: 120)],
+            routines: [morningRoutine(durationMinutes: 120)],
             timeZone: utc,
             settings: settings()
         )
@@ -65,75 +80,109 @@ final class NotificationServiceTests: XCTestCase {
     func testReturnsEmptyWhenBothSubTogglesOff() {
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [mondayInterval(durationMinutes: 120)],
+            routines: [morningRoutine(durationMinutes: 120)],
             timeZone: utc,
             settings: settings(warnings: false, completion: false)
         )
         XCTAssertEqual(requests, [])
     }
 
-    func testReturnsEmptyWhenNoIntervals() {
+    func testReturnsEmptyWhenNoRoutines() {
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [],
+            routines: [],
             timeZone: utc,
             settings: settings()
         )
         XCTAssertEqual(requests, [])
     }
 
-    // MARK: - Identifier shape + count
+    // MARK: - Identifier shape + per-day expansion
 
-    func testProducesOneWarningAndOneCompletionPerInterval() {
+    func testProducesOneWarningAndOneCompletionPerRoutineDay() {
         let id = UUID()
-        let interval = mondayInterval(durationMinutes: 120, id: id)
+        let routine = morningRoutine(durationMinutes: 120, days: [.monday], id: id)
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings(warningIntervals: [1])
         )
 
         XCTAssertEqual(requests.count, 2)
         let ids = Set(requests.map(\.identifier))
-        XCTAssertTrue(ids.contains("freetime_warning_\(id.uuidString)_1min"))
-        XCTAssertTrue(ids.contains("freetime_completion_\(id.uuidString)"))
+        XCTAssertTrue(ids.contains("freetime_warning_\(id.uuidString)_\(Weekday.monday.rawValue)_1min"))
+        XCTAssertTrue(ids.contains("freetime_completion_\(id.uuidString)_\(Weekday.monday.rawValue)"))
+    }
+
+    func testMultiDayRoutineExpandsPerDay() {
+        // Mon+Wed+Fri × (1 warning + 1 completion) = 6 requests.
+        let id = UUID()
+        let routine = morningRoutine(durationMinutes: 120, days: [.monday, .wednesday, .friday], id: id)
+        let requests = NotificationService.freeTimeNotificationRequests(
+            isScheduleEnabled: true,
+            routines: [routine],
+            timeZone: utc,
+            settings: settings(warningIntervals: [1])
+        )
+
+        XCTAssertEqual(requests.count, 6)
+
+        // Each weekday should produce its own warning + completion identifier.
+        for day in [Weekday.monday, .wednesday, .friday] {
+            let warningId = "freetime_warning_\(id.uuidString)_\(day.rawValue)_1min"
+            let completionId = "freetime_completion_\(id.uuidString)_\(day.rawValue)"
+            XCTAssertTrue(
+                requests.contains(where: { $0.identifier == warningId }),
+                "missing warning for \(day): \(warningId)"
+            )
+            XCTAssertTrue(
+                requests.contains(where: { $0.identifier == completionId }),
+                "missing completion for \(day): \(completionId)"
+            )
+        }
     }
 
     func testWarningOnlyWhenCompletionOff() {
         let id = UUID()
-        let interval = mondayInterval(durationMinutes: 120, id: id)
+        let routine = morningRoutine(durationMinutes: 120, days: [.monday], id: id)
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings(completion: false, warningIntervals: [1])
         )
 
         XCTAssertEqual(requests.count, 1)
-        XCTAssertEqual(requests.first?.identifier, "freetime_warning_\(id.uuidString)_1min")
+        XCTAssertEqual(
+            requests.first?.identifier,
+            "freetime_warning_\(id.uuidString)_\(Weekday.monday.rawValue)_1min"
+        )
     }
 
     func testCompletionOnlyWhenWarningOff() {
         let id = UUID()
-        let interval = mondayInterval(durationMinutes: 120, id: id)
+        let routine = morningRoutine(durationMinutes: 120, days: [.monday], id: id)
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings(warnings: false, warningIntervals: [1])
         )
 
         XCTAssertEqual(requests.count, 1)
-        XCTAssertEqual(requests.first?.identifier, "freetime_completion_\(id.uuidString)")
+        XCTAssertEqual(
+            requests.first?.identifier,
+            "freetime_completion_\(id.uuidString)_\(Weekday.monday.rawValue)"
+        )
     }
 
     func testMultipleWarningIntervalsProduceMultipleWarnings() {
         let id = UUID()
-        let interval = mondayInterval(durationMinutes: 120, id: id)
+        let routine = morningRoutine(durationMinutes: 120, days: [.monday], id: id)
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings(warningIntervals: [10, 5, 1])
         )
@@ -142,23 +191,30 @@ final class NotificationServiceTests: XCTestCase {
         XCTAssertEqual(requests.count, 4)
         let warningIds = requests.map(\.identifier).filter { $0.hasPrefix("freetime_warning_") }
         XCTAssertEqual(Set(warningIds), Set([
-            "freetime_warning_\(id.uuidString)_10min",
-            "freetime_warning_\(id.uuidString)_5min",
-            "freetime_warning_\(id.uuidString)_1min",
+            "freetime_warning_\(id.uuidString)_\(Weekday.monday.rawValue)_10min",
+            "freetime_warning_\(id.uuidString)_\(Weekday.monday.rawValue)_5min",
+            "freetime_warning_\(id.uuidString)_\(Weekday.monday.rawValue)_1min",
         ]))
     }
 
-    func testMultipleIntervalsProduceCartesianProduct() {
-        let a = mondayInterval(durationMinutes: 120)
-        let b = FreeTimeInterval(id: UUID(), startMinuteOfWeek: 17 * 60, durationMinutes: 60)
+    func testMultipleRoutinesProduceCartesianProduct() {
+        let a = morningRoutine(durationMinutes: 120, days: [.monday])
+        let b = FreeTimeRoutine(
+            id: UUID(),
+            name: nil,
+            startMinute: 17 * 60,
+            durationMinutes: 60,
+            days: [.monday],
+            sortIndex: 1
+        )
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [a, b],
+            routines: [a, b],
             timeZone: utc,
             settings: settings(warningIntervals: [1])
         )
 
-        // 2 intervals × (1 warning + 1 completion) = 4
+        // 2 routines × 1 day each × (1 warning + 1 completion) = 4
         XCTAssertEqual(requests.count, 4)
     }
 
@@ -168,40 +224,46 @@ final class NotificationServiceTests: XCTestCase {
         // 1-minute window with a 1-minute warning would fire at the window
         // start, which is meaningless — skip.
         let id = UUID()
-        let interval = mondayInterval(durationMinutes: 1, id: id)
+        let routine = morningRoutine(durationMinutes: 1, days: [.monday], id: id)
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings(warningIntervals: [1])
         )
 
         // Only the completion survives.
         XCTAssertEqual(requests.count, 1)
-        XCTAssertEqual(requests.first?.identifier, "freetime_completion_\(id.uuidString)")
+        XCTAssertEqual(
+            requests.first?.identifier,
+            "freetime_completion_\(id.uuidString)_\(Weekday.monday.rawValue)"
+        )
     }
 
     func testSkipsWarningWhenWindowShorterThanWarningOffset() {
         let id = UUID()
-        let interval = mondayInterval(durationMinutes: 3, id: id)
+        let routine = morningRoutine(durationMinutes: 3, days: [.monday], id: id)
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings(warningIntervals: [5])
         )
 
         XCTAssertEqual(requests.count, 1)
-        XCTAssertEqual(requests.first?.identifier, "freetime_completion_\(id.uuidString)")
+        XCTAssertEqual(
+            requests.first?.identifier,
+            "freetime_completion_\(id.uuidString)_\(Weekday.monday.rawValue)"
+        )
     }
 
     func testSkipsOnlyTheTooLongWarningsKeepsTheShorterOnes() {
         // 4-minute window with [10, 5, 1]: 10 and 5 skip (>=4), 1 fits.
         let id = UUID()
-        let interval = mondayInterval(durationMinutes: 4, id: id)
+        let routine = morningRoutine(durationMinutes: 4, days: [.monday], id: id)
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings(warningIntervals: [10, 5, 1])
         )
@@ -209,16 +271,19 @@ final class NotificationServiceTests: XCTestCase {
         // 1-min warning + completion
         XCTAssertEqual(requests.count, 2)
         let warningIds = requests.map(\.identifier).filter { $0.hasPrefix("freetime_warning_") }
-        XCTAssertEqual(warningIds, ["freetime_warning_\(id.uuidString)_1min"])
+        XCTAssertEqual(
+            warningIds,
+            ["freetime_warning_\(id.uuidString)_\(Weekday.monday.rawValue)_1min"]
+        )
     }
 
     // MARK: - Body strings + completion copy
 
     func testWarningBodyDefaultMinute() {
-        let interval = mondayInterval(durationMinutes: 120)
+        let routine = morningRoutine(durationMinutes: 120, days: [.monday])
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings(warningIntervals: [1])
         )
@@ -229,10 +294,10 @@ final class NotificationServiceTests: XCTestCase {
     }
 
     func testWarningBodyPluralisesAboveOne() {
-        let interval = mondayInterval(durationMinutes: 120)
+        let routine = morningRoutine(durationMinutes: 120, days: [.monday])
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings(warningIntervals: [5])
         )
@@ -242,10 +307,10 @@ final class NotificationServiceTests: XCTestCase {
     }
 
     func testCompletionCopy() {
-        let interval = mondayInterval(durationMinutes: 120)
+        let routine = morningRoutine(durationMinutes: 120, days: [.monday])
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings()
         )
@@ -257,13 +322,13 @@ final class NotificationServiceTests: XCTestCase {
 
     // MARK: - Trigger shape (DateComponents, repeats:true, timeZone)
 
-    func testCompletionTriggerFiresAtIntervalEndWithScheduleTimeZone() throws {
+    func testCompletionTriggerFiresAtRoutineEndWithScheduleTimeZone() throws {
         // Monday 09:00 + 120 minutes → ends Monday 11:00 (Foundation weekday 2).
-        let interval = mondayInterval(durationMinutes: 120)
+        let routine = morningRoutine(durationMinutes: 120, days: [.monday])
         let nzst = try XCTUnwrap(TimeZone(identifier: "Pacific/Auckland"))
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: nzst,
             settings: settings(completion: true, warnings: false, warningIntervals: [1])
         )
@@ -282,10 +347,10 @@ final class NotificationServiceTests: XCTestCase {
 
     func testWarningTriggerFiresWarningMinutesBeforeEnd() throws {
         // Monday 09:00 + 120min → ends Mon 11:00. 1-min warning at Mon 10:59.
-        let interval = mondayInterval(durationMinutes: 120)
+        let routine = morningRoutine(durationMinutes: 120, days: [.monday])
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings(warningIntervals: [1])
         )
@@ -298,58 +363,83 @@ final class NotificationServiceTests: XCTestCase {
         XCTAssertEqual(comps.minute, 59)
     }
 
-    func testWarningTriggerWrapsBackwardsAcrossDayBoundary() throws {
-        // Monday 00:30 + 60min → ends Mon 01:30. 60-min warning at Mon 00:30.
-        // That's also the interval START, which the "skip if duration <= warning"
-        // guard catches — assert no warning was produced for this case.
+    func testWarningSkippedWhenWindowEqualsWarningInterval() throws {
+        // Monday 00:30 + 60min → ends Mon 01:30. 60-min warning would land at
+        // the routine start, so the "skip if duration <= warning" guard catches
+        // it. Assert no warning, completion still present.
         let id = UUID()
-        let interval = FreeTimeInterval(id: id, startMinuteOfWeek: 30, durationMinutes: 60)
+        let routine = FreeTimeRoutine(
+            id: id,
+            name: nil,
+            startMinute: 30,
+            durationMinutes: 60,
+            days: [.monday],
+            sortIndex: 0
+        )
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings(warningIntervals: [60])
         )
 
         XCTAssertNil(requests.first { $0.identifier.hasPrefix("freetime_warning_") })
-        XCTAssertNotNil(requests.first { $0.identifier == "freetime_completion_\(id.uuidString)" })
+        XCTAssertNotNil(
+            requests.first { $0.identifier == "freetime_completion_\(id.uuidString)_\(Weekday.monday.rawValue)" }
+        )
     }
 
-    func testCompletionAtMidnightProducesCorrectComponents() throws {
-        // Interval ending exactly at Tuesday 00:00 — minute-of-week = 1*1440 = 1440.
-        // End minute-of-week wraps to 1440 (Tuesday 00:00, weekday=3).
+    func testCompletionAtMidnightRollsToNextWeekday() throws {
+        // Routine ending exactly at midnight on Monday: end-of-day minute = 1440.
+        // The trigger must roll into Tuesday 00:00 (Foundation weekday 3).
         let id = UUID()
-        let interval = FreeTimeInterval(id: id, startMinuteOfWeek: 23 * 60, durationMinutes: 60)
-        // ends at minute-of-week 24*60 = 1440 → Tuesday 00:00 (weekday 3).
+        let routine = FreeTimeRoutine(
+            id: id,
+            name: nil,
+            startMinute: 23 * 60,
+            durationMinutes: 60,
+            days: [.monday],
+            sortIndex: 0
+        )
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings(completion: true, warnings: false, warningIntervals: [1])
         )
 
-        let completion = try XCTUnwrap(requests.first { $0.identifier == "freetime_completion_\(id.uuidString)" })
+        let completion = try XCTUnwrap(
+            requests.first { $0.identifier == "freetime_completion_\(id.uuidString)_\(Weekday.monday.rawValue)" }
+        )
         let trigger = try XCTUnwrap(completion.trigger as? UNCalendarNotificationTrigger)
         let comps = trigger.dateComponents
-        XCTAssertEqual(comps.weekday, 3) // Tuesday
+        XCTAssertEqual(comps.weekday, 3) // Tuesday — rolled
         XCTAssertEqual(comps.hour, 0)
         XCTAssertEqual(comps.minute, 0)
     }
 
-    func testCompletionForSundayLateInterval() throws {
-        // Sunday is Monday-zero=6 → Foundation weekday=1.
+    func testCompletionForSundayLateRoutine() throws {
+        // Sunday = Foundation weekday 1.
         // Sunday 22:00 + 60min → ends Sunday 23:00, weekday=1.
         let id = UUID()
-        let sundayStart = 6 * FreeTimeInterval.minutesPerDay + 22 * 60
-        let interval = FreeTimeInterval(id: id, startMinuteOfWeek: sundayStart, durationMinutes: 60)
+        let routine = FreeTimeRoutine(
+            id: id,
+            name: nil,
+            startMinute: 22 * 60,
+            durationMinutes: 60,
+            days: [.sunday],
+            sortIndex: 0
+        )
         let requests = NotificationService.freeTimeNotificationRequests(
             isScheduleEnabled: true,
-            intervals: [interval],
+            routines: [routine],
             timeZone: utc,
             settings: settings(completion: true, warnings: false, warningIntervals: [1])
         )
 
-        let completion = try XCTUnwrap(requests.first { $0.identifier == "freetime_completion_\(id.uuidString)" })
+        let completion = try XCTUnwrap(
+            requests.first { $0.identifier == "freetime_completion_\(id.uuidString)_\(Weekday.sunday.rawValue)" }
+        )
         let trigger = try XCTUnwrap(completion.trigger as? UNCalendarNotificationTrigger)
         let comps = trigger.dateComponents
         XCTAssertEqual(comps.weekday, 1) // Sunday
@@ -357,10 +447,10 @@ final class NotificationServiceTests: XCTestCase {
         XCTAssertEqual(comps.minute, 0)
     }
 
-    // MARK: - dateComponents(forMinuteOfWeek:timeZone:) — unit test the inverse
+    // MARK: - dateComponents(weekday:minuteOfDay:timeZone:) — unit-test the helper
 
     func testDateComponentsMondayMidnight() {
-        let c = NotificationService.dateComponents(forMinuteOfWeek: 0, timeZone: utc)
+        let c = NotificationService.dateComponents(weekday: .monday, minuteOfDay: 0, timeZone: utc)
         XCTAssertEqual(c.weekday, 2)   // Monday
         XCTAssertEqual(c.hour, 0)
         XCTAssertEqual(c.minute, 0)
@@ -369,27 +459,34 @@ final class NotificationServiceTests: XCTestCase {
     }
 
     func testDateComponentsSaturdayLastMinute() {
-        // Sat = Monday-zero 5. 5*1440 + 23*60 + 59 = 8639. Foundation weekday=7.
-        let c = NotificationService.dateComponents(forMinuteOfWeek: 5 * 1440 + 23 * 60 + 59, timeZone: utc)
-        XCTAssertEqual(c.weekday, 7)
+        let c = NotificationService.dateComponents(weekday: .saturday, minuteOfDay: 23 * 60 + 59, timeZone: utc)
+        XCTAssertEqual(c.weekday, 7) // Saturday
         XCTAssertEqual(c.hour, 23)
         XCTAssertEqual(c.minute, 59)
     }
 
     func testDateComponentsSundayMidday() {
-        // Sun = Monday-zero 6 → Foundation weekday 1.
-        let c = NotificationService.dateComponents(forMinuteOfWeek: 6 * 1440 + 12 * 60, timeZone: utc)
-        XCTAssertEqual(c.weekday, 1)
+        let c = NotificationService.dateComponents(weekday: .sunday, minuteOfDay: 12 * 60, timeZone: utc)
+        XCTAssertEqual(c.weekday, 1) // Sunday
         XCTAssertEqual(c.hour, 12)
         XCTAssertEqual(c.minute, 0)
     }
 
-    func testDateComponentsNormalisesNegative() {
-        // (0 - 1 + 10080) % 10080 = 10079 → Sunday 23:59.
-        let c = NotificationService.dateComponents(forMinuteOfWeek: 10079, timeZone: utc)
+    func testDateComponentsRollsAtMidnight() {
+        // Monday end-of-day minute = 1440 → Tuesday 00:00.
+        let c = NotificationService.dateComponents(weekday: .monday, minuteOfDay: 1440, timeZone: utc)
+        XCTAssertEqual(c.weekday, 3) // Tuesday
+        XCTAssertEqual(c.hour, 0)
+        XCTAssertEqual(c.minute, 0)
+    }
+
+    func testDateComponentsRollsSaturdayMidnightToSunday() {
+        // Saturday 1440 → Sunday 00:00. Saturday calendarWeekday=7, % 7 = 0,
+        // + 1 = 1 → Sunday.
+        let c = NotificationService.dateComponents(weekday: .saturday, minuteOfDay: 1440, timeZone: utc)
         XCTAssertEqual(c.weekday, 1) // Sunday
-        XCTAssertEqual(c.hour, 23)
-        XCTAssertEqual(c.minute, 59)
+        XCTAssertEqual(c.hour, 0)
+        XCTAssertEqual(c.minute, 0)
     }
 
     // MARK: - R3 mutex teardown banner (#30) — per-session pre-scheduled spec-builder

@@ -183,67 +183,28 @@ protocol DataPersisting: Sendable {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
-        // 1. Try the canonical App Group blob first.
-        if let data = appGroupDefaults.data(forKey: Self.weeklyScheduleKey) {
-            do {
-                let schedule = try decoder.decode(WeeklySchedule.self, from: data)
-                Self.mirrorIntentionQuoteToSharedDefaults(schedule.intentionQuote)
-                DebugBreadcrumbs.record(
-                    .weeklyScheduleLoaded,
-                    note: "newBlob enabled=\(schedule.isEnabled) intervals=\(schedule.intervals.count)"
-                )
-                return schedule
-            } catch {
-                DebugBreadcrumbs.record(.weeklyScheduleLoaded, note: "decodeError: \(error.localizedDescription)")
-                throw AppError.persistenceError("Failed to decode WeeklySchedule: \(error.localizedDescription)")
-            }
-        }
+        // Pre-release model cutover (#31): legacy pre-routine blobs and the
+        // SwiftData `ScheduleSettings` fallback are no longer migrated — they
+        // get cleaned out on first run and the user starts from an empty
+        // routine list.
+        userDefaults.removeObject(forKey: Self.legacyStandardSuiteWeeklyScheduleKey)
 
-        // 2. One-shot migration: hoist a pre-issue-#8 standard-suite blob into
-        //    the App Group suite. Idempotent — once the standard-suite key is
-        //    deleted, this branch never runs again. Note that we cannot call
-        //    `saveWeeklySchedule` here because the schedule contains an
-        //    `@MainActor`-isolated WeeklySchedule that we re-encode straight
-        //    from the legacy bytes (no main-actor hop needed).
-        if let legacyData = userDefaults.data(forKey: Self.legacyStandardSuiteWeeklyScheduleKey) {
-            do {
-                let schedule = try decoder.decode(WeeklySchedule.self, from: legacyData)
-                appGroupDefaults.set(legacyData, forKey: Self.weeklyScheduleKey)
-                userDefaults.removeObject(forKey: Self.legacyStandardSuiteWeeklyScheduleKey)
-                Self.mirrorIntentionQuoteToSharedDefaults(schedule.intentionQuote)
-                DebugBreadcrumbs.record(
-                    .weeklyScheduleLoaded,
-                    note: "appGroupMigration enabled=\(schedule.isEnabled) intervals=\(schedule.intervals.count)"
-                )
-                return schedule
-            } catch {
-                // Bytes were present but undecodable — surface the error and
-                // delete the corrupt legacy blob so we don't loop on it next
-                // launch. The user will fall through to a fresh default schedule.
-                userDefaults.removeObject(forKey: Self.legacyStandardSuiteWeeklyScheduleKey)
-                DebugBreadcrumbs.record(
-                    .weeklyScheduleLoaded,
-                    note: "decodeError(appGroupMigration): \(error.localizedDescription)"
-                )
-                throw AppError.persistenceError("Failed to decode legacy WeeklySchedule: \(error.localizedDescription)")
-            }
-        }
-
-        // 3. Fall back to legacy ScheduleSettings via SwiftData.
-        let legacy = try await loadScheduleSettings()
-        guard let legacy else {
-            DebugBreadcrumbs.record(.weeklyScheduleLoaded, note: "nil (no blob, no legacy)")
+        guard let data = appGroupDefaults.data(forKey: Self.weeklyScheduleKey) else {
+            DebugBreadcrumbs.record(.weeklyScheduleLoaded, note: "nil (no blob)")
             return nil
         }
-
-        // Migrate once and persist so future reads skip this path
-        let migrated = WeeklySchedule.migrate(from: legacy)
-        try await saveWeeklySchedule(migrated)
-        DebugBreadcrumbs.record(
-            .weeklyScheduleLoaded,
-            note: "legacyMigration enabled=\(migrated.isEnabled) intervals=\(migrated.intervals.count)"
-        )
-        return migrated
+        do {
+            let schedule = try decoder.decode(WeeklySchedule.self, from: data)
+            Self.mirrorIntentionQuoteToSharedDefaults(schedule.intentionQuote)
+            DebugBreadcrumbs.record(
+                .weeklyScheduleLoaded,
+                note: "newBlob enabled=\(schedule.isEnabled) routines=\(schedule.routines.count)"
+            )
+            return schedule
+        } catch {
+            DebugBreadcrumbs.record(.weeklyScheduleLoaded, note: "decodeError: \(error.localizedDescription)")
+            throw AppError.persistenceError("Failed to decode WeeklySchedule: \(error.localizedDescription)")
+        }
     }
 
     /// Mirrors the user's intention quote into App Group UserDefaults so the
