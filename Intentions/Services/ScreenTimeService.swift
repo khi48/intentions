@@ -7,7 +7,6 @@ import Synchronization
 import OSLog
 @preconcurrency import FamilyControls
 @preconcurrency import ManagedSettings
-import WidgetKit
 
 actor ScreenTimeService: ScreenTimeManaging {
 
@@ -114,7 +113,9 @@ actor ScreenTimeService: ScreenTimeManaging {
         let endsAt = Date().addingTimeInterval(duration)
         logger.notice("allowApps → startSession(endsAt: \(endsAt, privacy: .public), id: \(sessionId.uuidString, privacy: .public))")
         engine.startSession(apps: selection, endsAt: endsAt)
-        updateWidget(blocking: true)
+        // Widget is pushed by ContentViewModel.updateWidgetSessionData after
+        // this returns — it knows the session title (not in IntentLog) and
+        // calls WidgetBridge.pushSession with the full state.
 
         // Belt-and-suspenders in-app timer. Main-app process write is the
         // only one iOS 26 reliably renders — if we're alive at expiry, this
@@ -210,17 +211,4 @@ actor ScreenTimeService: ScreenTimeManaging {
         engine.registerKnownTokens(apps: tokens)
     }
 
-    // MARK: - Widget
-
-    private nonisolated func updateWidget(blocking: Bool) {
-        let appGroupId = AppConstants.appGroupId
-        if let sharedDefaults = UserDefaults(suiteName: appGroupId) {
-            sharedDefaults.set(blocking, forKey: AppConstants.Keys.widgetBlockingStatus)
-            sharedDefaults.set(Date(), forKey: AppConstants.Keys.widgetLastUpdate)
-        }
-        UserDefaults.standard.set(blocking, forKey: AppConstants.Keys.widgetBlockingStatus)
-        UserDefaults.standard.set(Date(), forKey: AppConstants.Keys.widgetLastUpdate)
-        WidgetCenter.shared.reloadAllTimelines()
-        WidgetCenter.shared.reloadTimelines(ofKind: "IntentionsWidget")
-    }
 }

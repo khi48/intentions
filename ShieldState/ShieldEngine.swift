@@ -224,6 +224,16 @@ struct ShieldEngine: Sendable {
         applier.apply(config, knownApps: log.knownApplicationTokens, knownDomains: log.knownWebDomainTokens)
     }
 
+    /// Current blocking state for widget rendering. Session-active means apps
+    /// are unblocked (session = granted access), so returns false. Otherwise
+    /// returns the weekly schedule's blocking state at `now`, defaulting to
+    /// false when no schedule is set.
+    func currentBlockingState(at now: Date = Date()) -> Bool {
+        let log = store.load()
+        if log.activeSession != nil { return false }
+        return log.weeklySchedule?.isBlocking(at: now) ?? false
+    }
+
     /// Union additional tokens into the IntentLog's `knownApplicationTokens` /
     /// `knownWebDomainTokens` and re-apply the current config so the gap-plug
     /// (`shield.applications = knownApps`) covers them on the next write.

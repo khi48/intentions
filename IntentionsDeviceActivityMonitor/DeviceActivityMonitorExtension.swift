@@ -24,9 +24,11 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
         DebugBreadcrumbs.record(.damIntervalDidStart, note: activity.rawValue)
+        let engine = ShieldEngine.damExtension()
         if DAMScheduler.isSessionExpiryActivity(activity) {
             logger.notice("intervalDidStart: session expiry — primary trigger")
-            ShieldEngine.damExtension().handleExpiry()
+            engine.handleExpiry()
+            WidgetBridge.pushNoSession(isBlocking: engine.currentBlockingState())
             return
         }
         if DAMScheduler.isScheduleBoundaryActivity(activity) {
@@ -35,7 +37,8 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             // cancels the current boundary activity first then registers the next.
             // That kills the [intervalStart, intervalEnd] window so iOS can't
             // replay intervalDidStart on subsequent ext relaunches.
-            ShieldEngine.damExtension().handleScheduleTransition()
+            engine.handleScheduleTransition()
+            WidgetBridge.pushNoSession(isBlocking: engine.currentBlockingState())
             return
         }
         logger.notice("intervalDidStart: ignoring unrelated activity \(activity.rawValue, privacy: .public)")
@@ -47,7 +50,9 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         guard DAMScheduler.isSessionExpiryActivity(activity) else { return }
         guard event == DAMScheduler.firstTouchEventName else { return }
         logger.notice("eventDidReachThreshold: firstTouch on session tokens — secondary trigger")
-        ShieldEngine.damExtension().handleExpiry()
+        let engine = ShieldEngine.damExtension()
+        engine.handleExpiry()
+        WidgetBridge.pushNoSession(isBlocking: engine.currentBlockingState())
     }
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
@@ -55,7 +60,9 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         DebugBreadcrumbs.record(.damIntervalDidEnd, note: activity.rawValue)
         if DAMScheduler.isSessionExpiryActivity(activity) {
             logger.notice("intervalDidEnd: session expiry — tertiary trigger")
-            ShieldEngine.damExtension().handleExpiry()
+            let engine = ShieldEngine.damExtension()
+            engine.handleExpiry()
+            WidgetBridge.pushNoSession(isBlocking: engine.currentBlockingState())
             return
         }
         // Schedule-boundary intervalDidEnd is informational only — the boundary

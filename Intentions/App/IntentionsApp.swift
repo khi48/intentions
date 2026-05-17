@@ -45,6 +45,9 @@ struct IntentApp: App {
             // No reapplyCurrentState — catchUpOnForeground already does
             // compute+apply on the same log read. The duplicate apply
             // (8 ManagedSettings XPC writes back-to-back) was a hang vector.
+            // Push fresh widget state — covers users who open the app after
+            // a long gap during which no session ran (#20).
+            WidgetBridge.pushNoSession(isBlocking: engine.currentBlockingState())
         }
     }
 }
