@@ -1,150 +1,220 @@
 import SwiftUI
 
-/// Read-only 7-column × 24-hour grid. One block per (routine × day in routine.days).
-/// Today's column overlays a now-line + time pill, updating per minute.
+/// Read-only 7-column × 24-hour grid with horizontal scrolling. Columns are
+/// sized so exactly 4 fit the viewport (between the 36pt hour gutter and the
+/// 8pt trailing margin). Hour gutter pins to the leading edge during
+/// horizontal scroll; the day-header row pins to the top during vertical
+/// scroll. On appear today is positioned as the second of four visible
+/// columns and the now-line is centred vertically.
 @MainActor
 struct RoutinesWeekView: View {
     let routines: [FreeTimeRoutine]
 
-    private static let hourHeight: CGFloat = 24
+    private static let hourHeight: CGFloat = 48
     private static let headerHeight: CGFloat = 28
+    private static let hourGutterWidth: CGFloat = 36
+    private static let trailingMargin: CGFloat = 8
+    private static let visibleColumns: CGFloat = 4
     private static let weekOrder: [Weekday] = [
         .monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday
     ]
+
+    @State private var vScrollOffset: CGFloat = 0
+    @State private var hScrollPos = ScrollPosition()
+    @State private var vScrollPos = ScrollPosition()
+    @State private var selectedRoutine: FreeTimeRoutine?
 
     private var blocks: [RoutineGridBlock] { gridBlocks(for: routines) }
     private var totalHeight: CGFloat { Self.hourHeight * 24 }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: true) {
-            VStack(spacing: 0) {
-                columnHeader
-                gridBody
+        GeometryReader { geo in
+            let colWidth = max(
+                (geo.size.width - Self.hourGutterWidth - Self.trailingMargin) / Self.visibleColumns,
+                1
+            )
+
+            ScrollView(.vertical, showsIndicators: true) {
+                HStack(alignment: .top, spacing: 0) {
+                    hourGutter
+                    bodyHScroll(colWidth: colWidth)
+                    Color.clear.frame(width: Self.trailingMargin)
+                }
+                .frame(height: totalHeight + Self.headerHeight)
+                .padding(.bottom, 16)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 12)
-        }
-        .background(AppConstants.Colors.background)
-    }
-
-    // MARK: - Header
-
-    private var columnHeader: some View {
-        HStack(spacing: 0) {
-            // Spacer aligns columns with the hour-rule gutter below.
-            Color.clear.frame(width: hourGutterWidth, height: Self.headerHeight)
-            ForEach(Self.weekOrder, id: \.self) { day in
-                Text(day.shortName)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(isToday(day)
-                        ? AppConstants.Colors.text
-                        : AppConstants.Colors.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: Self.headerHeight)
+            .scrollPosition($vScrollPos)
+            .onScrollGeometryChange(for: CGFloat.self, of: { $0.contentOffset.y }) { _, new in
+                vScrollOffset = new
             }
-        }
-    }
-
-    // MARK: - Grid
-
-    private var gridBody: some View {
-        HStack(alignment: .top, spacing: 0) {
-            hourGutter
-            ForEach(Self.weekOrder, id: \.self) { day in
-                dayColumn(day)
-                    .frame(maxWidth: .infinity)
+            .background(AppConstants.Colors.background)
+            .overlay(alignment: .topLeading) {
+                // Intersection mask: pinned on both axes; hides hour-gutter
+                // labels that scroll up into the day-header zone.
+                AppConstants.Colors.background
+                    .frame(width: Self.hourGutterWidth, height: Self.headerHeight)
+            }
+            .sheet(item: $selectedRoutine) { routine in
+                RoutineDetailSheet(routine: routine)
+            }
+            .onAppear {
+                applyAnchors(colWidth: colWidth, viewportHeight: geo.size.height)
             }
         }
-        .frame(height: totalHeight)
     }
 
-    private var hourGutterWidth: CGFloat { 36 }
+    // MARK: - Hour gutter (pinned-x; scrolls-y with content)
 
     private var hourGutter: some View {
         ZStack(alignment: .topLeading) {
             Color.clear
-                .frame(width: hourGutterWidth, height: totalHeight)
+                .frame(width: Self.hourGutterWidth, height: totalHeight + Self.headerHeight)
             ForEach(0..<24, id: \.self) { hour in
                 Text(String(format: "%02d", hour))
                     .font(.system(size: 9))
                     .foregroundColor(AppConstants.Colors.textSecondary)
-                    .frame(width: hourGutterWidth, alignment: .trailing)
+                    .frame(width: Self.hourGutterWidth, alignment: .trailing)
                     .padding(.trailing, 6)
                     .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
-                    .offset(y: CGFloat(hour) * Self.hourHeight)
+                    .offset(y: Self.headerHeight + CGFloat(hour) * Self.hourHeight)
             }
         }
     }
 
-    @ViewBuilder
-    private func dayColumn(_ day: Weekday) -> some View {
-        ZStack(alignment: .topLeading) {
-            // Claim full proposed height — without this, the ZStack sizes to its
-            // tallest child (a single block) and the outer .frame(height:) centers
-            // that small ZStack inside the 576pt slot, shifting every offset-positioned
-            // child down by ~(totalHeight - blockHeight)/2.
-            Color.clear
-                .frame(height: totalHeight)
-            hourLines
-            ForEach(blocksFor(day), id: \.routineID) { block in
-                blockView(block)
-            }
-            if isToday(day) {
-                TimelineView(.everyMinute) { context in
-                    nowLine(at: context.date)
+    // MARK: - Body horizontal scroll
+
+    private func bodyHScroll(colWidth: CGFloat) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: 0) {
+                ForEach(Self.weekOrder, id: \.self) { day in
+                    dayColumn(day, colWidth: colWidth)
                 }
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: totalHeight)
+        .scrollPosition($hScrollPos)
+    }
+
+    @ViewBuilder
+    private func dayColumn(_ day: Weekday, colWidth: CGFloat) -> some View {
+        let isTodayDay = isToday(day)
+        VStack(spacing: 0) {
+            Text(day.shortName)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(isTodayDay
+                    ? AppConstants.Colors.text
+                    : AppConstants.Colors.textSecondary)
+                .frame(width: colWidth, height: Self.headerHeight)
+                .background(AppConstants.Colors.background)
+                .offset(y: vScrollOffset)
+                .zIndex(2)
+
+            dayColumnBody(day, colWidth: colWidth, tintToday: isTodayDay)
+        }
+        .frame(width: colWidth)
+    }
+
+    @ViewBuilder
+    private func dayColumnBody(_ day: Weekday, colWidth: CGFloat, tintToday: Bool) -> some View {
+        ZStack(alignment: .topLeading) {
+            // Claim full proposed height — without this the ZStack sizes to
+            // its tallest child and outer .frame(height:) recentres every
+            // offset-positioned child.
+            Color.clear
+                .frame(width: colWidth, height: totalHeight)
+            if tintToday {
+                AppConstants.Colors.accent
+                    .opacity(0.07)
+                    .frame(width: colWidth, height: totalHeight)
+            }
+            hourLines(width: colWidth)
+            ForEach(blocksFor(day), id: \.routineID) { block in
+                blockView(block, width: colWidth)
+            }
+            if tintToday {
+                TimelineView(.everyMinute) { context in
+                    nowLine(at: context.date, width: colWidth)
+                }
+            }
+        }
+        .frame(width: colWidth, height: totalHeight)
         .overlay(
             Rectangle()
                 .stroke(AppConstants.Colors.border.opacity(0.5), lineWidth: 0.5)
         )
     }
 
-    private var hourLines: some View {
+    private func hourLines(width: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
             ForEach(0..<25, id: \.self) { hour in
                 let isMajor = (hour % 6 == 0)
                 Rectangle()
                     .fill(AppConstants.Colors.border
                         .opacity(isMajor ? 0.9 : 0.35))
-                    .frame(height: isMajor ? 0.75 : 0.5)
+                    .frame(width: width, height: isMajor ? 0.75 : 0.5)
                     .offset(y: CGFloat(hour) * Self.hourHeight)
             }
         }
     }
 
     @ViewBuilder
-    private func blockView(_ block: RoutineGridBlock) -> some View {
+    private func blockView(_ block: RoutineGridBlock, width: CGFloat) -> some View {
         let y = CGFloat(block.startMinute) / 60 * Self.hourHeight
         let h = max(CGFloat(block.durationMinutes) / 60 * Self.hourHeight, 2)
-        RoundedRectangle(cornerRadius: 3)
+        RoundedRectangle(cornerRadius: 4)
             .fill(AppConstants.Colors.accent.opacity(0.4))
             .overlay(
-                RoundedRectangle(cornerRadius: 3)
+                RoundedRectangle(cornerRadius: 4)
                     .stroke(AppConstants.Colors.accent, lineWidth: 1)
             )
             .overlay(alignment: .topLeading) {
-                if let name = block.name, !name.isEmpty, h >= 14 {
-                    Text(name)
-                        .font(.system(size: 9, weight: .medium))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .foregroundColor(AppConstants.Colors.text)
-                        .padding(.horizontal, 3)
-                        .padding(.top, 1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                blockLabel(block, height: h)
+            }
+            .frame(width: width - 2, height: h)
+            .padding(.horizontal, 1)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if let routine = routines.first(where: { $0.id == block.routineID }) {
+                    selectedRoutine = routine
                 }
             }
-            .frame(height: h)
-            .padding(.horizontal, 1)
             .offset(y: y)
     }
 
     @ViewBuilder
-    private func nowLine(at date: Date) -> some View {
+    private func blockLabel(_ block: RoutineGridBlock, height: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            if let name = block.name, !name.isEmpty, height >= 16 {
+                Text(name)
+                    .font(.system(size: 10, weight: .medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .foregroundColor(AppConstants.Colors.text)
+            }
+            if height >= 30 {
+                Text(timeRange(block))
+                    .font(.system(size: 9))
+                    .lineLimit(1)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+            }
+        }
+        .padding(.horizontal, 4)
+        .padding(.top, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func timeRange(_ block: RoutineGridBlock) -> String {
+        let endMinute = block.startMinute + block.durationMinutes
+        return String(
+            format: "%02d:%02d – %02d:%02d",
+            block.startMinute / 60,
+            block.startMinute % 60,
+            (endMinute / 60) % 24,
+            endMinute % 60
+        )
+    }
+
+    @ViewBuilder
+    private func nowLine(at date: Date, width: CGFloat) -> some View {
         let cal = Calendar.current
         let comps = cal.dateComponents([.hour, .minute], from: date)
         let minute = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
@@ -154,7 +224,7 @@ struct RoutinesWeekView: View {
         ZStack(alignment: .leading) {
             Rectangle()
                 .fill(AppConstants.Colors.accent)
-                .frame(height: 1.25)
+                .frame(width: width, height: 1.25)
             Text(label)
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundColor(AppConstants.Colors.text)
@@ -168,6 +238,26 @@ struct RoutinesWeekView: View {
         .offset(y: y - 0.5)
     }
 
+    // MARK: - Anchors
+
+    private func applyAnchors(colWidth: CGFloat, viewportHeight: CGFloat) {
+        // Horizontal: today as 2nd of 4 visible columns, clamped to bounds.
+        let todayIdx = Self.weekOrder.firstIndex(of: Weekday.today) ?? 0
+        let maxOffsetX = colWidth * (CGFloat(Self.weekOrder.count) - Self.visibleColumns)
+        let targetX = (CGFloat(todayIdx) - 1) * colWidth
+        let clampedX = min(max(targetX, 0), max(maxOffsetX, 0))
+        hScrollPos.scrollTo(x: clampedX)
+
+        // Vertical: centre the now-line, clamped to bounds.
+        let cal = Calendar.current
+        let comps = cal.dateComponents([.hour, .minute], from: Date())
+        let nowMinute = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+        let nowY = CGFloat(nowMinute) / 60 * Self.hourHeight + Self.headerHeight
+        let maxOffsetY = max(totalHeight + Self.headerHeight - viewportHeight, 0)
+        let targetY = min(max(nowY - viewportHeight / 2, 0), maxOffsetY)
+        vScrollPos.scrollTo(y: targetY)
+    }
+
     // MARK: - Helpers
 
     private func isToday(_ day: Weekday) -> Bool { day == Weekday.today }
@@ -176,3 +266,46 @@ struct RoutinesWeekView: View {
         blocks.filter { $0.day == day }
     }
 }
+
+/// Read-only summary of a tapped routine. No editing affordances — the week
+/// view is read-only by contract; edits happen via the routines-list editor.
+@MainActor
+private struct RoutineDetailSheet: View {
+    let routine: FreeTimeRoutine
+    @Environment(\.dismiss) private var dismiss
+
+    private static let weekOrder: [Weekday] = [
+        .monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday
+    ]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                LabeledContent("Name", value: displayName)
+                LabeledContent("Time", value: "\(routine.startTimeOfDayString) – \(routine.endTimeOfDayString)")
+                LabeledContent("Days", value: daysString)
+            }
+            .navigationTitle("Routine")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.fraction(0.35), .medium])
+    }
+
+    private var displayName: String {
+        guard let name = routine.name, !name.isEmpty else { return "Unnamed" }
+        return name
+    }
+
+    private var daysString: String {
+        Self.weekOrder
+            .filter { routine.days.contains($0) }
+            .map(\.shortName)
+            .joined(separator: ", ")
+    }
+}
+

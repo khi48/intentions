@@ -59,7 +59,8 @@ struct RoutinesView: View {
     private var content: some View {
         VStack(spacing: 0) {
             tabPicker
-                .padding(.horizontal, 16)
+                .padding(.leading, 16)
+                .padding(.trailing, 24)
                 .padding(.top, 12)
 
             if isReadOnly {
@@ -84,6 +85,7 @@ struct RoutinesView: View {
                 }
             case .weekView:
                 RoutinesWeekView(routines: routines)
+                    .padding(.top, 16)
             }
         }
     }
