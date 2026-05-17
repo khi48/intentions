@@ -120,3 +120,16 @@ private func pastWeekdays(before today: Weekday) -> Set<Weekday> {
     guard let idx = order.firstIndex(of: today) else { return [] }
     return Set(order.prefix(idx))
 }
+
+/// Pure: true if `now` falls within `routine`'s window in the supplied calendar.
+/// Uses `calendar` to derive weekday + minute-of-day so tests can inject a fixed
+/// timezone. Default `Calendar.current` mirrors the user's system timezone for
+/// UI consumers — schedules elsewhere honor `WeeklySchedule.timeZone`, but this
+/// function intentionally has no schedule reference and assumes wall-clock = system.
+func isActive(routine: FreeTimeRoutine, now: Date, calendar: Calendar = .current) -> Bool {
+    let calendarWeekday = calendar.component(.weekday, from: now)
+    let weekday = Weekday.from(calendarWeekday: calendarWeekday)
+    let hour = calendar.component(.hour, from: now)
+    let minute = calendar.component(.minute, from: now)
+    return routine.isActive(weekday: weekday, minuteOfDay: hour * 60 + minute)
+}
