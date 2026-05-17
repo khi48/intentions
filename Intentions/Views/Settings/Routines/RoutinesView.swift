@@ -92,11 +92,11 @@ struct RoutinesView: View {
                     .disabled(isReadOnly)
                     .listRowBackground(AppConstants.Colors.surface)
                 }
+                .onMove(perform: isReadOnly ? nil : moveAction)
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background(AppConstants.Colors.background)
-            .onMove(perform: isReadOnly ? nil : moveAction)
         }
     }
 
