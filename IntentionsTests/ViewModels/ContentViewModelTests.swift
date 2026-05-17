@@ -328,7 +328,7 @@ final class ContentViewModelTests: XCTestCase {
 
         // Then
         XCTAssertTrue(viewModel.canStartSession)
-        XCTAssertNil(viewModel.cannotStartReason)
+        XCTAssertNil(viewModel.cannotStartBanner)
     }
 
     @MainActor
@@ -346,8 +346,12 @@ final class ContentViewModelTests: XCTestCase {
         // Then
         XCTAssertFalse(viewModel.canStartSession)
         XCTAssertEqual(
-            viewModel.cannotStartReason,
-            "All apps are unlocked — turn blocking on to start a session."
+            viewModel.cannotStartBanner?.title,
+            "Sessions locked while blocking is off."
+        )
+        XCTAssertEqual(
+            viewModel.cannotStartBanner?.remedy,
+            "Turn on blocking in Settings to start one."
         )
     }
 
@@ -413,8 +417,12 @@ final class ContentViewModelTests: XCTestCase {
         // Then - guard refuses, caption is the free-time copy
         XCTAssertFalse(viewModel.canStartSession, "expected canStartSession false during free-time")
         XCTAssertEqual(
-            viewModel.cannotStartReason,
-            "All apps are unlocked during free time."
+            viewModel.cannotStartBanner?.title,
+            "Sessions locked during free time."
+        )
+        XCTAssertEqual(
+            viewModel.cannotStartBanner?.remedy,
+            "Free time will block again later."
         )
     }
 

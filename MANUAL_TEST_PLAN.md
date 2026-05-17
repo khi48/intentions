@@ -199,6 +199,45 @@
 
 ---
 
+## Issue #39 — State-lock banner
+
+**Objective**: Verify the unified `StateLockBanner` (M4 design) renders correctly at all four trigger sites and reads cleanly under VoiceOver.
+
+**Steps**:
+
+1. **Routines — blocking ON**:
+   - In Settings, toggle Blocking ON.
+   - Open Settings → Routines.
+   - **Expected**: Banner appears at top with title "Schedule locked while blocking is on." and remedy "Turn off blocking in Settings to edit." in M4 styling (raised surface, 2pt accent left rail, ensō glyph).
+
+2. **Routines — blocking toggle clears banner**:
+   - From the previous step, return to Settings and toggle Blocking OFF.
+   - Re-open Settings → Routines.
+   - **Expected**: Banner is gone, schedule is editable.
+
+3. **Intention quote — blocking ON**:
+   - Toggle Blocking ON.
+   - Open Settings → Your Intention.
+   - **Expected**: Banner appears with "Intention locked while blocking is on." / "Turn off blocking in Settings to edit." copy and M4 styling.
+
+4. **Home — blocking OFF**:
+   - With no active session, toggle Blocking OFF.
+   - Open the Home tab; if Quick Actions exist, the banner should appear above the grid.
+   - **Expected**: Banner reads "Sessions locked while blocking is off." / "Turn on blocking in Settings to start one."
+
+5. **Home — free time**:
+   - With Blocking ON, create or wait for a routine whose free-time window contains the current time.
+   - Open the Home tab.
+   - **Expected**: Banner reads "Sessions locked during free time." / "Free time will block again later."
+
+6. **VoiceOver**:
+   - Enable VoiceOver (Settings → Accessibility) and focus any of the four banners above.
+   - **Expected**: VoiceOver reads "{title}. {remedy}" as a single phrase (no separate icon / title / remedy elements).
+
+**Pass/Fail**: ___________
+
+---
+
 ## Test Results Summary
 
 **Date Tested**: ___________

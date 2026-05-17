@@ -118,14 +118,9 @@ private struct QuickActionsSection: View {
             } else if !quickActionsViewModel.quickActions.isEmpty {
                 // Show available quick actions with drag-to-reorder
                 VStack(spacing: 16) {
-                    if let reason = viewModel.cannotStartReason {
-                        Text(reason)
-                            .font(.caption)
-                            .foregroundColor(AppConstants.Colors.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
+                    if let banner = viewModel.cannotStartBanner {
+                        StateLockBanner(title: banner.title, remedy: banner.remedy)
                             .padding(.horizontal)
-                            .accessibilityLabel(reason)
                     }
                     LazyVGrid(columns: [
                         GridItem(.flexible()),

@@ -55,15 +55,10 @@ struct QuickActionsView: View {
                 searchBar
 
                 // Banner when blocking is off / a session can't be started.
-                if let reason = contentViewModel.cannotStartReason {
-                    Text(reason)
-                        .font(.caption)
-                        .foregroundColor(AppConstants.Colors.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity)
+                if let banner = contentViewModel.cannotStartBanner {
+                    StateLockBanner(title: banner.title, remedy: banner.remedy)
                         .padding(.horizontal)
                         .padding(.top, 8)
-                        .accessibilityLabel(reason)
                 }
 
                 if viewModel.isLoading {

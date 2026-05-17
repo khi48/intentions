@@ -12,6 +12,14 @@ import SwiftUI
 import UserNotifications
 import OSLog
 
+/// Title + remedy pair surfaced via `StateLockBanner` when a new session cannot
+/// be started. Title states the locked state ("Sessions locked while …");
+/// remedy tells the user how to recover ("Turn on blocking in Settings…").
+struct CannotStartBanner: Sendable, Equatable {
+    let title: String
+    let remedy: String
+}
+
 /// Tracks the lifecycle state of the ScreenTimeService within ContentViewModel
 enum ScreenTimeServiceState: Sendable {
     case uninitialized
@@ -413,19 +421,34 @@ final class ContentViewModel: Sendable {
 
     /// Whether the user is currently allowed to start a new intention session.
     var canStartSession: Bool {
-        cannotStartReason == nil
+        cannotStartBanner == nil
     }
 
-    /// Human-readable reason why a session cannot be started, or nil when it can.
-    /// Surfaced as a caption on disabled session-start affordances in the UI.
-    var cannotStartReason: String? {
+    /// Title + remedy pair surfaced via `StateLockBanner` when a new session
+    /// cannot be started, or nil when one can. The title states the locked
+    /// state; the remedy tells the user how to unlock it.
+    var cannotStartBanner: CannotStartBanner? {
         if !weeklySchedule.isEnabled {
-            return "All apps are unlocked — turn blocking on to start a session."
+            return CannotStartBanner(
+                title: "Sessions locked while blocking is off.",
+                remedy: "Turn on blocking in Settings to start one."
+            )
         }
         if weeklySchedule.isFreeTime(at: Date()) {
-            return "All apps are unlocked during free time."
+            return CannotStartBanner(
+                title: "Sessions locked during free time.",
+                remedy: "Free time will block again later."
+            )
         }
         return nil
+    }
+
+    /// Backwards-compatible single-string view of `cannotStartBanner`, joining
+    /// title and remedy with a space. Kept for callers (test suite, accessibility
+    /// hints on disabled cards) that want a flat reason caption.
+    var cannotStartReason: String? {
+        guard let banner = cannotStartBanner else { return nil }
+        return "\(banner.title) \(banner.remedy)"
     }
 
     /// Start a new intention session
