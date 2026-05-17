@@ -34,7 +34,7 @@ struct RoutinesView: View {
             content
         }
         .navigationTitle("Free Time")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .sheet(item: $editorTarget) { target in
             RoutineEditorSheet(
                 editing: target.routine,

@@ -76,7 +76,7 @@ struct IntentionQuoteEditorView: View {
         }
         .settingsPageBackground()
         .navigationTitle("Your Intention")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .onAppear { if !isReadOnly { isFocused = true } }
     }
 

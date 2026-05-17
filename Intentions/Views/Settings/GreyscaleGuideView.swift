@@ -49,7 +49,7 @@ struct GreyscaleGuideView: View {
         }
         .settingsPageBackground()
         .navigationTitle("Enable Greyscale")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
     }
 
     private func stepRow(number: Int, text: LocalizedStringKey) -> some View {
