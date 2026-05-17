@@ -79,6 +79,12 @@ struct RoutinesWeekView: View {
     @ViewBuilder
     private func dayColumn(_ day: Weekday) -> some View {
         ZStack(alignment: .topLeading) {
+            // Claim full proposed height — without this, the ZStack sizes to its
+            // tallest child (a single block) and the outer .frame(height:) centers
+            // that small ZStack inside the 576pt slot, shifting every offset-positioned
+            // child down by ~(totalHeight - blockHeight)/2.
+            Color.clear
+                .frame(height: totalHeight)
             hourLines
             ForEach(blocksFor(day), id: \.routineID) { block in
                 blockView(block)
