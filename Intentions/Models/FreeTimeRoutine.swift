@@ -57,4 +57,13 @@ struct FreeTimeRoutine: Identifiable, Codable, Hashable, Sendable {
         let m = minute % 60
         return String(format: "%02d:%02d", h, m)
     }
+
+    /// Card title resolution: trimmed non-empty name wins; otherwise the time-range string.
+    static func title(for routine: FreeTimeRoutine) -> String {
+        if let raw = routine.name {
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
+        }
+        return "\(routine.startTimeOfDayString)–\(routine.endTimeOfDayString)"
+    }
 }

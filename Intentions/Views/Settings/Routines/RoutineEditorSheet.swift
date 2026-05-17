@@ -15,6 +15,7 @@ struct RoutineEditorSheet: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    @State private var name: String
     @State private var startDate: Date
     @State private var endDate: Date
     @State private var selectedDays: Set<Weekday>
@@ -37,12 +38,14 @@ struct RoutineEditorSheet: View {
         let baseEndMinute: Int
         let baseDays: Set<Weekday>
         let baseID: UUID
+        let baseName: String
 
         if let routine = editing {
             baseStartMinute = routine.startMinute
             baseEndMinute = routine.endMinute
             baseDays = routine.days
             baseID = routine.id
+            baseName = routine.name ?? ""
         } else {
             // New routine snaps start to current time; default duration 60min, clamped to end-of-day.
             let nowMinute = Self.minuteOfDay(from: Date())
@@ -51,8 +54,10 @@ struct RoutineEditorSheet: View {
             baseEndMinute = min(clampedStart + 60, FreeTimeRoutine.minutesPerDay - 1)
             baseDays = [.monday, .tuesday, .wednesday, .thursday, .friday]
             baseID = UUID()
+            baseName = ""
         }
 
+        _name = State(initialValue: baseName)
         _startDate = State(initialValue: Self.date(forMinuteOfDay: baseStartMinute))
         _endDate = State(initialValue: Self.date(forMinuteOfDay: baseEndMinute))
         _selectedDays = State(initialValue: baseDays)
@@ -86,6 +91,13 @@ struct RoutineEditorSheet: View {
 
     private var form: some View {
         Form {
+            Section("Name") {
+                TextField("", text: $name, prompt: Text(currentPlaceholder))
+                    .foregroundColor(AppConstants.Colors.text)
+                    .autocorrectionDisabled()
+            }
+            .listRowBackground(AppConstants.Colors.surface)
+
             Section("Time") {
                 DatePicker(
                     "Starts",
@@ -176,6 +188,11 @@ struct RoutineEditorSheet: View {
         endMinute > startMinute && !selectedDays.isEmpty
     }
 
+    /// Live `HH:mm–HH:mm` shown as the name field's placeholder.
+    private var currentPlaceholder: String {
+        "\(FreeTimeRoutine.timeOfDayString(forMinute: startMinute))–\(FreeTimeRoutine.timeOfDayString(forMinute: endMinute))"
+    }
+
     /// End picker may only pick a time strictly after the current start.
     /// Upper bound is end-of-day (23:59 on the same anchor day) so the picker
     /// can't roll into tomorrow — model is single-day.
@@ -201,9 +218,10 @@ struct RoutineEditorSheet: View {
         guard isValid else { return }
         let duration = endMinute - startMinute
         let sortIndex = editing?.sortIndex ?? defaultSortIndex
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let routine = FreeTimeRoutine(
             id: routineID,
-            name: editing?.name,
+            name: trimmed.isEmpty ? nil : trimmed,
             startMinute: startMinute,
             durationMinutes: duration,
             days: selectedDays,

@@ -170,4 +170,31 @@ final class FreeTimeRoutineTests: XCTestCase {
         let b = makeRoutine()
         XCTAssertNotEqual(a, b)
     }
+
+    // MARK: - title(for:) resolution
+
+    func test_title_returnsNameWhenSet() {
+        let r = makeRoutine(startMinute: 9 * 60, durationMinutes: 60, name: "Morning")
+        XCTAssertEqual(FreeTimeRoutine.title(for: r), "Morning")
+    }
+
+    func test_title_returnsTimeRangeWhenNameNil() {
+        let r = makeRoutine(startMinute: 9 * 60, durationMinutes: 60, name: nil)
+        XCTAssertEqual(FreeTimeRoutine.title(for: r), "09:00–10:00")
+    }
+
+    func test_title_returnsTimeRangeWhenNameEmpty() {
+        let r = makeRoutine(startMinute: 9 * 60, durationMinutes: 60, name: "")
+        XCTAssertEqual(FreeTimeRoutine.title(for: r), "09:00–10:00")
+    }
+
+    func test_title_returnsTimeRangeWhenNameWhitespaceOnly() {
+        let r = makeRoutine(startMinute: 9 * 60, durationMinutes: 60, name: "   \t\n ")
+        XCTAssertEqual(FreeTimeRoutine.title(for: r), "09:00–10:00")
+    }
+
+    func test_title_trimsSurroundingWhitespaceFromName() {
+        let r = makeRoutine(name: "  Focus  ")
+        XCTAssertEqual(FreeTimeRoutine.title(for: r), "Focus")
+    }
 }
