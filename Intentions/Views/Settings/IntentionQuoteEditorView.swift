@@ -40,7 +40,10 @@ struct IntentionQuoteEditorView: View {
                 .padding(.top, 8)
 
                 if isReadOnly {
-                    lockedBanner
+                    StateLockBanner(
+                        title: "Intention locked while blocking is on.",
+                        remedy: "Turn off blocking in Settings to edit."
+                    )
                 }
 
                 // Editor card
@@ -78,32 +81,5 @@ struct IntentionQuoteEditorView: View {
         .navigationTitle("Your Intention")
         .navigationBarTitleDisplayMode(.large)
         .onAppear { if !isReadOnly { isFocused = true } }
-    }
-
-    private var lockedBanner: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "lock.fill")
-                .font(.caption)
-                .foregroundColor(AppConstants.Colors.accent)
-                .padding(.top, 1)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Intention locked while Blocking is on.")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(AppConstants.Colors.text)
-                Text("Turn off Blocking in Settings to edit.")
-                    .font(.caption)
-                    .foregroundColor(AppConstants.Colors.textSecondary)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.vertical, 11)
-        .padding(.horizontal, 13)
-        .background(AppConstants.Colors.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(AppConstants.Colors.border, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
