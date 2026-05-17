@@ -5,7 +5,10 @@ import SwiftUI
 /// Auto-saves on every mutation — no toolbar Save.
 @MainActor
 struct RoutinesView: View {
+    enum Tab: Hashable { case routines, weekView }
+
     @State private var routines: [FreeTimeRoutine]
+    @State private var selectedTab: Tab = .routines
 
     /// Sheet presentation: `.some(routine)` to edit; `.some(nil)` to create. `nil` = closed.
     @State private var editorTarget: EditorTarget?
@@ -55,25 +58,42 @@ struct RoutinesView: View {
     @ViewBuilder
     private var content: some View {
         VStack(spacing: 0) {
+            tabPicker
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+
             if isReadOnly {
                 lockedBanner
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
             }
 
-            if routines.isEmpty {
-                emptyState
-            } else {
-                routinesList
-            }
+            switch selectedTab {
+            case .routines:
+                if routines.isEmpty {
+                    emptyState
+                } else {
+                    routinesList
+                }
 
-            if !isReadOnly {
-                addRoutineButton
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 16)
+                if !isReadOnly {
+                    addRoutineButton
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 16)
+                }
+            case .weekView:
+                RoutinesWeekView(routines: routines)
             }
         }
+    }
+
+    private var tabPicker: some View {
+        Picker("View", selection: $selectedTab) {
+            Text("Routines").tag(Tab.routines)
+            Text("Week view").tag(Tab.weekView)
+        }
+        .pickerStyle(.segmented)
     }
 
     private var routinesList: some View {
