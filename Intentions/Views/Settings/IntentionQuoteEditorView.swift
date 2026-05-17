@@ -9,14 +9,16 @@ import SwiftUI
 /// Pushed from `SettingsView` via `SettingsDestination.intentionQuote`.
 struct IntentionQuoteEditorView: View {
     let initialQuote: String
+    let isReadOnly: Bool
     let onSave: (String) -> Void
 
     @State private var quote: String
     @FocusState private var isFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
-    init(quote: String, onSave: @escaping (String) -> Void) {
+    init(quote: String, isReadOnly: Bool = false, onSave: @escaping (String) -> Void) {
         self.initialQuote = quote
+        self.isReadOnly = isReadOnly
         self.onSave = onSave
         self._quote = State(initialValue: quote)
     }
@@ -34,13 +36,12 @@ struct IntentionQuoteEditorView: View {
                         .font(.headline)
                         .foregroundColor(AppConstants.Colors.text)
                         .multilineTextAlignment(.center)
-
-                    Text("This is shown when you try to disable blocking, to remind you why you started.")
-                        .font(.subheadline)
-                        .foregroundColor(AppConstants.Colors.textSecondary)
-                        .multilineTextAlignment(.center)
                 }
                 .padding(.top, 8)
+
+                if isReadOnly {
+                    lockedBanner
+                }
 
                 // Editor card
                 VStack(alignment: .leading, spacing: 8) {
@@ -52,6 +53,7 @@ struct IntentionQuoteEditorView: View {
                         .foregroundColor(AppConstants.Colors.text)
                         .focused($isFocused)
                         .textInputAutocapitalization(.sentences)
+                        .disabled(isReadOnly)
                         .padding(14)
                         .background(AppConstants.Colors.surface)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -61,9 +63,11 @@ struct IntentionQuoteEditorView: View {
                         )
                 }
 
-                SettingsPrimaryButton("Save", systemImage: "checkmark") {
-                    onSave(quote.trimmingCharacters(in: .whitespacesAndNewlines))
-                    dismiss()
+                if !isReadOnly {
+                    SettingsPrimaryButton("Save", systemImage: "checkmark") {
+                        onSave(quote.trimmingCharacters(in: .whitespacesAndNewlines))
+                        dismiss()
+                    }
                 }
 
                 Spacer(minLength: 24)
@@ -73,6 +77,33 @@ struct IntentionQuoteEditorView: View {
         .settingsPageBackground()
         .navigationTitle("Your Intention")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { isFocused = true }
+        .onAppear { if !isReadOnly { isFocused = true } }
+    }
+
+    private var lockedBanner: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "lock.fill")
+                .font(.caption)
+                .foregroundColor(AppConstants.Colors.accent)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Intention locked while Blocking is on.")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppConstants.Colors.text)
+                Text("Turn off Blocking in Settings to edit.")
+                    .font(.caption)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 11)
+        .padding(.horizontal, 13)
+        .background(AppConstants.Colors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(AppConstants.Colors.border, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }

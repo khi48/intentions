@@ -152,7 +152,8 @@ struct SettingsView: View {
                         )
                     case .intentionQuote:
                         IntentionQuoteEditorView(
-                            quote: viewModel.weeklySchedule.intentionQuote ?? ""
+                            quote: viewModel.weeklySchedule.intentionQuote ?? "",
+                            isReadOnly: viewModel.weeklySchedule.isEnabled
                         ) { newQuote in
                             viewModel.weeklySchedule.intentionQuote = newQuote.isEmpty ? nil : newQuote
                             Task {
