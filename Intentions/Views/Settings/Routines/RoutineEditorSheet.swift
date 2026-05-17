@@ -119,12 +119,13 @@ struct RoutineEditorSheet: View {
 
             if !isCreating {
                 Section {
-                    Button(role: .destructive) {
+                    Button {
                         onDelete()
                         dismiss()
                     } label: {
                         Text("Delete routine")
                             .frame(maxWidth: .infinity)
+                            .foregroundColor(AppConstants.Colors.text)
                     }
                 }
                 .listRowBackground(AppConstants.Colors.surface)

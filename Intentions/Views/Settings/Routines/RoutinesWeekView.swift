@@ -62,16 +62,18 @@ struct RoutinesWeekView: View {
 
     private var hourGutter: some View {
         ZStack(alignment: .topLeading) {
+            Color.clear
+                .frame(width: hourGutterWidth, height: totalHeight)
             ForEach(0..<24, id: \.self) { hour in
                 Text(String(format: "%02d", hour))
                     .font(.system(size: 9))
                     .foregroundColor(AppConstants.Colors.textSecondary)
                     .frame(width: hourGutterWidth, alignment: .trailing)
                     .padding(.trailing, 6)
-                    .offset(y: CGFloat(hour) * Self.hourHeight - 4)
+                    .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
+                    .offset(y: CGFloat(hour) * Self.hourHeight)
             }
         }
-        .frame(width: hourGutterWidth, height: totalHeight, alignment: .topTrailing)
     }
 
     @ViewBuilder
