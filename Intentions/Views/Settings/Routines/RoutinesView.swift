@@ -181,8 +181,7 @@ struct RoutinesView: View {
     }
 
     private func title(for routine: FreeTimeRoutine) -> String {
-        if let name = routine.name, !name.isEmpty { return name }
-        return "\(routine.startTimeOfDayString)–\(routine.endTimeOfDayString)"
+        FreeTimeRoutine.title(for: routine)
     }
 
     /// Days sorted Mon..Sun (Monday-first), comma-joined short names.
