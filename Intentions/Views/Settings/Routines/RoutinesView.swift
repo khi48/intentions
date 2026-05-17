@@ -2,11 +2,9 @@ import SwiftUI
 
 /// Cards-based replacement for `WeekScheduleEditorView`. Lists each `FreeTimeRoutine`
 /// as a tappable card; routines are created, edited, and deleted via `RoutineEditorSheet`.
-/// This is the minimal cutover slice (#31) — no active highlight, no drag-reorder, no
-/// optional-name polish, no picker guards.
+/// Auto-saves on every mutation — no toolbar Save.
 @MainActor
 struct RoutinesView: View {
-    /// Live in-flight editing copy of routines. Mutations stay local until `Save` taps.
     @State private var routines: [FreeTimeRoutine]
 
     /// Sheet presentation: `.some(routine)` to edit; `.some(nil)` to create. `nil` = closed.
@@ -28,33 +26,27 @@ struct RoutinesView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                AppConstants.Colors.background.ignoresSafeArea()
-                content
-            }
-            .navigationTitle("Free Time")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if !isReadOnly {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Save") { commitSave() }
-                            .fontWeight(.semibold)
+        ZStack {
+            AppConstants.Colors.background.ignoresSafeArea()
+            content
+        }
+        .navigationTitle("Free Time")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $editorTarget) { target in
+            RoutineEditorSheet(
+                editing: target.routine,
+                defaultSortIndex: nextSortIndex,
+                onSave: { saved in
+                    upsert(saved)
+                    commitSave()
+                },
+                onDelete: {
+                    if let id = target.routine?.id {
+                        delete(id: id)
+                        commitSave()
                     }
                 }
-            }
-            .sheet(item: $editorTarget) { target in
-                RoutineEditorSheet(
-                    editing: target.routine,
-                    defaultSortIndex: nextSortIndex,
-                    onSave: { saved in
-                        upsert(saved)
-                    },
-                    onDelete: {
-                        if let id = target.routine?.id { delete(id: id) }
-                    }
-                )
-            }
+            )
         }
     }
 
@@ -74,6 +66,13 @@ struct RoutinesView: View {
             } else {
                 routinesList
             }
+
+            if !isReadOnly {
+                addRoutineButton
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
+            }
         }
     }
 
@@ -90,23 +89,6 @@ struct RoutinesView: View {
                 .disabled(isReadOnly)
                 .listRowBackground(AppConstants.Colors.surface)
             }
-
-            if !isReadOnly {
-                Button {
-                    editorTarget = EditorTarget(routine: nil)
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundColor(AppConstants.Colors.accent)
-                        Text("Add routine")
-                            .foregroundColor(AppConstants.Colors.text)
-                            .fontWeight(.medium)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                }
-                .listRowBackground(AppConstants.Colors.surface)
-            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -119,25 +101,29 @@ struct RoutinesView: View {
             Text("No routines yet")
                 .font(.body)
                 .foregroundColor(AppConstants.Colors.textSecondary)
-            if !isReadOnly {
-                Button {
-                    editorTarget = EditorTarget(routine: nil)
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus.circle.fill")
-                        Text("Add routine")
-                            .fontWeight(.semibold)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(AppConstants.Colors.text)
-                .foregroundColor(AppConstants.Colors.background)
-            }
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var addRoutineButton: some View {
+        Button {
+            editorTarget = EditorTarget(routine: nil)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "plus.circle.fill")
+                Text("Add routine")
+                    .fontWeight(.semibold)
+            }
+            .font(.headline)
+            .foregroundColor(AppConstants.Colors.text)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(AppConstants.Colors.buttonPrimary)
+            )
+        }
     }
 
     private func routineRow(_ routine: FreeTimeRoutine) -> some View {

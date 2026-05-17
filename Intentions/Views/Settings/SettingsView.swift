@@ -148,7 +148,6 @@ struct SettingsView: View {
                                     await viewModel.updateSchedule(updated)
                                     await onScheduleSettingsChanged?(updated)
                                 }
-                                navigationManager.resetSettingsNavigation()
                             }
                         )
                     case .intentionQuote:

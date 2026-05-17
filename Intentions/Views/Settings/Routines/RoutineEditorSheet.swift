@@ -44,9 +44,11 @@ struct RoutineEditorSheet: View {
             baseDays = routine.days
             baseID = routine.id
         } else {
-            // Default new routine: 09:00–10:00 weekdays.
-            baseStartMinute = 9 * 60
-            baseEndMinute = 10 * 60
+            // New routine snaps start to current time; default duration 60min, clamped to end-of-day.
+            let nowMinute = Self.minuteOfDay(from: Date())
+            let clampedStart = min(max(nowMinute, 0), FreeTimeRoutine.minutesPerDay - 2)
+            baseStartMinute = clampedStart
+            baseEndMinute = min(clampedStart + 60, FreeTimeRoutine.minutesPerDay - 1)
             baseDays = [.monday, .tuesday, .wednesday, .thursday, .friday]
             baseID = UUID()
         }
@@ -92,10 +94,18 @@ struct RoutineEditorSheet: View {
                 )
                 .environment(\.locale, Locale(identifier: "en_GB_POSIX")) // 24-hour
                 .foregroundColor(AppConstants.Colors.text)
+                .onChange(of: startDate) { _, newStart in
+                    // Keep end strictly after start. Bump end by the prior gap
+                    // (or 1 min minimum) so the user's chosen duration sticks.
+                    if endDate <= newStart {
+                        endDate = newStart.addingTimeInterval(60)
+                    }
+                }
 
                 DatePicker(
                     "Ends",
                     selection: $endDate,
+                    in: endPickerRange,
                     displayedComponents: .hourAndMinute
                 )
                 .environment(\.locale, Locale(identifier: "en_GB_POSIX"))
@@ -164,6 +174,17 @@ struct RoutineEditorSheet: View {
 
     private var isValid: Bool {
         endMinute > startMinute && !selectedDays.isEmpty
+    }
+
+    /// End picker may only pick a time strictly after the current start.
+    /// Upper bound is end-of-day (23:59 on the same anchor day) so the picker
+    /// can't roll into tomorrow — model is single-day.
+    private var endPickerRange: ClosedRange<Date> {
+        let lower = startDate.addingTimeInterval(60)
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: startDate)
+        let endOfDay = calendar.date(byAdding: .minute, value: FreeTimeRoutine.minutesPerDay - 1, to: startOfDay) ?? lower
+        return lower...max(lower, endOfDay)
     }
 
     // MARK: - Actions
