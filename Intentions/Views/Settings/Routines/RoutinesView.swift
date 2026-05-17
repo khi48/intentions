@@ -89,6 +89,7 @@ struct RoutinesView: View {
                 .disabled(isReadOnly)
                 .listRowBackground(AppConstants.Colors.surface)
             }
+            .onMove(perform: isReadOnly ? nil : moveAction)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -206,6 +207,17 @@ struct RoutinesView: View {
 
     private func delete(id: UUID) {
         routines.removeAll { $0.id == id }
+    }
+
+    private var moveAction: (IndexSet, Int) -> Void {
+        { source, destination in
+            routines = RoutineOrdering.reorder(
+                sortedRoutines: sortedRoutines,
+                from: source,
+                to: destination
+            )
+            commitSave()
+        }
     }
 
     private func commitSave() {

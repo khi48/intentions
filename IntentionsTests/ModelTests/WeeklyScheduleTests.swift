@@ -177,4 +177,30 @@ final class WeeklyScheduleTests: XCTestCase {
         XCTAssertEqual(decoded.intentionQuote, "Test")
         XCTAssertEqual(decoded.isEnabled, true)
     }
+
+    func testCodableRoundTripPreservesRoutineOrderBySortIndex() throws {
+        func named(_ name: String, sortIndex: Int) -> FreeTimeRoutine {
+            FreeTimeRoutine(
+                id: UUID(), name: name, startMinute: 9 * 60, durationMinutes: 60,
+                days: [.monday], sortIndex: sortIndex
+            )
+        }
+        let original = WeeklySchedule()
+        // Insert in scrambled order; sortIndex is the source of truth.
+        original.routines = [
+            named("third", sortIndex: 2),
+            named("first", sortIndex: 0),
+            named("fourth", sortIndex: 3),
+            named("second", sortIndex: 1)
+        ]
+
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(WeeklySchedule.self, from: data)
+
+        let orderedNames = decoded.routines
+            .sorted { $0.sortIndex < $1.sortIndex }
+            .compactMap(\.name)
+        XCTAssertEqual(orderedNames, ["first", "second", "third", "fourth"])
+        XCTAssertEqual(decoded.routines.map(\.sortIndex).sorted(), [0, 1, 2, 3])
+    }
 }
