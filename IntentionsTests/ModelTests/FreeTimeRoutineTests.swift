@@ -170,4 +170,79 @@ final class FreeTimeRoutineTests: XCTestCase {
         let b = makeRoutine()
         XCTAssertNotEqual(a, b)
     }
+
+    // MARK: - Pure isActive(routine:now:)
+
+    /// Build a UTC calendar so weekday + minute-of-day come out deterministically.
+    private var utcCalendar: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }
+
+    /// 2026-05-18 (Mon) 09:30 UTC.
+    private func mondayAt(hour: Int, minute: Int) -> Date {
+        var comps = DateComponents()
+        comps.year = 2026
+        comps.month = 5
+        comps.day = 18
+        comps.hour = hour
+        comps.minute = minute
+        return utcCalendar.date(from: comps)!
+    }
+
+    /// 2026-05-19 (Tue) at given time.
+    private func tuesdayAt(hour: Int, minute: Int) -> Date {
+        var comps = DateComponents()
+        comps.year = 2026
+        comps.month = 5
+        comps.day = 19
+        comps.hour = hour
+        comps.minute = minute
+        return utcCalendar.date(from: comps)!
+    }
+
+    func test_pureIsActive_matchingDayAndTime_isTrue() {
+        let r = makeRoutine(startMinute: 9 * 60, durationMinutes: 60, days: [.monday])
+        XCTAssertTrue(isActive(routine: r, now: mondayAt(hour: 9, minute: 30), calendar: utcCalendar))
+    }
+
+    func test_pureIsActive_matchingDayOutsideTime_isFalse() {
+        let r = makeRoutine(startMinute: 9 * 60, durationMinutes: 60, days: [.monday])
+        XCTAssertFalse(isActive(routine: r, now: mondayAt(hour: 8, minute: 59), calendar: utcCalendar))
+        XCTAssertFalse(isActive(routine: r, now: mondayAt(hour: 11, minute: 0), calendar: utcCalendar))
+    }
+
+    func test_pureIsActive_nonMatchingDay_isFalse() {
+        let r = makeRoutine(startMinute: 9 * 60, durationMinutes: 60, days: [.monday])
+        XCTAssertFalse(isActive(routine: r, now: tuesdayAt(hour: 9, minute: 30), calendar: utcCalendar))
+    }
+
+    func test_pureIsActive_inclusiveStart() {
+        let r = makeRoutine(startMinute: 9 * 60, durationMinutes: 60, days: [.monday])
+        XCTAssertTrue(isActive(routine: r, now: mondayAt(hour: 9, minute: 0), calendar: utcCalendar))
+    }
+
+    func test_pureIsActive_exclusiveEnd() {
+        let r = makeRoutine(startMinute: 9 * 60, durationMinutes: 60, days: [.monday])
+        XCTAssertFalse(isActive(routine: r, now: mondayAt(hour: 10, minute: 0), calendar: utcCalendar))
+    }
+
+    /// Highlight reactivity: at the last minute inside the window the row is active,
+    /// at the very next minute (the exclusive end) it flips to inactive. Same routine,
+    /// same calendar — only `now` advances one minute.
+    func test_pureIsActive_minuteBoundaryFlipsHighlight() {
+        let r = makeRoutine(startMinute: 9 * 60, durationMinutes: 60, days: [.monday])
+        let lastInside = mondayAt(hour: 9, minute: 59)
+        let firstOutside = mondayAt(hour: 10, minute: 0)
+        XCTAssertTrue(isActive(routine: r, now: lastInside, calendar: utcCalendar))
+        XCTAssertFalse(isActive(routine: r, now: firstOutside, calendar: utcCalendar))
+    }
+
+    /// Boundary at start: T = startMinute - 1 inactive, T+1 active.
+    func test_pureIsActive_startBoundaryFlipsHighlight() {
+        let r = makeRoutine(startMinute: 9 * 60, durationMinutes: 60, days: [.monday])
+        XCTAssertFalse(isActive(routine: r, now: mondayAt(hour: 8, minute: 59), calendar: utcCalendar))
+        XCTAssertTrue(isActive(routine: r, now: mondayAt(hour: 9, minute: 0), calendar: utcCalendar))
+    }
 }

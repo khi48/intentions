@@ -77,22 +77,26 @@ struct RoutinesView: View {
     }
 
     private var routinesList: some View {
-        List {
-            ForEach(sortedRoutines) { routine in
-                Button {
-                    guard !isReadOnly else { return }
-                    editorTarget = EditorTarget(routine: routine)
-                } label: {
-                    routineRow(routine)
+        // TimelineView at .everyMinute drives row re-evaluation so the active
+        // highlight crosses minute boundaries without manual timers.
+        TimelineView(.everyMinute) { context in
+            List {
+                ForEach(sortedRoutines) { routine in
+                    Button {
+                        guard !isReadOnly else { return }
+                        editorTarget = EditorTarget(routine: routine)
+                    } label: {
+                        routineRow(routine, now: context.date)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isReadOnly)
+                    .listRowBackground(AppConstants.Colors.surface)
                 }
-                .buttonStyle(.plain)
-                .disabled(isReadOnly)
-                .listRowBackground(AppConstants.Colors.surface)
             }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(AppConstants.Colors.background)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .background(AppConstants.Colors.background)
     }
 
     private var emptyState: some View {
@@ -126,18 +130,40 @@ struct RoutinesView: View {
         }
     }
 
-    private func routineRow(_ routine: FreeTimeRoutine) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title(for: routine))
-                .font(.body.weight(.medium))
-                .foregroundColor(AppConstants.Colors.text)
+    private func routineRow(_ routine: FreeTimeRoutine, now: Date) -> some View {
+        let active = isActive(routine: routine, now: now)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text(title(for: routine))
+                    .font(.body.weight(.medium))
+                    .foregroundColor(AppConstants.Colors.text)
+                if active {
+                    nowBadge
+                }
+            }
             Text(daysSubtitle(for: routine))
                 .font(.caption)
                 .foregroundColor(AppConstants.Colors.textSecondary)
         }
         .padding(.vertical, 4)
+        .padding(.horizontal, active ? 8 : 0)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(AppConstants.Colors.accent, lineWidth: active ? 1.5 : 0)
+        )
+    }
+
+    private var nowBadge: some View {
+        Text("NOW")
+            .font(.caption2.weight(.bold))
+            .foregroundColor(AppConstants.Colors.background)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                Capsule().fill(AppConstants.Colors.accent)
+            )
     }
 
     private var lockedBanner: some View {
