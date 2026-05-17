@@ -10,7 +10,6 @@ import SwiftUI
 @preconcurrency import FamilyControls
 @preconcurrency import ManagedSettings
 import UserNotifications
-import WidgetKit
 import OSLog
 
 /// Tracks the lifecycle state of the ScreenTimeService within ContentViewModel
@@ -918,32 +917,17 @@ final class ContentViewModel: Sendable {
     
     /// Update widget with session information
     private func updateWidgetSessionData(_ session: IntentionSession) {
-        guard let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) else { return }
-
         let sessionTitle: String
         switch session.source {
         case .quickAction(let quickAction): sessionTitle = quickAction.name
         case .manual: sessionTitle = "Session"
         }
-
-        sharedDefaults.set(sessionTitle, forKey: AppConstants.Keys.widgetSessionTitle)
-        sharedDefaults.set(session.endTime, forKey: AppConstants.Keys.widgetSessionEndTime)
-        sharedDefaults.set(false, forKey: AppConstants.Keys.widgetBlockingStatus)
-        sharedDefaults.set(Date(), forKey: AppConstants.Keys.widgetLastUpdate)
-        sharedDefaults.synchronize()
-        WidgetCenter.shared.reloadAllTimelines()
+        WidgetBridge.pushSession(title: sessionTitle, endsAt: session.endTime)
     }
 
     /// Clear widget session data when session ends
     private func clearWidgetSessionData() {
-        guard let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupId) else { return }
-
-        sharedDefaults.removeObject(forKey: AppConstants.Keys.widgetSessionTitle)
-        sharedDefaults.removeObject(forKey: AppConstants.Keys.widgetSessionEndTime)
-        sharedDefaults.set(weeklySchedule.isBlocking(at: Date()), forKey: AppConstants.Keys.widgetBlockingStatus)
-        sharedDefaults.set(Date(), forKey: AppConstants.Keys.widgetLastUpdate)
-        sharedDefaults.synchronize()
-        WidgetCenter.shared.reloadAllTimelines()
+        WidgetBridge.pushNoSession(isBlocking: weeklySchedule.isBlocking(at: Date()))
     }
 }
 

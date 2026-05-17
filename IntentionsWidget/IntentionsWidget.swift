@@ -23,9 +23,13 @@ private struct WidgetDataManager {
         sharedUserDefaults.object(forKey: SharedConstants.WidgetKeys.lastUpdate) as? Date
     }
 
+    /// Only flagged stale on first-ever read (no `lastUpdate` yet). Once the
+    /// main app or DAM has written, we trust the value indefinitely — every
+    /// state transition (session start/end, schedule boundary, app foreground)
+    /// pushes a fresh write, so a stored value is always the latest known
+    /// state. Time-based staleness was removed in #20.
     static func isDataStale() -> Bool {
-        guard let lastUpdate = getLastUpdateTime() else { return true }
-        return Date().timeIntervalSince(lastUpdate) > 3600
+        getLastUpdateTime() == nil
     }
 
     static func getSessionTitle() -> String? {
