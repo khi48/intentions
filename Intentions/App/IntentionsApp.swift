@@ -42,7 +42,9 @@ struct IntentApp: App {
             print("SHIELDSTATE_BREADCRUMBS_END")
             let engine = ShieldEngine.mainApp()
             engine.catchUpOnForeground()
-            engine.reapplyCurrentState()
+            // No reapplyCurrentState — catchUpOnForeground already does
+            // compute+apply on the same log read. The duplicate apply
+            // (8 ManagedSettings XPC writes back-to-back) was a hang vector.
         }
     }
 }
