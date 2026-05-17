@@ -342,4 +342,64 @@ final class FreeTimeRoutineTests: XCTestCase {
         XCTAssertFalse(isActive(routine: r, now: mondayAt(hour: 8, minute: 59), calendar: utcCalendar))
         XCTAssertTrue(isActive(routine: r, now: mondayAt(hour: 9, minute: 0), calendar: utcCalendar))
     }
+
+    // MARK: - RoutineOrdering.reorder
+
+    private func makeSortedTriple() -> [FreeTimeRoutine] {
+        [
+            makeRoutine(sortIndex: 0, name: "A"),
+            makeRoutine(sortIndex: 1, name: "B"),
+            makeRoutine(sortIndex: 2, name: "C")
+        ]
+    }
+
+    func test_reorder_moveFirstToLast_producesContiguousIndices() {
+        let input = makeSortedTriple()
+        // SwiftUI: moving index 0 to "end" passes destination == count.
+        let result = RoutineOrdering.reorder(sortedRoutines: input, from: IndexSet(integer: 0), to: 3)
+        XCTAssertEqual(result.map(\.name), ["B", "C", "A"])
+        XCTAssertEqual(result.map(\.sortIndex), [0, 1, 2])
+    }
+
+    func test_reorder_moveLastToFirst_producesContiguousIndices() {
+        let input = makeSortedTriple()
+        let result = RoutineOrdering.reorder(sortedRoutines: input, from: IndexSet(integer: 2), to: 0)
+        XCTAssertEqual(result.map(\.name), ["C", "A", "B"])
+        XCTAssertEqual(result.map(\.sortIndex), [0, 1, 2])
+    }
+
+    func test_reorder_moveMiddleToMiddle_producesContiguousIndices() {
+        let input = [
+            makeRoutine(sortIndex: 0, name: "A"),
+            makeRoutine(sortIndex: 1, name: "B"),
+            makeRoutine(sortIndex: 2, name: "C"),
+            makeRoutine(sortIndex: 3, name: "D")
+        ]
+        // Move "B" (idx 1) to just after "C" — destination idx 3 means insert before original idx 3.
+        let result = RoutineOrdering.reorder(sortedRoutines: input, from: IndexSet(integer: 1), to: 3)
+        XCTAssertEqual(result.map(\.name), ["A", "C", "B", "D"])
+        XCTAssertEqual(result.map(\.sortIndex), [0, 1, 2, 3])
+    }
+
+    func test_reorder_isPure_doesNotMutateInput() {
+        let input = makeSortedTriple()
+        let originalSortIndices = input.map(\.sortIndex)
+        _ = RoutineOrdering.reorder(sortedRoutines: input, from: IndexSet(integer: 0), to: 2)
+        XCTAssertEqual(input.map(\.sortIndex), originalSortIndices)
+    }
+
+    func test_reorder_preservesAllRoutineFields() {
+        let r = FreeTimeRoutine(
+            id: UUID(), name: "Keep", startMinute: 7 * 60, durationMinutes: 30,
+            days: [.tuesday], sortIndex: 5
+        )
+        let other = makeRoutine(sortIndex: 99, name: "Other")
+        let result = RoutineOrdering.reorder(sortedRoutines: [r, other], from: IndexSet(integer: 1), to: 0)
+        let moved = result.first { $0.id == other.id }!
+        XCTAssertEqual(moved.name, "Other")
+        let kept = result.first { $0.id == r.id }!
+        XCTAssertEqual(kept.startMinute, 7 * 60)
+        XCTAssertEqual(kept.durationMinutes, 30)
+        XCTAssertEqual(kept.days, [.tuesday])
+    }
 }
