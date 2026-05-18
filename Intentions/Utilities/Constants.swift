@@ -185,6 +185,10 @@ enum AppConstants {
         /// Card/surface background color (darker for better contrast)
         static let surface = Color(red: 0.15, green: 0.15, blue: 0.15)
 
+        /// Elevated surface — one shade lighter than `surface`. Used to mark a
+        /// row as currently-active without introducing a coloured tint.
+        static let surfaceElevated = Color(red: 0.19, green: 0.19, blue: 0.19)
+
         /// Primary text color (white)
         static let text = Color.white
 
