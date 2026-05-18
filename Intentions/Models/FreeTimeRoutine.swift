@@ -82,10 +82,9 @@ struct EditorGuardSpec: Equatable, Sendable {
 
 /// Pure guard-spec for the routine editor sheet.
 ///
-/// Pass `isNewRoutine = true` for new routines AND for edits of routines that
-/// have not yet started on today. Pass `false` only when editing a routine that
-/// is currently in-progress (today ∈ days && start ≤ nowMinute < end) — in that
-/// case no guards apply, since the user is just adjusting a live window.
+/// Pass `isNewRoutine = true` only when creating a new routine. Edits always
+/// pass `false`: an existing routine recurs weekly, so past-week and minStart
+/// guards would block legitimate edits (e.g. renaming a Mon routine on Sun).
 func editorGuards(
     now: Date,
     isNewRoutine: Bool,

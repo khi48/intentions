@@ -210,24 +210,16 @@ struct RoutineEditorSheet: View {
     private var startMinute: Int { Self.minuteOfDay(from: startDate) }
     private var endMinute: Int { Self.minuteOfDay(from: endDate) }
 
-    /// Treat as new-routine (guards apply) unless we're editing a routine that's
-    /// already in-progress right now — those are live windows and shouldn't be
-    /// clamped while the user tweaks them.
+    /// Guards apply to new routines only. Edits never apply past-week or
+    /// minStart guards — an existing routine recurs weekly, so its days are
+    /// valid future occurrences regardless of the current weekday.
     private var guardSpec: EditorGuardSpec {
         editorGuards(
             now: Date(),
-            isNewRoutine: !editingIsInProgress,
+            isNewRoutine: isCreating,
             currentStart: startMinute,
             daysSelected: selectedDays
         )
-    }
-
-    private var editingIsInProgress: Bool {
-        guard let routine = editing else { return false }
-        let now = Date()
-        let weekday = Weekday.from(calendarWeekday: Calendar.current.component(.weekday, from: now))
-        let minute = Self.minuteOfDay(from: now)
-        return routine.isActive(weekday: weekday, minuteOfDay: minute)
     }
 
     private var isValid: Bool {
