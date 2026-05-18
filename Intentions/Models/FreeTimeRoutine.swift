@@ -68,57 +68,6 @@ struct FreeTimeRoutine: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-// MARK: - Editor guards
-
-/// Spec for what the routine editor sheet should disable / clamp, so it
-/// can't create a routine that starts in the past on today.
-struct EditorGuardSpec: Equatable, Sendable {
-    let disabledDays: Set<Weekday>
-    /// `nil` = no minimum (today not selected, or editing an in-progress routine).
-    let minStartMinute: Int?
-    /// Always >= currentStart + 1.
-    let minEndMinute: Int
-}
-
-/// Pure guard-spec for the routine editor sheet.
-///
-/// Pass `isNewRoutine = true` only when creating a new routine. Edits always
-/// pass `false`: an existing routine recurs weekly, so past-week and minStart
-/// guards would block legitimate edits (e.g. renaming a Mon routine on Sun).
-func editorGuards(
-    now: Date,
-    isNewRoutine: Bool,
-    currentStart: Int?,
-    daysSelected: Set<Weekday>
-) -> EditorGuardSpec {
-    let calendar: Calendar = {
-        var c = Calendar(identifier: .gregorian)
-        c.firstWeekday = 2
-        return c
-    }()
-    let comps = calendar.dateComponents([.hour, .minute, .weekday], from: now)
-    let nowMinute = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
-    let today = Weekday.from(calendarWeekday: comps.weekday ?? 1)
-
-    let baseStart = currentStart ?? 0
-    let endFloor = min(baseStart + 1, FreeTimeRoutine.minutesPerDay)
-
-    guard isNewRoutine else {
-        return EditorGuardSpec(disabledDays: [], minStartMinute: nil, minEndMinute: endFloor)
-    }
-
-    let disabled = pastWeekdays(before: today)
-    let minStart = daysSelected.contains(today) ? nowMinute : nil
-    return EditorGuardSpec(disabledDays: disabled, minStartMinute: minStart, minEndMinute: endFloor)
-}
-
-/// Weekdays earlier in the current week than `today`, using Mon=baseline.
-/// If today is Mon → empty. If today is Sun → all six prior days.
-private func pastWeekdays(before today: Weekday) -> Set<Weekday> {
-    let order: [Weekday] = [.monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday]
-    guard let idx = order.firstIndex(of: today) else { return [] }
-    return Set(order.prefix(idx))
-}
 
 /// Pure: true if `now` falls within `routine`'s window in the supplied calendar.
 /// Uses `calendar` to derive weekday + minute-of-day so tests can inject a fixed

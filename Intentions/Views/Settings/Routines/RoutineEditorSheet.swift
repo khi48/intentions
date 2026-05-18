@@ -145,10 +145,7 @@ struct RoutineEditorSheet: View {
 
     private func dayChip(_ day: Weekday) -> some View {
         let isSelected = selectedDays.contains(day)
-        let isDisabled = guardSpec.disabledDays.contains(day)
-        let textColor: Color = isDisabled
-            ? AppConstants.Colors.text.opacity(0.3)
-            : (isSelected ? AppConstants.Colors.background : AppConstants.Colors.text)
+        let textColor: Color = isSelected ? AppConstants.Colors.background : AppConstants.Colors.text
         return Button {
             toggle(day)
         } label: {
@@ -165,36 +162,21 @@ struct RoutineEditorSheet: View {
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(AppConstants.Colors.border, lineWidth: 1)
                 )
-                .opacity(isDisabled ? 0.5 : 1.0)
         }
         .buttonStyle(.plain)
-        .disabled(isDisabled)
     }
 
-    /// Start picker with `in:` range applied only when guard sets a minimum.
-    /// SwiftUI's `DatePicker` needs distinct overload calls for ranged vs unranged.
-    @ViewBuilder
+    /// Start picker is unconstrained — recurring routines may start at any
+    /// time-of-day; only end > start matters (enforced by `endPickerRange`).
     private var startPicker: some View {
-        if let minMinute = guardSpec.minStartMinute {
-            DatePicker(
-                "Starts",
-                selection: $startDate,
-                in: startPickerRange(minMinute: minMinute),
-                displayedComponents: .hourAndMinute
-            )
-            .environment(\.locale, Locale(identifier: "en_GB_POSIX"))
-            .foregroundColor(AppConstants.Colors.text)
-            .onChange(of: startDate, initial: false, handleStartChange)
-        } else {
-            DatePicker(
-                "Starts",
-                selection: $startDate,
-                displayedComponents: .hourAndMinute
-            )
-            .environment(\.locale, Locale(identifier: "en_GB_POSIX"))
-            .foregroundColor(AppConstants.Colors.text)
-            .onChange(of: startDate, initial: false, handleStartChange)
-        }
+        DatePicker(
+            "Starts",
+            selection: $startDate,
+            displayedComponents: .hourAndMinute
+        )
+        .environment(\.locale, Locale(identifier: "en_GB_POSIX"))
+        .foregroundColor(AppConstants.Colors.text)
+        .onChange(of: startDate, initial: false, handleStartChange)
     }
 
     private func handleStartChange(_ oldStart: Date, _ newStart: Date) {
@@ -210,24 +192,8 @@ struct RoutineEditorSheet: View {
     private var startMinute: Int { Self.minuteOfDay(from: startDate) }
     private var endMinute: Int { Self.minuteOfDay(from: endDate) }
 
-    /// Guards apply to new routines only. Edits never apply past-week or
-    /// minStart guards — an existing routine recurs weekly, so its days are
-    /// valid future occurrences regardless of the current weekday.
-    private var guardSpec: EditorGuardSpec {
-        editorGuards(
-            now: Date(),
-            isNewRoutine: isCreating,
-            currentStart: startMinute,
-            daysSelected: selectedDays
-        )
-    }
-
     private var isValid: Bool {
-        guard endMinute > startMinute, !selectedDays.isEmpty else { return false }
-        let spec = guardSpec
-        if let min = spec.minStartMinute, startMinute < min { return false }
-        if !spec.disabledDays.isDisjoint(with: selectedDays) { return false }
-        return true
+        endMinute > startMinute && !selectedDays.isEmpty
     }
 
     /// Live `HH:mm–HH:mm` shown as the name field's placeholder.
@@ -244,16 +210,6 @@ struct RoutineEditorSheet: View {
         let startOfDay = calendar.startOfDay(for: startDate)
         let endOfDay = calendar.date(byAdding: .minute, value: FreeTimeRoutine.minutesPerDay - 1, to: startOfDay) ?? lower
         return lower...max(lower, endOfDay)
-    }
-
-    /// Start picker lower bound when guard sets a minimum: today's start-of-day
-    /// + `minMinute`. Upper bound is end-of-day-1 so picker can't roll forward.
-    private func startPickerRange(minMinute: Int) -> ClosedRange<Date> {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: Date())
-        let lower = calendar.date(byAdding: .minute, value: minMinute, to: startOfDay) ?? startOfDay
-        let upper = calendar.date(byAdding: .minute, value: FreeTimeRoutine.minutesPerDay - 2, to: startOfDay) ?? lower
-        return lower...max(lower, upper)
     }
 
     // MARK: - Actions
