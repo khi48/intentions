@@ -46,8 +46,13 @@ struct IntentApp: App {
             // compute+apply on the same log read. The duplicate apply
             // (8 ManagedSettings XPC writes back-to-back) was a hang vector.
             // Push fresh widget state — covers users who open the app after
-            // a long gap during which no session ran (#20).
-            WidgetBridge.pushNoSession(isBlocking: engine.currentBlockingState())
+            // a long gap during which no session ran (#20). Skip when a
+            // session is in the log: pushNoSession wipes sessionTitle and
+            // sessionEndTime, so unconditional firing destroys the
+            // session-active widget render on every foreground.
+            if IntentLogStore().load().activeSession == nil {
+                WidgetBridge.pushNoSession(isBlocking: engine.currentBlockingState())
+            }
         }
     }
 }

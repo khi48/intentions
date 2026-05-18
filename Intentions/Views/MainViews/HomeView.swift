@@ -120,7 +120,6 @@ private struct QuickActionsSection: View {
                 VStack(spacing: 16) {
                     if let banner = viewModel.cannotStartBanner {
                         StateLockBanner(title: banner.title, remedy: banner.remedy)
-                            .padding(.horizontal)
                     }
                     LazyVGrid(columns: [
                         GridItem(.flexible()),

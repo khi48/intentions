@@ -620,6 +620,12 @@ final class ContentViewModel: Sendable {
         }
 
         await teardownSessionState()
+        // Clear the engine's in-log session BEFORE refreshing schedule. Without
+        // this, `IntentLog.activeSession` still has `endsAt > now` for manual /
+        // replaced ends, so `compute(log, now)` returns `.allExcept(session.apps)`
+        // and the apps the user was running stay unblocked. `cancelSessionTimers`
+        // also cancels the pending in-app expiry task.
+        await screenTimeService.cancelSessionTimers()
         await applyDefaultBlocking()
 
         // Clear currentSessionId AFTER blocking is applied. The extension needs this
