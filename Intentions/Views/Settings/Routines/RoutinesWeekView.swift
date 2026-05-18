@@ -221,7 +221,7 @@ struct RoutinesWeekView: View {
         let y = CGFloat(minute) / 60 * Self.hourHeight
         let label = String(format: "%02d:%02d", comps.hour ?? 0, comps.minute ?? 0)
 
-        ZStack(alignment: .leading) {
+        ZStack(alignment: .topLeading) {
             Rectangle()
                 .fill(AppConstants.Colors.accent)
                 .frame(width: width, height: 1.25)
@@ -233,9 +233,10 @@ struct RoutinesWeekView: View {
                 .background(
                     Capsule().fill(AppConstants.Colors.accent)
                 )
-                .offset(x: 2, y: -1)
+                .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
+                .offset(x: 2)
         }
-        .offset(y: y - 0.5)
+        .offset(y: y - 0.625)
     }
 
     // MARK: - Anchors
