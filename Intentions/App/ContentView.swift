@@ -95,27 +95,11 @@ private struct MainTabView: View {
         TabView(selection: Binding(
             get: { viewModel.selectedTab },
             set: { newTab in
-                
-                let oldTab = viewModel.selectedTab
-                
-                // First, perform the smooth tab switch immediately
+                // Smooth tab switch only — nav reset is driven by Settings
+                // lifecycle hooks (onAppear / onDisappear) below so it fires
+                // deterministically with TabView's own animation rather than
+                // a timer-based asyncAfter (see #48).
                 viewModel.navigateToTab(newTab)
-                
-                // Then reset Settings navigation in the background after a brief delay
-                if oldTab == .settings && newTab != .settings {
-                    // Use a small delay to let the tab transition complete smoothly
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        navigationManager.resetSettingsNavigationWithoutAnimation()
-                        settingsViewModel?.resetSheetState()
-                    }
-                }
-                // Also reset when navigating TO Settings tab (ensures clean state) 
-                else if oldTab != .settings && newTab == .settings {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        navigationManager.resetSettingsNavigationWithoutAnimation()
-                        settingsViewModel?.resetSheetState()
-                    }
-                }
             }
         )) {
             // Home Tab - Main intention interface with Quick Actions
@@ -142,7 +126,20 @@ private struct MainTabView: View {
                     Label(AppTab.settings.rawValue, systemImage: AppTab.settings.systemImage)
                 }
                 .tag(AppTab.settings)
-            
+                // Reset Settings nav state at lifecycle boundaries so the pop
+                // is invisible: onDisappear fires after the tab swap (user
+                // can't see the reset), onAppear primes a clean root state
+                // before the tab becomes visible. Replaces a 100ms
+                // asyncAfter race (#48).
+                .onAppear {
+                    navigationManager.resetSettingsNavigationWithoutAnimation()
+                    settingsViewModel?.resetSheetState()
+                }
+                .onDisappear {
+                    navigationManager.resetSettingsNavigationWithoutAnimation()
+                    settingsViewModel?.resetSheetState()
+                }
+
         }
         .tint(AppConstants.Colors.tabBarIcon)
         // REMOVED: IntentionPromptView was legacy - intention functionality now via Quick Actions
