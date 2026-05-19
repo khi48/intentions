@@ -38,7 +38,6 @@ final class QuickActionsViewModelTests: XCTestCase {
             name: name,
             subtitle: subtitle,
             iconName: "star.fill",
-            color: Color.blue,
             duration: duration
         )
     }

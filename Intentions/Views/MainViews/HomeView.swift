@@ -126,7 +126,6 @@ private struct QuickActionsSection: View {
                                 title: quickAction.name,
                                 subtitle: quickAction.subtitle ?? quickAction.formattedDuration,
                                 icon: quickAction.iconName,
-                                color: quickAction.color,
                                 isReady: viewModel.isScreenTimeServiceReady && viewModel.canStartSession,
                                 disabledReason: cardDisabledReason,
                                 isRunning: isQuickActionRunning(quickAction),
@@ -461,7 +460,6 @@ private struct QuickActionCard: View {
     let title: String
     let subtitle: String
     let icon: String
-    let color: Color
     let isReady: Bool
     let disabledReason: String
     let isRunning: Bool
