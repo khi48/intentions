@@ -61,10 +61,6 @@ private struct ActiveSessionCard: View {
             viewModel: sessionStatusViewModel,
             onEndSession: {
                 await viewModel.endCurrentSession()
-            },
-            onExtendSession: { _ in
-                // Extension is handled internally by SessionStatusViewModel
-                // This callback is kept for interface compatibility but does nothing
             }
         )
         .onAppear {

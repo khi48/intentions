@@ -259,48 +259,6 @@ final class SessionStatusViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.sessionPhase, .critical)
     }
     
-    // MARK: - Session Management Tests
-    
-    func testExtendSession() async {
-        // Given
-        let testSession = try! IntentionSession(appGroups: [], applications: [], duration: 1800)
-        viewModel.updateSession(testSession)
-        let originalDuration = testSession.duration
-        // When
-        await viewModel.extendSession(by: 15)
-
-        // Then
-        XCTAssertEqual(viewModel.session?.duration, originalDuration + 900)
-        XCTAssertFalse(viewModel.showingExtendDialog)
-    }
-    
-    func testShowExtendDialog() {
-        // When
-        viewModel.showExtendDialog()
-
-        // Then
-        XCTAssertTrue(viewModel.showingExtendDialog)
-    }
-    
-    func testCancelExtendDialog() {
-        // Given
-        viewModel.showingExtendDialog = true
-        
-        // When
-        viewModel.cancelExtendDialog()
-        
-        // Then
-        XCTAssertFalse(viewModel.showingExtendDialog)
-    }
-    
-    // MARK: - Extension Options Tests
-    
-    func testExtensionOptions() {
-        // Then
-        XCTAssertEqual(viewModel.extensionOptions, [5, 10, 15, 30])
-        XCTAssertEqual(viewModel.selectedExtensionTime, 15) // Default
-    }
-    
     // MARK: - SessionPhase Tests
     
     func testSessionPhaseColors() {
