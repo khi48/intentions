@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import SwiftUI
 @preconcurrency import FamilyControls
 import ManagedSettings
 
@@ -27,10 +26,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
     
     /// SF Symbol icon name for visual representation
     var iconName: String
-    
-    /// Color theme for the quick action (stored as hex string)
-    private var _colorHex: String
-    
+
     /// Session duration in seconds
     var duration: TimeInterval
 
@@ -66,18 +62,7 @@ struct QuickAction: Identifiable, Codable, Sendable {
     var sortOrder: Int
 
     // MARK: - Computed Properties
-    
-    /// Color representation of the stored hex color
-    var color: Color {
-        Color(hex: _colorHex) ?? .blue
-    }
-    
-    /// Set the color for this quick action
-    mutating func setColor(_ color: Color) {
-        _colorHex = color.toHex() ?? "#007AFF"
-        lastModified = Date()
-    }
-    
+
     /// Formatted duration string for display
     var formattedDuration: String {
         if duration >= 3600 {
@@ -106,7 +91,6 @@ struct QuickAction: Identifiable, Codable, Sendable {
     ///   - name: Display name for the quick action
     ///   - subtitle: Optional subtitle/description
     ///   - iconName: SF Symbol icon name
-    ///   - color: Color theme for the action
     ///   - duration: Session duration in seconds
     ///   - individualApplications: Individual apps selected for this quick action
     ///   - allowAllWebsites: Whether to allow all websites during the session
@@ -114,7 +98,6 @@ struct QuickAction: Identifiable, Codable, Sendable {
         name: String,
         subtitle: String? = nil,
         iconName: String = "star.fill",
-        color: Color = .blue,
         duration: TimeInterval = AppConstants.Session.defaultDuration,
         individualApplications: Set<ApplicationToken> = [],
         individualCategories: Set<ActivityCategoryToken> = [],
@@ -125,7 +108,6 @@ struct QuickAction: Identifiable, Codable, Sendable {
         self.name = name
         self.subtitle = subtitle
         self.iconName = iconName
-        self._colorHex = color.toHex() ?? "#007AFF"
         self.duration = duration
         self.individualApplications = individualApplications
         self.individualCategories = individualCategories
@@ -142,16 +124,18 @@ struct QuickAction: Identifiable, Codable, Sendable {
     // MARK: - Codable Implementation
     
     private enum CodingKeys: String, CodingKey {
-        case id, name, subtitle, iconName, _colorHex, duration
+        case id, name, subtitle, iconName, duration
         case individualApplications
         case individualCategories
         case individualWebDomains
         case allowAllWebsites
         case isEnabled, createdAt, lastModified, usageCount, lastUsed, sortOrder
-        // Legacy keys for backward compatibility (not used)
-        case appGroupIds
+        // Legacy keys for backward compatibility (not used).
+        // _colorHex remains here so legacy on-disk JSON decodes without throwing;
+        // the value is read-and-discarded. See #45 — colour was never rendered.
+        case appGroupIds, _colorHex
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -159,7 +143,6 @@ struct QuickAction: Identifiable, Codable, Sendable {
         name = try container.decode(String.self, forKey: .name)
         subtitle = try container.decodeIfPresent(String.self, forKey: .subtitle)
         iconName = try container.decode(String.self, forKey: .iconName)
-        _colorHex = try container.decode(String.self, forKey: ._colorHex)
         duration = try container.decode(TimeInterval.self, forKey: .duration)
 
         // Handle backward compatibility for individual tokens
@@ -179,8 +162,10 @@ struct QuickAction: Identifiable, Codable, Sendable {
 
         // Ignore legacy appGroupIds if present (backward compatibility)
         _ = try? container.decodeIfPresent(Set<UUID>.self, forKey: .appGroupIds)
+        // Ignore legacy _colorHex if present — colour was never rendered (#45)
+        _ = try? container.decodeIfPresent(String.self, forKey: ._colorHex)
     }
-    
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
 
@@ -188,7 +173,6 @@ struct QuickAction: Identifiable, Codable, Sendable {
         try container.encode(name, forKey: .name)
         try container.encodeIfPresent(subtitle, forKey: .subtitle)
         try container.encode(iconName, forKey: .iconName)
-        try container.encode(_colorHex, forKey: ._colorHex)
         try container.encode(duration, forKey: .duration)
         try container.encode(individualApplications, forKey: .individualApplications)
         try container.encode(individualCategories, forKey: .individualCategories)
@@ -212,7 +196,6 @@ struct QuickAction: Identifiable, Codable, Sendable {
         name: String? = nil,
         subtitle: String? = nil,
         iconName: String? = nil,
-        color: Color? = nil,
         duration: TimeInterval? = nil,
         individualApplications: Set<ApplicationToken>? = nil,
         individualCategories: Set<ActivityCategoryToken>? = nil,
@@ -222,7 +205,6 @@ struct QuickAction: Identifiable, Codable, Sendable {
         if let name = name { self.name = name }
         if let subtitle = subtitle { self.subtitle = subtitle }
         if let iconName = iconName { self.iconName = iconName }
-        if let color = color { self.setColor(color) }
         if let duration = duration { self.duration = duration }
         if let individualApplications = individualApplications { self.individualApplications = individualApplications }
         if let individualCategories = individualCategories { self.individualCategories = individualCategories }
@@ -279,48 +261,3 @@ extension QuickAction: Hashable, Equatable {
     }
 }
 
-// MARK: - Color Extensions
-
-extension Color {
-    /// Convert Color to hex string representation
-    func toHex() -> String? {
-        guard let components = cgColor?.components, let count = cgColor?.numberOfComponents else { return nil }
-
-        let r: Float
-        let g: Float
-        let b: Float
-
-        if count >= 3 {
-            r = Float(components[0])
-            g = Float(components[1])
-            b = Float(components[2])
-        } else {
-            // Grayscale color space (gray + alpha)
-            r = Float(components[0])
-            g = Float(components[0])
-            b = Float(components[0])
-        }
-
-        return String(format: "#%02lX%02lX%02lX",
-                     lroundf(r * 255),
-                     lroundf(g * 255),
-                     lroundf(b * 255))
-    }
-    
-    /// Initialize Color from hex string
-    init?(hex: String) {
-        var hexFormatted = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        hexFormatted = hexFormatted.replacingOccurrences(of: "#", with: "")
-        
-        guard hexFormatted.count == 6 else { return nil }
-        
-        var rgbValue: UInt64 = 0
-        Scanner(string: hexFormatted).scanHexInt64(&rgbValue)
-        
-        self.init(
-            red: Double((rgbValue & 0xFF0000) >> 16) / 255.0,
-            green: Double((rgbValue & 0x00FF00) >> 8) / 255.0,
-            blue: Double(rgbValue & 0x0000FF) / 255.0
-        )
-    }
-}

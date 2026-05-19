@@ -190,21 +190,18 @@ final class QuickActionsViewModel: Sendable {
                 name: "Work Session",
                 subtitle: "Focus on productivity apps",
                 iconName: "laptopcomputer",
-                color: Color.blue,
                 duration: 30 * 60 // 30 minutes
             ),
             QuickAction(
                 name: "Study Time",
                 subtitle: "Learning and research",
                 iconName: "book.fill",
-                color: Color.green,
                 duration: 60 * 60 // 1 hour
             ),
             QuickAction(
                 name: "Break Time",
                 subtitle: "Social and entertainment",
                 iconName: "cup.and.saucer.fill",
-                color: Color.orange,
                 duration: 15 * 60 // 15 minutes
             )
         ]

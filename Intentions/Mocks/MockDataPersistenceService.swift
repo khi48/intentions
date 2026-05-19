@@ -40,21 +40,18 @@ final class MockDataPersistenceService: DataPersisting {
                 name: "Work Session",
                 subtitle: "Productivity focus",
                 iconName: "laptopcomputer",
-                color: Color.blue,
                 duration: 30 * 60
             ),
             QuickAction(
                 name: "Study Time",
                 subtitle: "Deep learning",
                 iconName: "book.fill",
-                color: Color.green,
                 duration: 60 * 60
             ),
             QuickAction(
                 name: "Break Time",
                 subtitle: "Social & entertainment",
                 iconName: "cup.and.saucer.fill",
-                color: Color.orange,
                 duration: 15 * 60
             )
         ]
