@@ -512,35 +512,6 @@ final class ContentViewModel: Sendable {
         await finalizeSession(cause: .naturalCompletion)
     }
 
-    /// Extend the current session by additional time
-    func extendCurrentSession(by extensionTime: TimeInterval) async {
-        guard let session = activeSession, session.isActive else { return }
-
-        await withLoading {
-            do {
-                let sessionId = session.id
-                // Extend the session duration
-                session.duration += extensionTime
-                try await dataService.saveIntentionSession(session)
-
-                // Re-apply blocking with the new remaining time so the
-                // ScreenTimeService timer and DeviceActivity schedule update
-                currentlyAppliedSessionId = nil // Force re-application
-                await applySessionBlocking(for: session)
-
-                // Reschedule notifications for the new remaining time. Cancel ONLY
-                // this session's pending warnings + completion before rescheduling,
-                // so unrelated notifications (there shouldn't be any) stay untouched.
-                await NotificationService.shared.cancelAllSessionNotifications(sessionId: sessionId)
-                await NotificationService.shared.scheduleSessionNotifications(for: session)
-
-                updateWidgetSessionData(session)
-            } catch {
-                handleError(error)
-            }
-        }
-    }
-    
     /// Cancel the active session because the user disabled blocking entirely.
     /// Treated as a manual end — cancels all pending session notifications.
     private func cancelActiveSessionForDisable() async {

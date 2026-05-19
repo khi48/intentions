@@ -11,8 +11,7 @@ import SwiftUI
 struct SessionStatusView: View {
     @Bindable var viewModel: SessionStatusViewModel
     let onEndSession: () async -> Void
-    let onExtendSession: (TimeInterval) async -> Void
-    
+
     var body: some View {
         VStack(spacing: 20) {
             // Session Context (quick action name or apps)
@@ -159,31 +158,6 @@ struct SessionStatusView: View {
     }
 }
 
-private struct ExtensionOptionButton: View {
-    let minutes: Int
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Text("+\(minutes)")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Text(minutes == 1 ? "minute" : "minutes")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 60)
-            .background(AppConstants.Colors.surface)
-            .foregroundStyle(AppConstants.Colors.text)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 #Preview {
     // Create a mock session for preview
     let mockSession = try! IntentionSession(
@@ -200,8 +174,7 @@ private struct ExtensionOptionButton: View {
     
     return SessionStatusView(
         viewModel: mockViewModel,
-        onEndSession: { },
-        onExtendSession: { _ in }
+        onEndSession: { }
     )
     .padding()
 }

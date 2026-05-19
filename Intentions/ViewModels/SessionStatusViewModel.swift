@@ -95,16 +95,7 @@ final class SessionStatusViewModel: Sendable {
 
     /// Quick action associated with the session (if it's a quick action session)
     private(set) var associatedQuickAction: QuickAction?
-    
-    /// Whether showing extend session dialog
-    var showingExtendDialog: Bool = false
 
-    /// Extension time options (in minutes)
-    let extensionOptions: [Int] = [5, 10, 15, 30]
-
-    /// Selected extension time
-    var selectedExtensionTime: Int = 15
-    
     // MARK: - Dependencies
 
     private let dataService: DataPersisting
@@ -175,31 +166,6 @@ final class SessionStatusViewModel: Sendable {
         }
     }
     
-    /// Extend the current session
-    func extendSession(by minutes: Int) async {
-        guard let currentSession = session, currentSession.isActive else {
-            return
-        }
-
-        guard minutes > 0 else { return }
-
-        let extensionTime = TimeInterval(minutes * 60)
-        let newDuration = currentSession.duration + extensionTime
-
-        // Cap at maximum session duration
-        let cappedExtension: TimeInterval
-        if newDuration > AppConstants.Session.maximumDuration {
-            cappedExtension = AppConstants.Session.maximumDuration - currentSession.duration
-            guard cappedExtension > 0 else { return }
-        } else {
-            cappedExtension = extensionTime
-        }
-
-        await contentViewModel.extendCurrentSession(by: cappedExtension)
-        updateRemainingTime()
-        showingExtendDialog = false
-    }
-    
     /// End the current session early
     func endSession() async {
         guard session != nil, session?.isActive == true else { return }
@@ -210,17 +176,6 @@ final class SessionStatusViewModel: Sendable {
         // Delegate session completion, persistence, and blocking restore
         // to ContentViewModel — the single owner of session lifecycle
         await contentViewModel.endCurrentSession()
-    }
-    
-    // MARK: - UI Actions
-
-    func showExtendDialog() {
-        showingExtendDialog = true
-    }
-    
-    /// Cancel extend dialog
-    func cancelExtendDialog() {
-        showingExtendDialog = false
     }
     
     // MARK: - Data Loading
