@@ -107,7 +107,6 @@ struct RoutineEditorSheet: View {
                     in: endPickerRange,
                     displayedComponents: .hourAndMinute
                 )
-                .environment(\.locale, Locale(identifier: "en_GB_POSIX"))
                 .foregroundColor(AppConstants.Colors.text)
             }
             .listRowBackground(AppConstants.Colors.surface)
@@ -174,7 +173,6 @@ struct RoutineEditorSheet: View {
             selection: $startDate,
             displayedComponents: .hourAndMinute
         )
-        .environment(\.locale, Locale(identifier: "en_GB_POSIX"))
         .foregroundColor(AppConstants.Colors.text)
         .onChange(of: startDate, initial: false, handleStartChange)
     }
