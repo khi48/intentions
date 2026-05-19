@@ -206,11 +206,7 @@ struct DisableBlockingConfirmationView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(AppConstants.Colors.textSecondary.opacity(0.15))
 
-                // Fill grows leading→trailing via scaleEffect, animated by the
-                // `.animation(_:value:)` modifier whenever animatedProgress changes.
-                // scaleEffect is reliably animatable; using GeometryReader + frame
-                // can lose animation context.
-                RoundedRectangle(cornerRadius: 12)
+                Rectangle()
                     .fill(isConfirmEnabled
                           ? AppConstants.Colors.text
                           : AppConstants.Colors.text.opacity(0.35))
@@ -228,6 +224,7 @@ struct DisableBlockingConfirmationView: View {
                 }
             }
             .frame(height: 52)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .disabled(!isConfirmEnabled)
     }
