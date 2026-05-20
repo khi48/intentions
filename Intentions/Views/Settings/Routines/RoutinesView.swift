@@ -163,11 +163,17 @@ struct RoutinesView: View {
     }
 
     private func routineRow(_ routine: FreeTimeRoutine, now: Date, active: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            titleLine(for: routine)
-            Text(daysSubtitle(for: routine))
-                .font(.caption)
-                .foregroundColor(AppConstants.Colors.textSecondary)
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                titleLine(for: routine)
+                Text(daysSubtitle(for: routine))
+                    .font(.caption)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+            }
+            Spacer(minLength: 0)
+            if active {
+                activeBadge
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 11)
@@ -180,8 +186,9 @@ struct RoutinesView: View {
         }
     }
 
-    /// `HH:mm–HH:mm` (monospaced) optionally followed by `· Name`. Time range
-    /// stays primary; name is rendered in the secondary text colour.
+    /// Routine name (primary) optionally followed by `· HH:mm–HH:mm` time range
+    /// (secondary, monospaced). Falls back to time-only when the routine is
+    /// unnamed, keeping the time as the primary identifier in that case.
     @ViewBuilder
     private func titleLine(for routine: FreeTimeRoutine) -> some View {
         let timeRange = "\(routine.startTimeOfDayString)–\(routine.endTimeOfDayString)"
@@ -191,20 +198,36 @@ struct RoutinesView: View {
             return trimmed.isEmpty ? nil : trimmed
         }()
         HStack(spacing: 8) {
-            Text(timeRange)
-                .font(.body.weight(.medium).monospacedDigit())
-                .foregroundColor(AppConstants.Colors.text)
             if let name = trimmedName {
+                Text(name)
+                    .font(.body.weight(.medium))
+                    .foregroundColor(AppConstants.Colors.text)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 Text("·")
                     .font(.body)
                     .foregroundColor(AppConstants.Colors.textSecondary)
-                Text(name)
-                    .font(.body)
+                Text(timeRange)
+                    .font(.body.monospacedDigit())
                     .foregroundColor(AppConstants.Colors.textSecondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+            } else {
+                Text(timeRange)
+                    .font(.body.weight(.medium).monospacedDigit())
+                    .foregroundColor(AppConstants.Colors.text)
             }
         }
+    }
+
+    private var activeBadge: some View {
+        Text("Active")
+            .font(.caption.weight(.semibold))
+            .foregroundColor(AppConstants.Colors.text)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(
+                Capsule().fill(AppConstants.Colors.buttonPrimary)
+            )
+            .accessibilityLabel("Currently active routine")
     }
 
     /// 2 pt bar pinned to the bottom edge of the row's card. Faint white track,
