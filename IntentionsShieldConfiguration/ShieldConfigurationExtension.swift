@@ -29,6 +29,15 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     private static let log = Logger(subsystem: "oh.Intent.IntentShieldConfiguration", category: "appGroup")
     #endif
 
+    // #50: iOS 26 draws a ~1pt accent-tinted ring around the shield's primary
+    // button. ShieldConfiguration has no border/stroke knob; override the
+    // extension-wide appearance tint so any system-drawn stroke that derives
+    // from `tintColor` reads as our greyscale text colour instead of system blue.
+    override init() {
+        super.init()
+        UIView.appearance().tintColor = UIColor(white: 0.6, alpha: 1.0)
+    }
+
     // MARK: - Application
 
     override func configuration(shielding application: Application) -> ShieldConfiguration {
@@ -55,7 +64,6 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         let background = UIColor(white: 0.078, alpha: 1.0)   // #141414
         let textPrimary = UIColor.white
         let textSecondary = UIColor(white: 0.6, alpha: 1.0)  // #999999
-        let buttonBackground = UIColor(white: 0.145, alpha: 1.0) // #252525
 
         let title = ShieldConfiguration.Label(
             text: "Be intentional\nwith this moment.",
@@ -76,8 +84,7 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             primaryButtonLabel: ShieldConfiguration.Label(
                 text: "Return",
                 color: textPrimary
-            ),
-            primaryButtonBackgroundColor: buttonBackground
+            )
         )
     }
 
