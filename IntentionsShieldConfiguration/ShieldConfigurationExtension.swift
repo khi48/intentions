@@ -64,6 +64,7 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         let background = UIColor(white: 0.078, alpha: 1.0)   // #141414
         let textPrimary = UIColor.white
         let textSecondary = UIColor(white: 0.6, alpha: 1.0)  // #999999
+        let buttonBackground = UIColor(white: 0.145, alpha: 1.0) // #252525
 
         let title = ShieldConfiguration.Label(
             text: "Be intentional\nwith this moment.",
@@ -84,7 +85,8 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             primaryButtonLabel: ShieldConfiguration.Label(
                 text: "Return",
                 color: textPrimary
-            )
+            ),
+            primaryButtonBackgroundColor: buttonBackground
         )
     }
 
