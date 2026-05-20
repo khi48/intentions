@@ -103,19 +103,25 @@ struct RoutinesView: View {
 
     private var routinesList: some View {
         // TimelineView at .everyMinute drives row re-evaluation so the active
-        // highlight crosses minute boundaries without manual timers.
+        // highlight + progress fill cross minute boundaries without manual timers.
         TimelineView(.everyMinute) { context in
             List {
                 ForEach(sortedRoutines) { routine in
+                    let active = isActive(routine: routine, now: context.date)
                     Button {
                         guard !isReadOnly else { return }
                         editorTarget = EditorTarget(routine: routine)
                     } label: {
-                        routineRow(routine, now: context.date)
+                        routineRow(routine, now: context.date, active: active)
                     }
                     .buttonStyle(.plain)
                     .disabled(isReadOnly)
-                    .listRowBackground(AppConstants.Colors.surface)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(
+                        active
+                            ? AppConstants.Colors.surfaceElevated
+                            : AppConstants.Colors.surface
+                    )
                 }
                 .onMove(perform: isReadOnly ? nil : moveAction)
             }
@@ -156,40 +162,80 @@ struct RoutinesView: View {
         }
     }
 
-    private func routineRow(_ routine: FreeTimeRoutine, now: Date) -> some View {
-        let active = isActive(routine: routine, now: now)
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
-                Text(title(for: routine))
-                    .font(.body.weight(.medium))
-                    .foregroundColor(AppConstants.Colors.text)
-                if active {
-                    nowBadge
-                }
-            }
+    private func routineRow(_ routine: FreeTimeRoutine, now: Date, active: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            titleLine(for: routine)
             Text(daysSubtitle(for: routine))
                 .font(.caption)
                 .foregroundColor(AppConstants.Colors.textSecondary)
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, active ? 8 : 0)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 11)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(AppConstants.Colors.accent, lineWidth: active ? 1.5 : 0)
-        )
+        .overlay(alignment: .bottom) {
+            if active {
+                progressBar(for: routine, now: now)
+            }
+        }
     }
 
-    private var nowBadge: some View {
-        Text("NOW")
-            .font(.caption2.weight(.bold))
-            .foregroundColor(AppConstants.Colors.background)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(
-                Capsule().fill(AppConstants.Colors.accent)
-            )
+    /// `HH:mm–HH:mm` (monospaced) optionally followed by `· Name`. Time range
+    /// stays primary; name is rendered in the secondary text colour.
+    @ViewBuilder
+    private func titleLine(for routine: FreeTimeRoutine) -> some View {
+        let timeRange = "\(routine.startTimeOfDayString)–\(routine.endTimeOfDayString)"
+        let trimmedName: String? = {
+            guard let raw = routine.name else { return nil }
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }()
+        HStack(spacing: 8) {
+            Text(timeRange)
+                .font(.body.weight(.medium).monospacedDigit())
+                .foregroundColor(AppConstants.Colors.text)
+            if let name = trimmedName {
+                Text("·")
+                    .font(.body)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+                Text(name)
+                    .font(.body)
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        }
+    }
+
+    /// 2 pt bar pinned to the bottom edge of the row's card. Faint white track,
+    /// `Colors.text` (white) fill. Width derived from elapsed fraction of the
+    /// routine's window at `now`.
+    private func progressBar(for routine: FreeTimeRoutine, now: Date) -> some View {
+        let fraction = progressFraction(routine: routine, now: now)
+        return GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.12))
+                Rectangle()
+                    .fill(AppConstants.Colors.text)
+                    .frame(width: proxy.size.width * fraction)
+            }
+        }
+        .frame(height: 2)
+        .accessibilityHidden(true)
+    }
+
+    /// Elapsed fraction `(minuteOfDay(now) - startMinute) / durationMinutes`,
+    /// clamped to `[0, 1]`. Returns 0 if the routine has no duration (defensive
+    /// — model invariants forbid this, but the math would divide by zero).
+    private func progressFraction(routine: FreeTimeRoutine, now: Date) -> CGFloat {
+        guard routine.durationMinutes > 0 else { return 0 }
+        let calendar = Calendar.current
+        let minuteOfDay = calendar.component(.hour, from: now) * 60
+            + calendar.component(.minute, from: now)
+        let elapsed = minuteOfDay - routine.startMinute
+        let raw = CGFloat(elapsed) / CGFloat(routine.durationMinutes)
+        return min(max(raw, 0), 1)
     }
 
     // MARK: - Derived
@@ -203,10 +249,6 @@ struct RoutinesView: View {
 
     private var nextSortIndex: Int {
         (routines.map(\.sortIndex).max() ?? -1) + 1
-    }
-
-    private func title(for routine: FreeTimeRoutine) -> String {
-        FreeTimeRoutine.title(for: routine)
     }
 
     /// Days sorted Mon..Sun (Monday-first), comma-joined short names.
