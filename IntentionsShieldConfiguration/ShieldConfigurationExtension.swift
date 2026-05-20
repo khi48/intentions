@@ -29,15 +29,6 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     private static let log = Logger(subsystem: "oh.Intent.IntentShieldConfiguration", category: "appGroup")
     #endif
 
-    // #50: iOS 26 draws a ~1pt accent-tinted ring around the shield's primary
-    // button. ShieldConfiguration has no border/stroke knob; override the
-    // extension-wide appearance tint so any system-drawn stroke that derives
-    // from `tintColor` reads as our greyscale text colour instead of system blue.
-    override init() {
-        super.init()
-        UIView.appearance().tintColor = UIColor(white: 0.6, alpha: 1.0)
-    }
-
     // MARK: - Application
 
     override func configuration(shielding application: Application) -> ShieldConfiguration {
