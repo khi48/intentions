@@ -126,8 +126,13 @@ private struct MainTabView: View {
                 onScheduleSettingsChanged: { schedule in
                     await viewModel.updateWeeklySchedule(schedule)
                 },
-                onViewModelReady: { vm in
+                onViewModelReady: { [viewModel] vm in
                     settingsViewModel = vm
+                    // Bubble Settings VM errors to the root AppErrorBanner
+                    // via ContentViewModel.handleError(_:retry:) (#53).
+                    vm.onError = { error, retry in
+                        viewModel.handleError(error, retry: retry)
+                    }
                 }
             )
             .environment(navigationManager)

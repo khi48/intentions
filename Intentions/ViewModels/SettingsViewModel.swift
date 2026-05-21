@@ -10,6 +10,15 @@ import SwiftUI
 @preconcurrency import FamilyControls
 import ManagedSettings
 
+/// LocalizedError wrapper carrying a pre-built display message. Lets
+/// `SettingsViewModel` preserve the "Failed to load settings: ..." prefix
+/// while bubbling the error up to `ContentViewModel.handleError(_:retry:)`
+/// (see #53).
+private struct PrefixedError: LocalizedError, Sendable {
+    let message: String
+    var errorDescription: String? { message }
+}
+
 /// ViewModel for managing app settings and configuration
 @MainActor
 @Observable
@@ -21,7 +30,11 @@ final class SettingsViewModel: Sendable {
     // MARK: - Published State
     var isLoading: Bool = false
     var hasLoadedOnce: Bool = false
-    var errorMessage: String?
+
+    /// Bubble errors up to the parent (`ContentViewModel.handleError(_:retry:)`)
+    /// so they surface through the root `AppErrorBanner` mounted on
+    /// `MainTabView`. See #53 — Settings has no local banner mount.
+    var onError: (@MainActor @Sendable (Error, (@Sendable () async -> Void)?) -> Void)?
 
     // Schedule
     var weeklySchedule = WeeklySchedule()
@@ -47,7 +60,6 @@ final class SettingsViewModel: Sendable {
             isLoading = false
             hasLoadedOnce = true
         }
-        errorMessage = nil
 
         do {
             weeklySchedule = try await dataService.loadWeeklySchedule() ?? WeeklySchedule()
@@ -56,7 +68,10 @@ final class SettingsViewModel: Sendable {
             await updateStatistics()
 
         } catch {
-            errorMessage = String(localized: "Failed to load settings: \(error.localizedDescription)", comment: "Error toast when settings load fails; placeholder is system error description")
+            let message = String(localized: "Failed to load settings: \(error.localizedDescription)", comment: "Error toast when settings load fails; placeholder is system error description")
+            onError?(PrefixedError(message: message), { [weak self] in
+                await self?.loadData()
+            })
         }
     }
 
@@ -77,7 +92,10 @@ final class SettingsViewModel: Sendable {
             // still fires correctly if the session outlives the edit.
             await NotificationService.shared.rescheduleR3MutexTeardownBannerForActiveSession(schedule: schedule)
         } catch {
-            errorMessage = String(localized: "Failed to save schedule: \(error.localizedDescription)", comment: "Error toast when saving schedule fails; placeholder is system error description")
+            let message = String(localized: "Failed to save schedule: \(error.localizedDescription)", comment: "Error toast when saving schedule fails; placeholder is system error description")
+            onError?(PrefixedError(message: message), { [weak self] in
+                await self?.updateSchedule(schedule)
+            })
         }
     }
 
@@ -109,16 +127,6 @@ final class SettingsViewModel: Sendable {
             todaySessionCount = 0
             weeklySessionCount = 0
         }
-    }
-
-    // MARK: - Error Handling
-
-    func clearError() {
-        errorMessage = nil
-    }
-
-    func handleError(_ error: Error) {
-        errorMessage = error.localizedDescription
     }
 
     // MARK: - Navigation

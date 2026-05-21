@@ -51,7 +51,6 @@ final class SetupCoordinatorTests: XCTestCase {
         XCTAssertNotNil(coordinator.setupState)
         XCTAssertTrue(coordinator.setupState!.screenTimeAuthorized)
         XCTAssertFalse(coordinator.isValidating)
-        XCTAssertNil(coordinator.errorMessage)
     }
 
     func testValidateWithNoPriorStateCreatesNewState() async {
@@ -338,19 +337,6 @@ final class SetupCoordinatorTests: XCTestCase {
 
         // Then - Should not create state if none existed
         XCTAssertNil(coordinator.setupState)
-    }
-
-    // MARK: - clearError Tests
-
-    func testClearError() {
-        // Given
-        coordinator.errorMessage = "Some error"
-
-        // When
-        coordinator.clearError()
-
-        // Then
-        XCTAssertNil(coordinator.errorMessage)
     }
 
     // MARK: - SetupStateManager Tests

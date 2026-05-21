@@ -18,7 +18,6 @@ final class SetupCoordinator: Sendable {
     private(set) var setupState: SetupState?
     private(set) var shouldShowSetup: Bool = false
     var isValidating: Bool = false
-    var errorMessage: String?
 
     // MARK: - Dependencies
 
@@ -42,7 +41,6 @@ final class SetupCoordinator: Sendable {
     ///   revocation (e.g. status transitioned from `.approved` at runtime).
     func validateSetupRequirements(cachedAuthStatus: AuthorizationStatus? = nil, forceAuthUpdate: Bool = false) async {
         isValidating = true
-        errorMessage = nil
         defer { isValidating = false }
 
         let savedState = await stateManager.loadSetupState()
@@ -123,10 +121,6 @@ final class SetupCoordinator: Sendable {
         await stateManager.clearSetupState()
         setupState = nil
         shouldShowSetup = true
-    }
-
-    func clearError() {
-        errorMessage = nil
     }
 
     // MARK: - Setup Steps

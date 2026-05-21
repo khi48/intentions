@@ -43,7 +43,6 @@ final class SessionStatusViewModelTests: XCTestCase {
     
     func testInitializationWithoutSession() {
         XCTAssertFalse(viewModel.isLoading)
-        XCTAssertNil(viewModel.errorMessage)
         XCTAssertNil(viewModel.session)
         XCTAssertFalse(viewModel.isSessionActive)
         XCTAssertEqual(viewModel.remainingTime, 0)
@@ -275,32 +274,6 @@ final class SessionStatusViewModelTests: XCTestCase {
         XCTAssertEqual(SessionPhase.active.description, "Session active")
         XCTAssertEqual(SessionPhase.warning.description, "Session ending soon")
         XCTAssertEqual(SessionPhase.critical.description, "Session ending very soon")
-    }
-    
-    // MARK: - Error Handling Tests
-    
-    func testErrorHandling() async {
-        // Given
-        let testError = AppError.sessionNotFound
-        
-        // When
-        await viewModel.handleError(testError)
-        
-        // Then
-        XCTAssertEqual(viewModel.errorMessage, testError.localizedDescription)
-        XCTAssertFalse(viewModel.isLoading)
-    }
-    
-    func testClearError() async {
-        // Given
-        await viewModel.handleError(AppError.sessionNotFound)
-        XCTAssertNotNil(viewModel.errorMessage)
-        
-        // When
-        viewModel.clearError()
-        
-        // Then
-        XCTAssertNil(viewModel.errorMessage)
     }
     
     // MARK: - Constants Tests

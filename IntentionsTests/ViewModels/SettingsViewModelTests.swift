@@ -31,7 +31,6 @@ final class SettingsViewModelTests: XCTestCase {
 
     func testInitialization() {
         XCTAssertFalse(viewModel.isLoading)
-        XCTAssertNil(viewModel.errorMessage)
         XCTAssertFalse(viewModel.showingScheduleEditor)
     }
 
@@ -46,21 +45,32 @@ final class SettingsViewModelTests: XCTestCase {
     // MARK: - Data Loading Tests
 
     func testLoadDataSuccess() async {
+        var capturedError: Error?
+        viewModel.onError = { error, _ in capturedError = error }
+
         await viewModel.loadData()
 
         XCTAssertFalse(viewModel.isLoading)
-        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertNil(capturedError)
     }
 
     func testLoadDataFailure() async {
         mockDataService.shouldThrowError = true
         mockDataService.errorToThrow = AppError.persistenceError("Test error")
 
+        var capturedMessage: String?
+        var capturedRetry: (@Sendable () async -> Void)?
+        viewModel.onError = { error, retry in
+            capturedMessage = error.localizedDescription
+            capturedRetry = retry
+        }
+
         await viewModel.loadData()
 
         XCTAssertFalse(viewModel.isLoading)
-        XCTAssertNotNil(viewModel.errorMessage)
-        XCTAssertTrue(viewModel.errorMessage?.contains("Failed to load settings") == true)
+        XCTAssertNotNil(capturedMessage)
+        XCTAssertTrue(capturedMessage?.contains("Failed to load settings") == true)
+        XCTAssertNotNil(capturedRetry)
     }
 
     // MARK: - Schedule Tests
@@ -99,29 +109,19 @@ final class SettingsViewModelTests: XCTestCase {
         mockDataService.shouldThrowError = true
         mockDataService.errorToThrow = AppError.persistenceError("Save failed")
 
+        var capturedMessage: String?
+        var capturedRetry: (@Sendable () async -> Void)?
+        viewModel.onError = { error, retry in
+            capturedMessage = error.localizedDescription
+            capturedRetry = retry
+        }
+
         let newSchedule = WeeklySchedule()
         await viewModel.updateSchedule(newSchedule)
 
-        XCTAssertNotNil(viewModel.errorMessage)
-        XCTAssertTrue(viewModel.errorMessage?.contains("Failed to save schedule") == true)
-    }
-
-    // MARK: - Error Handling Tests
-
-    func testClearError() {
-        viewModel.errorMessage = "Test error"
-
-        viewModel.clearError()
-
-        XCTAssertNil(viewModel.errorMessage)
-    }
-
-    func testHandleError() {
-        let testError = AppError.persistenceError("Test error")
-
-        viewModel.handleError(testError)
-
-        XCTAssertEqual(viewModel.errorMessage, testError.localizedDescription)
+        XCTAssertNotNil(capturedMessage)
+        XCTAssertTrue(capturedMessage?.contains("Failed to save schedule") == true)
+        XCTAssertNotNil(capturedRetry)
     }
 
     // MARK: - Navigation Tests

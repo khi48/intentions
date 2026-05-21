@@ -22,10 +22,7 @@ final class SessionStatusViewModel: Sendable {
     
     /// Whether the view is currently loading
     var isLoading: Bool = false
-    
-    /// Current error message to display
-    var errorMessage: String? = nil
-    
+
     /// Current active session
     private(set) var session: IntentionSession?
     
@@ -240,21 +237,6 @@ final class SessionStatusViewModel: Sendable {
         isLoading = true
         defer { isLoading = false }
         return try await operation()
-    }
-    
-    // MARK: - Error Handling
-    
-    func handleError(_ error: Error) async {
-        if let appError = error as? AppError {
-            errorMessage = appError.localizedDescription
-        } else {
-            errorMessage = error.localizedDescription
-        }
-        isLoading = false
-    }
-    
-    func clearError() {
-        errorMessage = nil
     }
 
     private func loadAssociatedQuickAction() async {

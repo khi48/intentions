@@ -32,7 +32,6 @@ struct QuickActionEditorSheet: View {
 
     // UI state
     @State private var isLoading: Bool = false
-    @State private var errorMessage: String?
     @State private var lastSaveTapTime: Date = .distantPast
     @State private var lastPickerTapTime: Date = .distantPast
     @State private var showingIconPicker: Bool = false
@@ -124,14 +123,6 @@ struct QuickActionEditorSheet: View {
             )
             .onChange(of: familyActivitySelection) { _, newSelection in
                 updateSelectedItems(from: newSelection)
-            }
-            .alert("Error", isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { _ in clearError() }
-            )) {
-                Button("OK") { clearError() }
-            } message: {
-                Text(errorMessage ?? "")
             }
             .sheet(isPresented: $showingIconPicker) {
                 iconPickerSheet
@@ -379,15 +370,9 @@ struct QuickActionEditorSheet: View {
 
         lastSaveTapTime = now
 
-        guard !name.isEmpty else {
-            errorMessage = "Name is required"
-            return
-        }
-
-        guard !selectedApps.isEmpty else {
-            errorMessage = "At least one app must be selected"
-            return
-        }
+        // Save button is gated by isValidQuickAction (non-empty name + at
+        // least one app), so reaching this point means validation already
+        // passed. No inline error captions needed.
 
         isLoading = true
 
@@ -472,10 +457,6 @@ struct QuickActionEditorSheet: View {
             let minutes = max(0, Int(duration) / 60)
             return String(localized: "\(minutes)m", comment: "Quick action duration in minutes only")
         }
-    }
-
-    private func clearError() {
-        errorMessage = nil
     }
 }
 

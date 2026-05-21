@@ -94,14 +94,16 @@ struct QuickActionsView: View {
                     }
                 )
             }
-            .alert("Error", isPresented: Binding(
-                get: { viewModel.errorMessage != nil },
-                set: { _ in viewModel.clearError() }
-            )) {
-                Button("OK") { viewModel.clearError() }
-            } message: {
-                Text(viewModel.errorMessage ?? "")
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if let bannerError = viewModel.bannerError {
+                    AppErrorBanner(
+                        error: bannerError,
+                        onDismiss: { viewModel.clearError() }
+                    )
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
+            .animation(.easeInOut(duration: 0.2), value: viewModel.bannerError != nil)
             .alert("Delete Quick Action", isPresented: $viewModel.showingDeleteAlert) {
                 deleteConfirmationAlert
             }
@@ -296,7 +298,9 @@ struct QuickActionsView: View {
             await contentViewModel.startSession(session)
             contentViewModel.navigateToTab(.home)
         } catch {
-            await viewModel.handleError(error)
+            // createSession() failures are config issues — no retry closure;
+            // user dismisses banner and edits the action.
+            viewModel.handleError(error)
         }
     }
     

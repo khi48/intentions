@@ -61,27 +61,29 @@ final class SettingsIntegrationTests: XCTestCase {
     }
 
     func testErrorHandlingWorkflow() async throws {
-        // 1. Test successful operation first
+        // Errors bubble up via onError callback (#53). Capture invocations and
+        // assert on what was forwarded to the parent ContentViewModel.
+        var capturedErrors: [Error] = []
+        viewModel.onError = { error, _ in capturedErrors.append(error) }
+
+        // 1. Successful operation does not invoke onError
         await viewModel.loadData()
-        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertTrue(capturedErrors.isEmpty)
 
         // 2. Set up mock to throw errors
         mockDataService.shouldThrowError = true
         mockDataService.errorToThrow = AppError.persistenceError("Test error")
 
-        // 3. Try to update schedule — should fail
+        // 3. Try to update schedule — should fail and bubble
         let newSchedule = WeeklySchedule()
         await viewModel.updateSchedule(newSchedule)
-        XCTAssertNotNil(viewModel.errorMessage)
+        XCTAssertEqual(capturedErrors.count, 1)
+        XCTAssertTrue(capturedErrors.last?.localizedDescription.contains("Failed to save schedule") == true)
 
-        // 4. Clear error
-        viewModel.clearError()
-        XCTAssertNil(viewModel.errorMessage)
-
-        // 5. Reset mock and try again — should succeed
+        // 4. Reset mock and try again — should succeed (no new error)
         mockDataService.shouldThrowError = false
         await viewModel.updateSchedule(newSchedule)
-        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertEqual(capturedErrors.count, 1)
     }
 
     func testUIStateManagement() async throws {

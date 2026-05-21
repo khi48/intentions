@@ -18,8 +18,14 @@ final class QuickActionsViewModel: Sendable {
     /// Whether the view is currently loading
     var isLoading: Bool = false
 
-    /// Current error message to display
-    var errorMessage: String? = nil
+    /// Typed app-level error surfaced via AppErrorBanner (see #49, #53).
+    /// Carries the recovery action (retry the failed call). Replaces the prior
+    /// `errorMessage: String?` + .alert("OK") pattern.
+    var bannerError: BannerError? = nil
+
+    /// Plain-string error message (computed from `bannerError`). Kept for
+    /// existing tests that inspect `errorMessage` directly.
+    var errorMessage: String? { bannerError?.message }
 
     /// All quick actions
     private(set) var quickActions: [QuickAction] = []
@@ -59,7 +65,9 @@ final class QuickActionsViewModel: Sendable {
                 await runStaleTokenMigrationIfNeeded()
 
             } catch {
-                await handleError(error)
+                handleError(error, retry: { [weak self] in
+                    await self?.loadData()
+                })
             }
         }
     }
@@ -90,7 +98,9 @@ final class QuickActionsViewModel: Sendable {
             defaults.set(true, forKey: Self.staleTokenMigrationKey)
             showStaleTokenMigrationNotice = true
         } catch {
-            await handleError(error)
+            handleError(error, retry: { [weak self] in
+                await self?.runStaleTokenMigrationIfNeeded()
+            })
         }
     }
     
@@ -116,9 +126,11 @@ final class QuickActionsViewModel: Sendable {
 
                 // Save to persistence
                 try await dataService.save(quickActions, forKey: "quickActions")
-                
+
             } catch {
-                await handleError(error)
+                handleError(error, retry: { [weak self] in
+                    await self?.saveQuickAction(quickAction)
+                })
             }
         }
     }
@@ -144,7 +156,9 @@ final class QuickActionsViewModel: Sendable {
                 try await dataService.save(quickActions, forKey: "quickActions")
 
             } catch {
-                await handleError(error)
+                handleError(error, retry: { [weak self] in
+                    await self?.moveQuickAction(from: sourceIndex, to: destinationIndex)
+                })
             }
         }
     }
@@ -162,9 +176,11 @@ final class QuickActionsViewModel: Sendable {
                 // Clear delete state
                 showingDeleteAlert = false
                 quickActionToDelete = nil
-                
+
             } catch {
-                await handleError(error)
+                handleError(error, retry: { [weak self] in
+                    await self?.deleteQuickAction(quickAction)
+                })
             }
         }
     }
@@ -252,18 +268,30 @@ final class QuickActionsViewModel: Sendable {
     }
     
     // MARK: - Error Handling
-    
-    func handleError(_ error: Error) async {
+
+    /// Surface an error via AppErrorBanner with an optional retry closure.
+    /// Mirrors `ContentViewModel.handleError(_:retry:)` (see #49, #53).
+    func handleError(_ error: Error, retry: (@Sendable () async -> Void)? = nil) {
+        let message: String
         if let appError = error as? AppError {
-            errorMessage = appError.errorDescription
+            message = appError.errorDescription ?? error.localizedDescription
         } else {
-            errorMessage = error.localizedDescription
+            message = error.localizedDescription
         }
+
+        let action: BannerError.Action
+        if let retry {
+            action = .retry(retry)
+        } else {
+            action = .retry({ })
+        }
+
+        bannerError = BannerError(message: message, action: action)
         isLoading = false
     }
-    
+
     func clearError() {
-        errorMessage = nil
+        bannerError = nil
     }
     
     // MARK: - Helper Methods
