@@ -51,8 +51,14 @@ final class ContentViewModel: Sendable {
     /// Whether the app is currently loading or performing operations
     var isLoading: Bool = false
     
-    /// Current error message to display to user
-    var errorMessage: String? = nil
+    /// Typed app-level error surfaced via AppErrorBanner (see #49). Replaces
+    /// the prior `errorMessage: String?` + .alert("OK") pattern. Carries the
+    /// recovery action (retry the failed call, or open iOS Settings).
+    var bannerError: BannerError? = nil
+
+    /// Plain-string error message (computed from `bannerError`). Kept for
+    /// existing call sites and tests that inspect `errorMessage` directly.
+    var errorMessage: String? { bannerError?.message }
     
     /// Current active session if any
     private(set) var activeSession: IntentionSession? = nil
@@ -277,7 +283,9 @@ final class ContentViewModel: Sendable {
             try await dataService.saveWeeklySchedule(schedule)
         } catch {
             logger.error("Failed to save weekly schedule: \(error.localizedDescription)")
-            handleError(error)
+            handleError(error, retry: { [weak self] in
+                await self?.updateWeeklySchedule(schedule)
+            })
         }
 
         // Gate the IntentLog push on service readiness. If we push to an
@@ -288,7 +296,9 @@ final class ContentViewModel: Sendable {
         guard screenTimeService.isReady else {
             handleError(AppError.serviceUnavailable(
                 String(localized: "Screen Time service is not ready. Schedule saved locally but blocking has not been activated — please complete setup.", comment: "Error shown when saving schedule before Screen Time service finishes init")
-            ))
+            ), retry: { [weak self] in
+                await self?.updateWeeklySchedule(schedule)
+            })
             return
         }
 
@@ -307,7 +317,9 @@ final class ContentViewModel: Sendable {
             )
             handleError(AppError.persistenceError(
                 String(localized: "Schedule was saved but the shield engine did not persist it. Please retry.", comment: "Error when schedule write to ShieldEngine fails verification")
-            ))
+            ), retry: { [weak self] in
+                await self?.updateWeeklySchedule(schedule)
+            })
             return
         }
         DebugBreadcrumbs.record(
@@ -490,7 +502,9 @@ final class ContentViewModel: Sendable {
                 updateWidgetSessionData(session)
                 await NotificationService.shared.scheduleSessionNotifications(for: session)
             } catch {
-                handleError(error)
+                handleError(error, retry: { [weak self] in
+                    await self?.startSession(session)
+                })
             }
         }
     }
@@ -683,7 +697,9 @@ final class ContentViewModel: Sendable {
     /// Apply session-based blocking - allows only the session's apps/categories
     private func applySessionBlocking(for session: IntentionSession) async {
         guard screenTimeService.isReady else {
-            handleError(AppError.serviceUnavailable(String(localized: "Screen Time service is not ready. Please complete setup first.", comment: "Error when applying session blocking before Screen Time is initialised")))
+            handleError(AppError.serviceUnavailable(String(localized: "Screen Time service is not ready. Please complete setup first.", comment: "Error when applying session blocking before Screen Time is initialised")), retry: { [weak self] in
+                await self?.applySessionBlocking(for: session)
+            })
             return
         }
 
@@ -831,7 +847,9 @@ final class ContentViewModel: Sendable {
                 try await dataService.saveWeeklySchedule(weeklySchedule)
             } catch {
                 logger.error("Failed to save intention quote: \(error.localizedDescription)")
-                handleError(error)
+                handleError(error, retry: { [weak self] in
+                    await self?.setIntentionQuote(quote)
+                })
             }
         }
     }
@@ -845,7 +863,9 @@ final class ContentViewModel: Sendable {
         } else {
             handleError(AppError.serviceUnavailable(
                 String(localized: "Screen Time initialization failed. Please try again.", comment: "Error when Screen Time service fails to initialise after setup")
-            ))
+            ), retry: { [weak self] in
+                await self?.completeSetupFlow()
+            })
         }
     }
 
@@ -879,24 +899,51 @@ final class ContentViewModel: Sendable {
             } catch {
                 screenTimeState = .failed(error.localizedDescription)
                 logger.error("ScreenTimeService initialization error: \(error.localizedDescription)")
-                handleError(error)
+                handleError(error, retry: { [weak self] in
+                    await self?.retryScreenTimeServiceInitialization()
+                })
             }
         }
     }
-    
-    // MARK: - Error Handling
-    
-    func handleError(_ error: Error) {
-        if let appError = error as? AppError {
-            errorMessage = appError.errorDescription
-        } else {
-            errorMessage = error.localizedDescription
-        }
-        isLoading = false
+
+    /// Reset ScreenTimeService state to `.uninitialized` and re-run init.
+    /// `initializeScreenTimeServiceAfterSetup` gates on `.uninitialized` —
+    /// without this reset the retry guard would no-op after a prior failure.
+    private func retryScreenTimeServiceInitialization() async {
+        screenTimeState = .uninitialized
+        await initializeScreenTimeServiceAfterSetup()
     }
     
+    // MARK: - Error Handling
+
+    /// Surface an error to the user via AppErrorBanner. Classifies the action:
+    /// - `screenTimeAuthorizationFailed` → "Open Settings" deep link
+    /// - any other error with a `retry` closure → "Retry" re-runs the closure
+    /// - any other error without a retry → dismissible info banner (retry is a
+    ///   no-op so the user can still acknowledge)
+    func handleError(_ error: Error, retry: (@Sendable () async -> Void)? = nil) {
+        let message: String
+        if let appError = error as? AppError {
+            message = appError.errorDescription ?? error.localizedDescription
+        } else {
+            message = error.localizedDescription
+        }
+
+        let action: BannerError.Action
+        if let appError = error as? AppError, case .screenTimeAuthorizationFailed = appError {
+            action = .openSettings
+        } else if let retry {
+            action = .retry(retry)
+        } else {
+            action = .retry({ })
+        }
+
+        bannerError = BannerError(message: message, action: action)
+        isLoading = false
+    }
+
     func clearError() {
-        errorMessage = nil
+        bannerError = nil
     }
     
     // MARK: - Helper Methods

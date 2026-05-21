@@ -9,28 +9,45 @@ import SwiftUI
 @preconcurrency import FamilyControls
 
 
-/// Main app content view with navigation and authorization handling
+/// Main app content view with navigation and authorization handling.
+///
+/// Init-failure handling (#49): `ContentViewModel.init()` can throw if the
+/// App Group UserDefaults can't be opened or SwiftData ModelContainer init
+/// fails. Both are non-user-recoverable provisioning / install corruption
+/// bugs. Instead of falling back to MockServices (which let the user
+/// interact with a UI that didn't actually persist or block), surface
+/// `FatalInitView` — a non-dismissible diagnostic screen with copy/contact
+/// actions.
 struct ContentView: View {
-    @State private var viewModel: ContentViewModel
-    @Environment(\.scenePhase) private var scenePhase
+    @State private var initState: InitState
 
-    @State private var initError: String?
+    private enum InitState {
+        case ready(ContentViewModel)
+        case fatal(String)
+    }
 
     init() {
         do {
             let vm = try ContentViewModel()
-            self._viewModel = State(wrappedValue: vm)
-            self._initError = State(wrappedValue: nil)
+            self._initState = State(wrappedValue: .ready(vm))
         } catch {
-            // Create a fallback view model with mock services so the app can show an error
-            let fallbackVM = try! ContentViewModel(
-                screenTimeService: MockScreenTimeService(),
-                dataService: MockDataPersistenceService()
-            )
-            self._viewModel = State(wrappedValue: fallbackVM)
-            self._initError = State(wrappedValue: "Failed to initialize app: \(error.localizedDescription)")
+            self._initState = State(wrappedValue: .fatal("ContentViewModel init failed: \(error.localizedDescription)"))
         }
     }
+
+    var body: some View {
+        switch initState {
+        case .ready(let vm):
+            AuthorizedContentView(viewModel: vm)
+        case .fatal(let diagnostic):
+            FatalInitView(diagnostic: diagnostic)
+        }
+    }
+}
+
+private struct AuthorizedContentView: View {
+    @State var viewModel: ContentViewModel
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -50,6 +67,16 @@ struct ContentView: View {
                 }
             } else {
                 MainTabView(viewModel: viewModel)
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        if let bannerError = viewModel.bannerError {
+                            AppErrorBanner(
+                                error: bannerError,
+                                onDismiss: { viewModel.clearError() }
+                            )
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.2), value: viewModel.bannerError != nil)
             }
         }
         .task {
@@ -63,24 +90,6 @@ struct ContentView: View {
         .onOpenURL { url in
             guard url.scheme == "intentions", url.host == "home" else { return }
             viewModel.navigateToTab(.home)
-        }
-        .alert("Error", isPresented: Binding(
-            get: { viewModel.errorMessage != nil },
-            set: { _ in viewModel.clearError() }
-        )) {
-            Button("OK") {
-                viewModel.clearError()
-            }
-        } message: {
-            Text(viewModel.errorMessage ?? "")
-        }
-        .alert("Initialization Error", isPresented: Binding(
-            get: { initError != nil },
-            set: { _ in initError = nil }
-        )) {
-            Button("OK") { initError = nil }
-        } message: {
-            Text(initError ?? "")
         }
     }
 }
