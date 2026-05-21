@@ -187,20 +187,20 @@ final class QuickActionsViewModel: Sendable {
     func createDefaultQuickActions() async -> [QuickAction] {
         let defaults = [
             QuickAction(
-                name: "Work Session",
-                subtitle: "Focus on productivity apps",
+                name: String(localized: "Work Session", comment: "Seeded default quick action name"),
+                subtitle: String(localized: "Focus on productivity apps", comment: "Seeded default quick action subtitle"),
                 iconName: "laptopcomputer",
                 duration: 30 * 60 // 30 minutes
             ),
             QuickAction(
-                name: "Study Time",
-                subtitle: "Learning and research",
+                name: String(localized: "Study Time", comment: "Seeded default quick action name"),
+                subtitle: String(localized: "Learning and research", comment: "Seeded default quick action subtitle"),
                 iconName: "book.fill",
                 duration: 60 * 60 // 1 hour
             ),
             QuickAction(
-                name: "Break Time",
-                subtitle: "Social and entertainment",
+                name: String(localized: "Break Time", comment: "Seeded default quick action name"),
+                subtitle: String(localized: "Social and entertainment", comment: "Seeded default quick action subtitle"),
                 iconName: "cup.and.saucer.fill",
                 duration: 15 * 60 // 15 minutes
             )

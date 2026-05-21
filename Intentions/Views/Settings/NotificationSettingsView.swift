@@ -158,12 +158,12 @@ struct NotificationSettingsView: View {
 
     private var permissionStatusText: String {
         switch authorizationStatus {
-        case .authorized: return "Notifications are enabled"
-        case .provisional: return "Quiet notifications enabled"
-        case .ephemeral: return "Temporary notifications enabled"
-        case .denied: return "Notifications are disabled"
-        case .notDetermined: return "Permission not requested"
-        @unknown default: return "Unknown status"
+        case .authorized: return String(localized: "Notifications are enabled", comment: "Notification permission status row")
+        case .provisional: return String(localized: "Quiet notifications enabled", comment: "Notification permission status row (provisional)")
+        case .ephemeral: return String(localized: "Temporary notifications enabled", comment: "Notification permission status row (ephemeral, App Clip)")
+        case .denied: return String(localized: "Notifications are disabled", comment: "Notification permission status row")
+        case .notDetermined: return String(localized: "Permission not requested", comment: "Notification permission status row")
+        @unknown default: return String(localized: "Unknown status", comment: "Notification permission status row when value is unrecognised")
         }
     }
 

@@ -317,9 +317,9 @@ private struct QuickActionsSection: View {
     /// - Otherwise show `cannotStartReason` (e.g. blocking-disabled copy).
     private var cardDisabledReason: String {
         if !viewModel.isScreenTimeServiceReady {
-            return "Screen Time not ready"
+            return String(localized: "Screen Time not ready", comment: "Quick action card hint when Screen Time service is not ready")
         }
-        return viewModel.cannotStartReason ?? "Double tap to start session"
+        return viewModel.cannotStartReason ?? String(localized: "Double tap to start session", comment: "Default accessibility hint for an enabled quick action card")
     }
 
     private func isQuickActionRunning(_ quickAction: QuickAction) -> Bool {

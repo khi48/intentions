@@ -1,0 +1,708 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "%@ %@–%@" : {
+      "comment" : "Single-routine summary: day label and time range",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@–%3$@"
+          }
+        }
+      }
+    },
+    "%@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "%@. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. %2$@"
+          }
+        }
+      }
+    },
+    "%lld" : {
+
+    },
+    "%lld days" : {
+      "comment" : "Day-count label for a routine that runs on multiple days"
+    },
+    "%lld items" : {
+
+    },
+    "%lld percent complete" : {
+
+    },
+    "%lld routines" : {
+      "comment" : "Settings summary showing total routine count"
+    },
+    "%lld%% complete" : {
+
+    },
+    "%lld." : {
+
+    },
+    "%lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "%lld/15" : {
+
+    },
+    "%lld/50 selected" : {
+
+    },
+    "%lldh" : {
+      "comment" : "Quick action duration in whole hours"
+    },
+    "%lldh %lldm" : {
+      "comment" : "Compact duration: hours and minutes\nQuick action duration: hours and minutes",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lldh %2$lldm"
+          }
+        }
+      }
+    },
+    "%lldh %lldm remaining" : {
+      "comment" : "Remaining protected time: hours + minutes",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lldh %2$lldm remaining"
+          }
+        }
+      }
+    },
+    "%lldm" : {
+      "comment" : "Compact duration: minutes only\nQuick action duration in minutes only"
+    },
+    "%lldm remaining" : {
+      "comment" : "Remaining protected time: minutes only"
+    },
+    "+%lld" : {
+
+    },
+    "0m" : {
+      "comment" : "Zero-duration label for quick action"
+    },
+    "45m remaining" : {
+
+    },
+    "A Screen Time update required clearing the app selections on your quick actions. Your names, icons, and durations are preserved — tap a quick action to re-pick its apps." : {
+
+    },
+    "A quick glance at the lock screen tells you whether you're protected — or in an active session." : {
+
+    },
+    "Active" : {
+
+    },
+    "Add routine" : {
+
+    },
+    "Add the Intent widget" : {
+
+    },
+    "Adding the widget" : {
+
+    },
+    "Allow all websites" : {
+
+    },
+    "Almost done!" : {
+
+    },
+    "App Setup" : {
+      "comment" : "Settings row title for re-running setup flow"
+    },
+    "Apple limits app selection to 50 apps per session." : {
+
+    },
+    "Approved" : {
+
+    },
+    "Apps" : {
+
+    },
+    "Apps Allowed" : {
+
+    },
+    "BLOCKED" : {
+
+    },
+    "Be intentional\nwith this moment." : {
+
+    },
+    "Be intentional with your energy.\nBe intentional with your time.\nBe intentional with your habits." : {
+
+    },
+    "Blocking is off" : {
+      "comment" : "Settings summary when blocking is disabled"
+    },
+    "Blocking is off — no apps are blocked" : {
+      "comment" : "Subtitle under blocking toggle when blocking is off"
+    },
+    "Blocks apps 24/7 outside free time" : {
+      "comment" : "Subtitle under blocking toggle when blocking is on"
+    },
+    "Break Time" : {
+      "comment" : "Seeded default quick action name"
+    },
+    "Cancel" : {
+
+    },
+    "Capturing diagnostic…" : {
+
+    },
+    "Check your settings and try again." : {
+      "comment" : "Recovery suggestion when configuration is invalid"
+    },
+    "Choose Icon" : {
+
+    },
+    "Configure apps that you always need access to" : {
+
+    },
+    "Confirm" : {
+
+    },
+    "Copy" : {
+
+    },
+    "Copy To" : {
+
+    },
+    "Copy to…" : {
+
+    },
+    "Could not find %@. It may have been deleted." : {
+      "comment" : "Error when a stored item cannot be loaded; placeholder is item type name"
+    },
+    "Could not find the active session." : {
+      "comment" : "Error when lookup of the current active session returns nothing"
+    },
+    "Create" : {
+
+    },
+    "Create Your First Quick Action" : {
+
+    },
+    "Create a quick action" : {
+
+    },
+    "Create quick actions for instant access to your most common app groups and session types" : {
+
+    },
+    "Currently active routine" : {
+
+    },
+    "Currently running" : {
+
+    },
+    "DURATION" : {
+
+    },
+    "Days" : {
+
+    },
+    "Debug Status" : {
+      "comment" : "Settings row title for debug diagnostics screen"
+    },
+    "Deep Work" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete Quick Action" : {
+
+    },
+    "Delete routine" : {
+
+    },
+    "Denied" : {
+
+    },
+    "Disable" : {
+      "comment" : "Confirmation button to disable blocking"
+    },
+    "Disable · %llds" : {
+      "comment" : "Disable button label with remaining countdown seconds"
+    },
+    "Done" : {
+
+    },
+    "Double tap to end your focused session and re-block apps" : {
+
+    },
+    "Double tap to open the quick action editor" : {
+
+    },
+    "Double tap to start session" : {
+      "comment" : "Default accessibility hint for an enabled quick action card"
+    },
+    "Edit" : {
+
+    },
+    "Edit Free Time" : {
+
+    },
+    "Edit Quick Action" : {
+
+    },
+    "Edit Routine" : {
+
+    },
+    "Enable Access" : {
+
+    },
+    "Enable Greyscale" : {
+      "comment" : "Settings row title for greyscale guide"
+    },
+    "Enable Notifications" : {
+
+    },
+    "Enabled" : {
+
+    },
+    "End Session" : {
+
+    },
+    "End current session" : {
+
+    },
+    "Ends" : {
+
+    },
+    "Ensure the app has permission to store data and try again." : {
+      "comment" : "Recovery suggestion when persistence fails"
+    },
+    "Error" : {
+
+    },
+    "Essential Apps" : {
+
+    },
+    "Failed to block apps: %@." : {
+      "comment" : "Error when Screen Time blocking fails; placeholder is system error detail"
+    },
+    "Failed to discover apps: %@." : {
+      "comment" : "Error when listing installed apps fails; placeholder is system error detail"
+    },
+    "Failed to load settings: %@" : {
+      "comment" : "Error toast when settings load fails; placeholder is system error description"
+    },
+    "Failed to save data: %@." : {
+      "comment" : "Error when saving to persistent storage fails; placeholder is system error detail"
+    },
+    "Failed to save schedule: %@" : {
+      "comment" : "Error toast when saving schedule fails; placeholder is system error description"
+    },
+    "Focus on productivity apps" : {
+      "comment" : "Seeded default quick action subtitle"
+    },
+    "Free Time" : {
+
+    },
+    "Free Time Settings" : {
+      "comment" : "Settings row title for free-time schedule editor"
+    },
+    "Free time will block again later." : {
+      "comment" : "Banner remedy when sessions can't start because user is in free time"
+    },
+    "Go to **Accessibility**" : {
+
+    },
+    "Go to Settings > Screen Time > Content & Privacy Restrictions and enable access for Intent." : {
+      "comment" : "Recovery suggestion after Screen Time permission is denied"
+    },
+    "Greyscale makes your phone less appealing, reducing the urge to scroll." : {
+
+    },
+    "Home" : {
+      "comment" : "Tab bar label for the home screen"
+    },
+    "How to Configure" : {
+
+    },
+    "How to add it to your lock screen" : {
+
+    },
+    "Initialization Error" : {
+
+    },
+    "Intent" : {
+
+    },
+    "Intent needs Screen Time access to manage app blocking. Enable it to start using quick actions." : {
+
+    },
+    "Invalid configuration: %@." : {
+      "comment" : "Error when a configuration value is invalid; placeholder is internal reason"
+    },
+    "Last reapply: %@" : {
+
+    },
+    "Learning and research" : {
+      "comment" : "Seeded default quick action subtitle"
+    },
+    "Let's set up your app for mindful phone usage. This quick setup will help you take control of your digital habits." : {
+
+    },
+    "Loading Settings..." : {
+
+    },
+    "Loading quick actions..." : {
+
+    },
+    "Long press to reorder" : {
+
+    },
+    "Manual Setup Instructions" : {
+
+    },
+    "Matched" : {
+
+    },
+    "Name" : {
+
+    },
+    "New Quick Action" : {
+
+    },
+    "New Routine" : {
+
+    },
+    "No Quick Actions Yet" : {
+
+    },
+    "No active session" : {
+      "comment" : "Session status label when no session is running"
+    },
+    "No routines set" : {
+      "comment" : "Settings summary when blocking is enabled but no routines exist"
+    },
+    "No routines yet" : {
+
+    },
+    "Not Requested" : {
+
+    },
+    "Notification Permission" : {
+
+    },
+    "Notifications" : {
+      "comment" : "Settings row title"
+    },
+    "Notifications are disabled" : {
+      "comment" : "Notification permission status row"
+    },
+    "Notifications are enabled" : {
+      "comment" : "Notification permission status row"
+    },
+    "OK" : {
+
+    },
+    "Open **Settings**" : {
+
+    },
+    "Or go to **Settings → Screen Time → Intent** to enable manually." : {
+
+    },
+    "Permission Status:" : {
+
+    },
+    "Permission not requested" : {
+      "comment" : "Notification permission status row"
+    },
+    "Please grant Screen Time permissions to use this feature." : {
+      "comment" : "Recovery suggestion when an action requires Screen Time permission"
+    },
+    "Please re-pick your apps" : {
+
+    },
+    "Quick Actions" : {
+
+    },
+    "Quick action name" : {
+
+    },
+    "Quiet notifications enabled" : {
+      "comment" : "Notification permission status row (provisional)"
+    },
+    "Replace" : {
+
+    },
+    "Replace current session?" : {
+
+    },
+    "Return" : {
+
+    },
+    "Routine" : {
+
+    },
+    "Routines" : {
+
+    },
+    "SESSIONS TODAY" : {
+
+    },
+    "Save" : {
+
+    },
+    "Schedule was saved but the shield engine did not persist it. Please retry." : {
+      "comment" : "Error when schedule write to ShieldEngine fails verification"
+    },
+    "Screen Time Access Required" : {
+
+    },
+    "Screen Time Permission" : {
+
+    },
+    "Screen Time authorization was denied. Please enable it in Settings to use Intent." : {
+      "comment" : "Error when the user denies Screen Time permission"
+    },
+    "Screen Time initialization failed. Please try again." : {
+      "comment" : "Error when Screen Time service fails to initialise after setup"
+    },
+    "Screen Time is not available on this device." : {
+      "comment" : "Error when Screen Time framework is unavailable (e.g. unsupported device)"
+    },
+    "Screen Time not ready" : {
+      "comment" : "Quick action card hint when Screen Time service is not ready"
+    },
+    "Screen Time permission granted successfully!" : {
+
+    },
+    "Screen Time service is not ready. Please complete setup first." : {
+      "comment" : "Error when applying session blocking before Screen Time is initialised"
+    },
+    "Screen Time service is not ready. Schedule saved locally but blocking has not been activated — please complete setup." : {
+      "comment" : "Error shown when saving schedule before Screen Time service finishes init"
+    },
+    "Search quick actions..." : {
+
+    },
+    "Session" : {
+      "comment" : "Default widget title for a manually-started session"
+    },
+    "Session active" : {
+      "comment" : "Session status label during normal running"
+    },
+    "Session ending soon" : {
+      "comment" : "Session status label as session nears expiry"
+    },
+    "Session ending very soon" : {
+      "comment" : "Session status label in the final moments of a session"
+    },
+    "Session in progress" : {
+
+    },
+    "Session starting" : {
+      "comment" : "Session status label in the first seconds of a session"
+    },
+    "Sessions locked during free time." : {
+      "comment" : "Banner title when sessions can't start because user is in free time"
+    },
+    "Sessions locked while blocking is off." : {
+      "comment" : "Banner title when sessions can't start because blocking is disabled"
+    },
+    "Set Your Intention" : {
+
+    },
+    "Set your first intention" : {
+
+    },
+    "Settings" : {
+      "comment" : "Tab bar label for the settings screen"
+    },
+    "Setup not available" : {
+
+    },
+    "Skip for now" : {
+
+    },
+    "Snapshot captured" : {
+
+    },
+    "Social and entertainment" : {
+      "comment" : "Seeded default quick action subtitle"
+    },
+    "Start a new session from the main screen." : {
+      "comment" : "Recovery suggestion when the active session lookup fails"
+    },
+    "Start a new session to access apps again." : {
+      "comment" : "Recovery suggestion after a focus session ends"
+    },
+    "Starts" : {
+
+    },
+    "Step %lld of 4" : {
+
+    },
+    "Study Time" : {
+      "comment" : "Seeded default quick action name"
+    },
+    "THIS WEEK" : {
+
+    },
+    "Tap 'Grant Permission' below to allow Intent to manage app access during focused sessions." : {
+
+    },
+    "Tap **Colour Filters**" : {
+
+    },
+    "Tap **Display & Text Size**" : {
+
+    },
+    "Temporary notifications enabled" : {
+      "comment" : "Notification permission status row (ephemeral, App Clip)"
+    },
+    "This app requires iOS 16.0 or later with Screen Time support." : {
+      "comment" : "Recovery suggestion when device does not support Screen Time"
+    },
+    "This setup takes about 2 minutes" : {
+
+    },
+    "Time" : {
+
+    },
+    "Time remaining: %@" : {
+
+    },
+    "Timer error: %@." : {
+      "comment" : "Error from the session countdown timer; placeholder is internal reason"
+    },
+    "To receive session reminders, please enable notifications in Settings." : {
+
+    },
+    "Too many apps selected. Apple limits selection to 50 apps per session." : {
+
+    },
+    "Try refreshing or recreating the item." : {
+      "comment" : "Recovery suggestion when a stored item is missing"
+    },
+    "Try refreshing the app list or restarting the app." : {
+      "comment" : "Recovery suggestion when app discovery fails"
+    },
+    "Try restarting the app or check Screen Time settings." : {
+      "comment" : "Recovery suggestion when Screen Time blocking fails"
+    },
+    "Try starting a new session." : {
+      "comment" : "Recovery suggestion after a timer error"
+    },
+    "Turn on **Colour Filters** and select **Greyscale**" : {
+
+    },
+    "Turn on blocking in Settings to start one." : {
+      "comment" : "Banner remedy when sessions can't start because blocking is disabled"
+    },
+    "Two ways to add Intent — pick whichever fits your setup." : {
+
+    },
+    "Type it here..." : {
+
+    },
+    "Type your intention to confirm" : {
+
+    },
+    "Unknown" : {
+
+    },
+    "Unknown status" : {
+      "comment" : "Notification permission status row when value is unrecognised"
+    },
+    "Unnamed" : {
+      "comment" : "Placeholder name for a routine that has no user-provided name"
+    },
+    "Update" : {
+
+    },
+    "Used %lldx" : {
+
+    },
+    "View" : {
+
+    },
+    "Week view" : {
+
+    },
+    "Welcome to Intent" : {
+
+    },
+    "What we'll set up:" : {
+
+    },
+    "Why are you setting up app blocking? Write a short reminder to yourself — it'll be shown if you ever try to disable protection." : {
+
+    },
+    "Why have you tried to control your screen time?" : {
+
+    },
+    "Why unlock?" : {
+
+    },
+    "Work Session" : {
+      "comment" : "Seeded default quick action name"
+    },
+    "Write your reason..." : {
+
+    },
+    "You can configure Always Allowed apps now or later. Intent will work perfectly either way." : {
+
+    },
+    "You have %@ left on your current session. Starting a new one will end it." : {
+
+    },
+    "Your Intention" : {
+      "comment" : "Settings row title for the user's intention quote"
+    },
+    "Your session has expired and apps have been locked." : {
+      "comment" : "Error shown after a focus session ends and blocking resumes"
+    },
+    "e.g. I want to be more present with my family" : {
+
+    },
+    "e.g. To be more present with my family" : {
+
+    },
+    "remaining" : {
+
+    },
+    "·" : {
+
+    },
+    "———" : {
+
+    },
+    "“%@”" : {
+
+    }
+  },
+  "version" : "1.0"
+}

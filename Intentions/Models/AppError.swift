@@ -28,54 +28,54 @@ enum AppError: LocalizedError, Sendable, Equatable {
     var errorDescription: String? {
         switch self {
         case .screenTimeAuthorizationFailed:
-            return "Screen Time authorization was denied. Please enable it in Settings to use Intent."
+            return String(localized: "Screen Time authorization was denied. Please enable it in Settings to use Intent.", comment: "Error when the user denies Screen Time permission")
         case .screenTimeAuthorizationRequired(let message):
             return message
         case .screenTimeNotAvailable:
-            return "Screen Time is not available on this device."
+            return String(localized: "Screen Time is not available on this device.", comment: "Error when Screen Time framework is unavailable (e.g. unsupported device)")
         case .appBlockingFailed(let details):
-            return "Failed to block apps: \(details)."
+            return String(localized: "Failed to block apps: \(details).", comment: "Error when Screen Time blocking fails; placeholder is system error detail")
         case .sessionExpired:
-            return "Your session has expired and apps have been locked."
+            return String(localized: "Your session has expired and apps have been locked.", comment: "Error shown after a focus session ends and blocking resumes")
         case .sessionNotFound:
-            return "Could not find the active session."
+            return String(localized: "Could not find the active session.", comment: "Error when lookup of the current active session returns nothing")
         case .dataNotFound(let item):
-            return "Could not find \(item). It may have been deleted."
+            return String(localized: "Could not find \(item). It may have been deleted.", comment: "Error when a stored item cannot be loaded; placeholder is item type name")
         case .invalidConfiguration(let details):
-            return "Invalid configuration: \(details)."
+            return String(localized: "Invalid configuration: \(details).", comment: "Error when a configuration value is invalid; placeholder is internal reason")
         case .persistenceError(let details):
-            return "Failed to save data: \(details)."
+            return String(localized: "Failed to save data: \(details).", comment: "Error when saving to persistent storage fails; placeholder is system error detail")
         case .appDiscoveryFailed(let details):
-            return "Failed to discover apps: \(details)."
+            return String(localized: "Failed to discover apps: \(details).", comment: "Error when listing installed apps fails; placeholder is system error detail")
         case .timerError(let details):
-            return "Timer error: \(details)."
+            return String(localized: "Timer error: \(details).", comment: "Error from the session countdown timer; placeholder is internal reason")
         }
     }
-    
+
     var recoverySuggestion: String? {
         switch self {
         case .screenTimeAuthorizationFailed:
-            return "Go to Settings > Screen Time > Content & Privacy Restrictions and enable access for Intent."
+            return String(localized: "Go to Settings > Screen Time > Content & Privacy Restrictions and enable access for Intent.", comment: "Recovery suggestion after Screen Time permission is denied")
         case .screenTimeAuthorizationRequired:
-            return "Please grant Screen Time permissions to use this feature."
+            return String(localized: "Please grant Screen Time permissions to use this feature.", comment: "Recovery suggestion when an action requires Screen Time permission")
         case .screenTimeNotAvailable:
-            return "This app requires iOS 16.0 or later with Screen Time support."
+            return String(localized: "This app requires iOS 16.0 or later with Screen Time support.", comment: "Recovery suggestion when device does not support Screen Time")
         case .appBlockingFailed:
-            return "Try restarting the app or check Screen Time settings."
+            return String(localized: "Try restarting the app or check Screen Time settings.", comment: "Recovery suggestion when Screen Time blocking fails")
         case .sessionExpired:
-            return "Start a new session to access apps again."
+            return String(localized: "Start a new session to access apps again.", comment: "Recovery suggestion after a focus session ends")
         case .sessionNotFound:
-            return "Start a new session from the main screen."
+            return String(localized: "Start a new session from the main screen.", comment: "Recovery suggestion when the active session lookup fails")
         case .dataNotFound:
-            return "Try refreshing or recreating the item."
+            return String(localized: "Try refreshing or recreating the item.", comment: "Recovery suggestion when a stored item is missing")
         case .invalidConfiguration:
-            return "Check your settings and try again."
+            return String(localized: "Check your settings and try again.", comment: "Recovery suggestion when configuration is invalid")
         case .persistenceError:
-            return "Ensure the app has permission to store data and try again."
+            return String(localized: "Ensure the app has permission to store data and try again.", comment: "Recovery suggestion when persistence fails")
         case .appDiscoveryFailed:
-            return "Try refreshing the app list or restarting the app."
+            return String(localized: "Try refreshing the app list or restarting the app.", comment: "Recovery suggestion when app discovery fails")
         case .timerError:
-            return "Try starting a new session."
+            return String(localized: "Try starting a new session.", comment: "Recovery suggestion after a timer error")
         }
     }
 }
