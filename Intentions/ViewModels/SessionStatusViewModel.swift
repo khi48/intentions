@@ -300,15 +300,15 @@ enum SessionPhase: String, CaseIterable, Sendable {
     var description: String {
         switch self {
         case .inactive:
-            return "No active session"
+            return String(localized: "No active session", comment: "Session status label when no session is running")
         case .early:
-            return "Session starting"
+            return String(localized: "Session starting", comment: "Session status label in the first seconds of a session")
         case .active:
-            return "Session active"
+            return String(localized: "Session active", comment: "Session status label during normal running")
         case .warning:
-            return "Session ending soon"
+            return String(localized: "Session ending soon", comment: "Session status label as session nears expiry")
         case .critical:
-            return "Session ending very soon"
+            return String(localized: "Session ending very soon", comment: "Session status label in the final moments of a session")
         }
     }
 }

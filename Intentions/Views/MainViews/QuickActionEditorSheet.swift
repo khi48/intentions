@@ -456,7 +456,7 @@ struct QuickActionEditorSheet: View {
 
     private func formatDuration(_ duration: TimeInterval) -> String {
         guard !duration.isNaN && !duration.isInfinite && duration.isFinite && duration >= 0 else {
-            return "0m"
+            return String(localized: "0m", comment: "Zero-duration label for quick action")
         }
 
         if duration >= 3600 {
@@ -464,13 +464,13 @@ struct QuickActionEditorSheet: View {
             let hours = totalSeconds / 3600
             let minutes = (totalSeconds % 3600) / 60
             if minutes == 0 {
-                return "\(hours)h"
+                return String(localized: "\(hours)h", comment: "Quick action duration in whole hours")
             } else {
-                return "\(hours)h \(minutes)m"
+                return String(localized: "\(hours)h \(minutes)m", comment: "Quick action duration: hours and minutes")
             }
         } else {
             let minutes = max(0, Int(duration) / 60)
-            return "\(minutes)m"
+            return String(localized: "\(minutes)m", comment: "Quick action duration in minutes only")
         }
     }
 

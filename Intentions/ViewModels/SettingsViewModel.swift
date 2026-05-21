@@ -56,7 +56,7 @@ final class SettingsViewModel: Sendable {
             await updateStatistics()
 
         } catch {
-            errorMessage = "Failed to load settings: \(error.localizedDescription)"
+            errorMessage = String(localized: "Failed to load settings: \(error.localizedDescription)", comment: "Error toast when settings load fails; placeholder is system error description")
         }
     }
 
@@ -77,7 +77,7 @@ final class SettingsViewModel: Sendable {
             // still fires correctly if the session outlives the edit.
             await NotificationService.shared.rescheduleR3MutexTeardownBannerForActiveSession(schedule: schedule)
         } catch {
-            errorMessage = "Failed to save schedule: \(error.localizedDescription)"
+            errorMessage = String(localized: "Failed to save schedule: \(error.localizedDescription)", comment: "Error toast when saving schedule fails; placeholder is system error description")
         }
     }
 
@@ -138,16 +138,21 @@ final class SettingsViewModel: Sendable {
     // MARK: - Computed Properties
 
     var scheduleSummary: String {
-        guard weeklySchedule.isEnabled else { return "Blocking is off" }
+        guard weeklySchedule.isEnabled else {
+            return String(localized: "Blocking is off", comment: "Settings summary when blocking is disabled")
+        }
         let count = weeklySchedule.routines.count
         switch count {
-        case 0: return "No routines set"
+        case 0:
+            return String(localized: "No routines set", comment: "Settings summary when blocking is enabled but no routines exist")
         case 1:
             let r = weeklySchedule.routines[0]
-            let dayLabel = r.days.count == 1 ? r.days.first!.shortName : "\(r.days.count) days"
-            return "\(dayLabel) \(r.startTimeOfDayString)–\(r.endTimeOfDayString)"
+            let dayLabel = r.days.count == 1
+                ? r.days.first!.shortName
+                : String(localized: "\(r.days.count) days", comment: "Day-count label for a routine that runs on multiple days")
+            return String(localized: "\(dayLabel) \(r.startTimeOfDayString)–\(r.endTimeOfDayString)", comment: "Single-routine summary: day label and time range")
         default:
-            return "\(count) routines"
+            return String(localized: "\(count) routines", comment: "Settings summary showing total routine count")
         }
     }
 
@@ -162,9 +167,9 @@ final class SettingsViewModel: Sendable {
         let hours = totalMinutes / 60
         let minutes = totalMinutes % 60
         if hours > 0 {
-            return "\(hours)h \(minutes)m remaining"
+            return String(localized: "\(hours)h \(minutes)m remaining", comment: "Remaining protected time: hours + minutes")
         } else {
-            return "\(minutes)m remaining"
+            return String(localized: "\(minutes)m remaining", comment: "Remaining protected time: minutes only")
         }
     }
 
@@ -182,9 +187,9 @@ final class SettingsViewModel: Sendable {
         let hours = mins / 60
         let minutes = mins % 60
         if hours > 0 {
-            return "\(hours)h \(minutes)m"
+            return String(localized: "\(hours)h \(minutes)m", comment: "Compact duration: hours and minutes")
         } else {
-            return "\(minutes)m"
+            return String(localized: "\(minutes)m", comment: "Compact duration: minutes only")
         }
     }
 }

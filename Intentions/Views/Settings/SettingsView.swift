@@ -18,12 +18,12 @@ enum SettingsDestination: Hashable {
 
     var title: String {
         switch self {
-        case .notifications: return "Notifications"
-        case .setupFlow: return "App Setup"
-        case .greyscale: return "Enable Greyscale"
-        case .scheduleEditor: return "Free Time Settings"
-        case .intentionQuote: return "Your Intention"
-        case .debugStatus: return "Debug Status"
+        case .notifications: return String(localized: "Notifications", comment: "Settings row title")
+        case .setupFlow: return String(localized: "App Setup", comment: "Settings row title for re-running setup flow")
+        case .greyscale: return String(localized: "Enable Greyscale", comment: "Settings row title for greyscale guide")
+        case .scheduleEditor: return String(localized: "Free Time Settings", comment: "Settings row title for free-time schedule editor")
+        case .intentionQuote: return String(localized: "Your Intention", comment: "Settings row title for the user's intention quote")
+        case .debugStatus: return String(localized: "Debug Status", comment: "Settings row title for debug diagnostics screen")
         }
     }
 
@@ -281,9 +281,9 @@ struct SettingsView: View {
 
     private var blockingToggleSubtitle: String {
         if viewModel.weeklySchedule.isEnabled {
-            return "Blocks apps 24/7 outside free time"
+            return String(localized: "Blocks apps 24/7 outside free time", comment: "Subtitle under blocking toggle when blocking is on")
         } else {
-            return "Blocking is off — no apps are blocked"
+            return String(localized: "Blocking is off — no apps are blocked", comment: "Subtitle under blocking toggle when blocking is off")
         }
     }
 

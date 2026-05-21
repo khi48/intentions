@@ -287,7 +287,7 @@ final class ContentViewModel: Sendable {
         // loudly instead of silently no-op'ing.
         guard screenTimeService.isReady else {
             handleError(AppError.serviceUnavailable(
-                "Screen Time service is not ready. Schedule saved locally but blocking has not been activated — please complete setup."
+                String(localized: "Screen Time service is not ready. Schedule saved locally but blocking has not been activated — please complete setup.", comment: "Error shown when saving schedule before Screen Time service finishes init")
             ))
             return
         }
@@ -306,7 +306,7 @@ final class ContentViewModel: Sendable {
                 note: "MISMATCH saved enabled=\(snapshot.isEnabled)/routines=\(snapshot.routines.count) log enabled=\(persisted?.isEnabled.description ?? "nil")/routines=\(persisted?.routines.count.description ?? "nil")"
             )
             handleError(AppError.persistenceError(
-                "Schedule was saved but the shield engine did not persist it. Please retry."
+                String(localized: "Schedule was saved but the shield engine did not persist it. Please retry.", comment: "Error when schedule write to ShieldEngine fails verification")
             ))
             return
         }
@@ -430,14 +430,14 @@ final class ContentViewModel: Sendable {
     var cannotStartBanner: CannotStartBanner? {
         if !weeklySchedule.isEnabled {
             return CannotStartBanner(
-                title: "Sessions locked while blocking is off.",
-                remedy: "Turn on blocking in Settings to start one."
+                title: String(localized: "Sessions locked while blocking is off.", comment: "Banner title when sessions can't start because blocking is disabled"),
+                remedy: String(localized: "Turn on blocking in Settings to start one.", comment: "Banner remedy when sessions can't start because blocking is disabled")
             )
         }
         if weeklySchedule.isFreeTime(at: Date()) {
             return CannotStartBanner(
-                title: "Sessions locked during free time.",
-                remedy: "Free time will block again later."
+                title: String(localized: "Sessions locked during free time.", comment: "Banner title when sessions can't start because user is in free time"),
+                remedy: String(localized: "Free time will block again later.", comment: "Banner remedy when sessions can't start because user is in free time")
             )
         }
         return nil
@@ -683,7 +683,7 @@ final class ContentViewModel: Sendable {
     /// Apply session-based blocking - allows only the session's apps/categories
     private func applySessionBlocking(for session: IntentionSession) async {
         guard screenTimeService.isReady else {
-            handleError(AppError.serviceUnavailable("Screen Time service is not ready. Please complete setup first."))
+            handleError(AppError.serviceUnavailable(String(localized: "Screen Time service is not ready. Please complete setup first.", comment: "Error when applying session blocking before Screen Time is initialised")))
             return
         }
 
@@ -844,7 +844,7 @@ final class ContentViewModel: Sendable {
             showingSetupFlow = false
         } else {
             handleError(AppError.serviceUnavailable(
-                "Screen Time initialization failed. Please try again."
+                String(localized: "Screen Time initialization failed. Please try again.", comment: "Error when Screen Time service fails to initialise after setup")
             ))
         }
     }
@@ -920,7 +920,7 @@ final class ContentViewModel: Sendable {
         let sessionTitle: String
         switch session.source {
         case .quickAction(let quickAction): sessionTitle = quickAction.name
-        case .manual: sessionTitle = "Session"
+        case .manual: sessionTitle = String(localized: "Session", comment: "Default widget title for a manually-started session")
         }
         WidgetBridge.pushSession(title: sessionTitle, endsAt: session.endTime)
     }
@@ -939,6 +939,13 @@ enum AppTab: String, CaseIterable, Identifiable {
     case settings = "Settings"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .home: return String(localized: "Home", comment: "Tab bar label for the home screen")
+        case .settings: return String(localized: "Settings", comment: "Tab bar label for the settings screen")
+        }
+    }
 
     var systemImage: String {
         switch self {

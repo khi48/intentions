@@ -244,10 +244,13 @@ struct DisableBlockingConfirmationView: View {
     }
 
     private func currentLabel(at date: Date) -> String {
-        guard let end = countdownEndDate, !isCountdownComplete else { return "Disable" }
+        let disableLabel = String(localized: "Disable", comment: "Confirmation button to disable blocking")
+        guard let end = countdownEndDate, !isCountdownComplete else { return disableLabel }
         let remaining = max(0, end.timeIntervalSince(date))
         let seconds = Int(ceil(remaining))
-        return seconds > 0 ? "Disable · \(seconds)s" : "Disable"
+        return seconds > 0
+            ? String(localized: "Disable · \(seconds)s", comment: "Disable button label with remaining countdown seconds")
+            : disableLabel
     }
 
     // MARK: - Countdown

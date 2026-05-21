@@ -105,7 +105,7 @@ private struct MainTabView: View {
             // Home Tab - Main intention interface with Quick Actions
             HomeView(viewModel: viewModel)
                 .tabItem {
-                    Label(AppTab.home.rawValue, systemImage: AppTab.home.systemImage)
+                    Label(AppTab.home.title, systemImage: AppTab.home.systemImage)
                 }
                 .tag(AppTab.home)
 
@@ -123,7 +123,7 @@ private struct MainTabView: View {
             )
             .environment(navigationManager)
                 .tabItem {
-                    Label(AppTab.settings.rawValue, systemImage: AppTab.settings.systemImage)
+                    Label(AppTab.settings.title, systemImage: AppTab.settings.systemImage)
                 }
                 .tag(AppTab.settings)
                 // Reset Settings nav state at lifecycle boundaries so the pop

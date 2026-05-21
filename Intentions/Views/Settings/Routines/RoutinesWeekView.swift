@@ -298,7 +298,9 @@ private struct RoutineDetailSheet: View {
     }
 
     private var displayName: String {
-        guard let name = routine.name, !name.isEmpty else { return "Unnamed" }
+        guard let name = routine.name, !name.isEmpty else {
+            return String(localized: "Unnamed", comment: "Placeholder name for a routine that has no user-provided name")
+        }
         return name
     }
 
