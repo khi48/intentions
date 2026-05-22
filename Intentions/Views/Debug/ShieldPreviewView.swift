@@ -18,7 +18,8 @@ struct ShieldPreviewView: View {
     private let background = Color(white: 0.078)        // #141414
     private let textPrimary = Color.white
     private let textSecondary = Color(white: 0.6)       // #999999
-    private let buttonBackground = Color(white: 0.145)  // #252525
+    private let buttonBackground = Color.white
+    private let buttonText = Color(white: 0.078)        // #141414 — dark on white for legibility
 
     var body: some View {
         ZStack {
@@ -66,7 +67,7 @@ struct ShieldPreviewView: View {
                 Button(action: {}) {
                     Text("Return")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(textPrimary)
+                        .foregroundStyle(buttonText)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(
