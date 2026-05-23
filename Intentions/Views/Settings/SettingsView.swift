@@ -10,31 +10,25 @@ import SwiftUI
 
 enum SettingsDestination: Hashable {
     case notifications
-    case setupFlow
     case greyscale
     case scheduleEditor
     case intentionQuote
-    case debugStatus
 
     var title: String {
         switch self {
         case .notifications: return String(localized: "Notifications", comment: "Settings row title")
-        case .setupFlow: return String(localized: "App Setup", comment: "Settings row title for re-running setup flow")
         case .greyscale: return String(localized: "Enable Greyscale", comment: "Settings row title for greyscale guide")
         case .scheduleEditor: return String(localized: "Free Time Settings", comment: "Settings row title for free-time schedule editor")
         case .intentionQuote: return String(localized: "Your Intention", comment: "Settings row title for the user's intention quote")
-        case .debugStatus: return String(localized: "Debug Status", comment: "Settings row title for debug diagnostics screen")
         }
     }
 
     var systemImage: String {
         switch self {
         case .notifications: return "bell.fill"
-        case .setupFlow: return "gear.badge.checkmark"
         case .greyscale: return "circle.lefthalf.filled"
         case .scheduleEditor: return "calendar"
         case .intentionQuote: return "quote.opening"
-        case .debugStatus: return "ladybug.fill"
         }
     }
 }
@@ -46,20 +40,17 @@ struct SettingsView: View {
     @State private var showingDisableConfirmation = false
     private let onScheduleSettingsChanged: ((WeeklySchedule) async -> Void)?
     private let onViewModelReady: ((SettingsViewModel) -> Void)?
-    private let setupCoordinator: SetupCoordinator?
     private let hasActiveSession: Bool
     @Environment(NavigationStateManager.self) private var navigationManager
 
     init(
         dataService: DataPersisting? = nil,
-        setupCoordinator: SetupCoordinator? = nil,
         hasActiveSession: Bool = false,
         onScheduleSettingsChanged: ((WeeklySchedule) async -> Void)? = nil,
         onViewModelReady: ((SettingsViewModel) -> Void)? = nil
     ) {
         let service = dataService ?? MockDataPersistenceService()
         self._viewModel = State(wrappedValue: SettingsViewModel(dataService: service))
-        self.setupCoordinator = setupCoordinator
         self.hasActiveSession = hasActiveSession
         self.onScheduleSettingsChanged = onScheduleSettingsChanged
         self.onViewModelReady = onViewModelReady
@@ -99,14 +90,6 @@ struct SettingsView: View {
                             "Enable Greyscale",
                             value: SettingsDestination.greyscale
                         )
-                        SettingsNavigationRow(
-                            "App Setup",
-                            value: SettingsDestination.setupFlow
-                        )
-                        SettingsNavigationRow(
-                            "Debug Status",
-                            value: SettingsDestination.debugStatus
-                        )
                     }
                     .padding(.horizontal)
                     .padding(.bottom, 40)
@@ -118,25 +101,6 @@ struct SettingsView: View {
                     switch destination {
                     case .notifications:
                         NotificationSettingsView()
-                    case .setupFlow:
-                        if let coordinator = setupCoordinator {
-                            SetupFlowView(
-                                setupCoordinator: coordinator,
-                                embedInNavigationView: false,
-                                forceSetup: true,
-                                onIntentionQuoteSet: { quote in
-                                    viewModel.weeklySchedule.intentionQuote = quote
-                                    Task {
-                                        await viewModel.updateSchedule(viewModel.weeklySchedule)
-                                    }
-                                }
-                            ) {
-                                navigationManager.resetSettingsNavigation()
-                            }
-                        } else {
-                            Text("Setup not available")
-                                .foregroundColor(AppConstants.Colors.textSecondary)
-                        }
                     case .greyscale:
                         GreyscaleGuideView()
                     case .scheduleEditor:
@@ -160,8 +124,6 @@ struct SettingsView: View {
                                 await viewModel.updateSchedule(viewModel.weeklySchedule)
                             }
                         }
-                    case .debugStatus:
-                        DebugStatusView()
                     }
                 }
             }

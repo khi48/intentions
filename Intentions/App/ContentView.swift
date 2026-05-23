@@ -121,7 +121,6 @@ private struct MainTabView: View {
             // Settings Tab
             SettingsView(
                 dataService: viewModel.dataServiceProvider,
-                setupCoordinator: viewModel.setupCoordinator,
                 hasActiveSession: viewModel.activeSession != nil,
                 onScheduleSettingsChanged: { schedule in
                     await viewModel.updateWeeklySchedule(schedule)
