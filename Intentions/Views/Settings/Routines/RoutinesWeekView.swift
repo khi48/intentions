@@ -221,22 +221,25 @@ struct RoutinesWeekView: View {
         let y = CGFloat(minute) / 60 * Self.hourHeight
         let label = String(format: "%02d:%02d", comps.hour ?? 0, comps.minute ?? 0)
 
-        ZStack(alignment: .topLeading) {
-            Rectangle()
-                .fill(AppConstants.Colors.accent)
-                .frame(width: width, height: 1.25)
-            Text(label)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundColor(AppConstants.Colors.text)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 1)
-                .background(
-                    Capsule().fill(AppConstants.Colors.accent)
-                )
-                .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
-                .offset(x: 2)
-        }
-        .offset(y: y - 0.625)
+        // Rect as root with overlay label — keeps the line's frame fixed at
+        // 1.25pt. A ZStack with both would expand to fit the taller capsule's
+        // alignment-guide-pushed bounds and shift the rect down by ~half the
+        // capsule height (~5–8pt = ~7–10min visual drift).
+        Rectangle()
+            .fill(AppConstants.Colors.accent)
+            .frame(width: width, height: 1.25)
+            .overlay(alignment: .leading) {
+                Text(label)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(AppConstants.Colors.text)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(
+                        Capsule().fill(AppConstants.Colors.accent)
+                    )
+                    .offset(x: 2)
+            }
+            .offset(y: y - 0.625)
     }
 
     // MARK: - Anchors
