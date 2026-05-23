@@ -41,10 +41,19 @@ struct IntentApp: App {
             print(dump)
             print("SHIELDSTATE_BREADCRUMBS_END")
             let engine = ShieldEngine.mainApp()
-            engine.catchUpOnForeground()
+            // Run catch-up off the main thread (#56). `catchUpOnForeground`
+            // synchronously calls into ManagedSettings + DeviceActivity
+            // (UsageTrackingAgent XPC), which is observably blocked for 10s+
+            // when the agent is contended across DAM apps (e.g. Opal also
+            // installed). Synchronous on main = black-screen launch hang +
+            // 0x8badf00d watchdog kill at 20s. UI renders regardless of XPC
+            // state; the user sees stale shield briefly rather than a hang.
             // No reapplyCurrentState — catchUpOnForeground already does
             // compute+apply on the same log read. The duplicate apply
             // (8 ManagedSettings XPC writes back-to-back) was a hang vector.
+            Task.detached(priority: .userInitiated) {
+                engine.catchUpOnForeground()
+            }
             // Push fresh widget state — covers users who open the app after
             // a long gap during which no session ran (#20). Skip when a
             // session is in the log: pushNoSession wipes sessionTitle and

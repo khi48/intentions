@@ -87,10 +87,23 @@ struct ShieldEngine: Sendable {
         applier.apply(config, knownApps: log.knownApplicationTokens, knownDomains: log.knownWebDomainTokens)
     }
 
-    /// Persist the latest schedule snapshot and (re-)register the next-boundary
-    /// DAM monitor. Called by the main app on schedule edits and on
-    /// scenePhase → .active to recover from missed boundaries / OS resets.
+    /// Persist the latest schedule snapshot and re-apply the current shield
+    /// config. Called by the main app on schedule edits and on
+    /// scenePhase → .active to push the snapshot into the IntentLog.
     /// Idempotent.
+    ///
+    /// Boundary registration is intentionally NOT performed here (#56). The
+    /// foreground path (`catchUpOnForeground`) and the session-lifecycle
+    /// paths (`startSession` / `endSession` / `handleExpiry`) all register
+    /// the next boundary themselves. Calling `rescheduleBoundary` from this
+    /// method as well duplicated `UsageTrackingAgent` XPC load on every
+    /// foreground (ContentView's scenePhase observer + IntentionsApp's
+    /// scenePhase observer both flowed through here) and contributed to
+    /// the launch-hang failure mode. Accepted regression: a user who edits
+    /// the schedule and then backgrounds the phone before the next
+    /// foreground will have the new boundary registered only on next
+    /// foreground (`catchUpOnForeground`). Same shape as the ext-side
+    /// scheduling-removal regression — first foreground self-heals.
     ///
     /// R3 (#27) mutex: if the newly-persisted snapshot puts us in a free-time
     /// window at `now` and an active session exists in the log, the session
@@ -130,7 +143,7 @@ struct ShieldEngine: Sendable {
 
         store.save(log)
 
-        rescheduleBoundary(log: log, from: now)
+        // #56: boundary registration removed from this path. See doc-comment.
 
         let config = compute(log, at: now)
         logger.notice("refreshScheduleMonitoring: applying \(String(describing: config), privacy: .public)")
@@ -302,28 +315,36 @@ extension ShieldEngine {
         )
     }
 
-    /// Production engine used by the DAM extension. Self-perpetuates the
-    /// boundary chain: `handleScheduleTransition` calls `rescheduleBoundary`,
-    /// which registers the next boundary via `DAMScheduler` from inside the
-    /// extension process. Critical when the phone is backgrounded for a
-    /// whole routine window — without ext-side scheduling, the routine-end
-    /// boundary is never registered and reshield is gated on the user
-    /// opening the app.
+    /// Production engine used by the DAM extension. Ext-side scheduling is
+    /// OFF (`scheduler: nil`): the ext applies state on `intervalDidStart`
+    /// and `handleExpiry` but does NOT chain the next boundary from inside
+    /// the extension process. Re-registration is deferred to the main app's
+    /// `catchUpOnForeground` (scenePhase → .active).
     ///
-    /// Main app also reschedules in `catchUpOnForeground` as defense-in-depth:
-    /// if ext-side scheduling failed (crash, FC auth lost, DAC unavailable),
-    /// next foreground self-heals.
+    /// Rationale (#56):
     ///
-    /// Concurrency note: prior diagnosis attributed observed 30-60s hangs
-    /// in `handleScheduleTransition` to concurrent main+ext `startMonitoring`
-    /// on the same activity name. Re-eval after fixing two co-contributors:
-    /// (a) duplicate apply at foreground (`catchUpOnForeground` +
-    /// `reapplyCurrentState` → 8 ManagedSettings XPC writes back-to-back),
-    /// (b) boundary replay (single fire → N re-fires across the 15m30s
-    /// monitoring window, now killed by `scheduleNextBoundary`'s internal
-    /// cancel-first). With both removed, ext-side scheduling is back on.
-    /// If hang returns, throttle main-app reschedule via App Group
-    /// `lastBoundaryScheduleAt` timestamp.
+    /// (a) `intervalDidStart` was observed replaying every ~30s in bursts
+    /// under cross-process `UsageTrackingAgent` XPC saturation — especially
+    /// when another DeviceActivity-using app (e.g. Opal) is installed and
+    /// the shared agent's queue is contended. Each replay re-entered
+    /// `handleScheduleTransition → rescheduleBoundary → scheduleNextBoundary`,
+    /// whose `startMonitoring` call blocked on the same saturated XPC,
+    /// triggering iOS's 30s ext budget kill and amplifying the loop. With
+    /// `scheduler: nil` the ext's contribution collapses to a single apply
+    /// per fire — no further scheduling work, no further XPC pressure.
+    ///
+    /// (b) Self-healing path: main-app `catchUpOnForeground` already
+    /// reschedules the boundary on every foreground. Worst case for users
+    /// who skip multiple consecutive routine boundaries without opening the
+    /// app: shield/unshield fires for the first transition only; first
+    /// foreground heals subsequent state. That's the accepted regression
+    /// vs. the launch-hang failure mode.
+    ///
+    /// The ext-side `intervalDidStart` schedule-boundary branch calls
+    /// `DAMScheduler().cancelScheduleBoundary()` explicitly before
+    /// `handleScheduleTransition` to close the open `[intervalStart,
+    /// intervalEnd]` window so iOS can't replay `intervalDidStart` on
+    /// subsequent ext relaunches within the 15min30s monitoring envelope.
     ///
     /// Uses `AdditiveShieldApplier` (no clearAllSettings) — see that type for
     /// the rationale around extension-side rendering on iOS 26.
@@ -331,7 +352,7 @@ extension ShieldEngine {
         ShieldEngine(
             store: IntentLogStore(),
             applier: AdditiveShieldApplier(),
-            scheduler: DAMScheduler()
+            scheduler: nil
         )
     }
 }

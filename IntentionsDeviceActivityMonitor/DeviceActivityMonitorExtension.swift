@@ -33,10 +33,14 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         }
         if DAMScheduler.isScheduleBoundaryActivity(activity) {
             logger.notice("intervalDidStart: schedule boundary")
-            // handleScheduleTransition → rescheduleBoundary → scheduleNextBoundary
-            // cancels the current boundary activity first then registers the next.
-            // That kills the [intervalStart, intervalEnd] window so iOS can't
-            // replay intervalDidStart on subsequent ext relaunches.
+            // Close the open [intervalStart, intervalEnd] window FIRST so iOS
+            // can't replay intervalDidStart on subsequent ext relaunches
+            // within the 15min30s monitoring envelope. Ext-side rescheduling
+            // is OFF (#56) — engine is constructed with `scheduler: nil`
+            // (see ShieldEngine.damExtension), so `handleScheduleTransition`
+            // no longer registers the next boundary. Main-app
+            // `catchUpOnForeground` does that on the next foreground.
+            DAMScheduler().cancelScheduleBoundary()
             engine.handleScheduleTransition()
             WidgetBridge.pushNoSession(isBlocking: engine.currentBlockingState())
             return
