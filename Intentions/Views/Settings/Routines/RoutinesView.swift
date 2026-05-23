@@ -164,16 +164,17 @@ struct RoutinesView: View {
 
     private func routineRow(_ routine: FreeTimeRoutine, now: Date, active: Bool) -> some View {
         HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                titleLine(for: routine)
+            titleCluster(for: routine, active: active)
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 1) {
+                Text("\(routine.startTimeOfDayString)–\(routine.endTimeOfDayString)")
+                    .font(.body.weight(.medium).monospacedDigit())
+                    .foregroundColor(AppConstants.Colors.text)
                 Text(daysSubtitle(for: routine))
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundColor(AppConstants.Colors.textSecondary)
             }
-            Spacer(minLength: 0)
-            if active {
-                activeBadge
-            }
+            .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 11)
@@ -186,12 +187,10 @@ struct RoutinesView: View {
         }
     }
 
-    /// Routine name (primary) optionally followed by `· HH:mm–HH:mm` time range
-    /// (secondary, monospaced). Falls back to time-only when the routine is
-    /// unnamed, keeping the time as the primary identifier in that case.
+    /// Name (or "Untitled" placeholder) followed by the Active pill when running.
+    /// Title truncates with ellipsis; pill never compresses.
     @ViewBuilder
-    private func titleLine(for routine: FreeTimeRoutine) -> some View {
-        let timeRange = "\(routine.startTimeOfDayString)–\(routine.endTimeOfDayString)"
+    private func titleCluster(for routine: FreeTimeRoutine, active: Bool) -> some View {
         let trimmedName: String? = {
             guard let raw = routine.name else { return nil }
             let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -204,16 +203,14 @@ struct RoutinesView: View {
                     .foregroundColor(AppConstants.Colors.text)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                Text("·")
-                    .font(.body)
-                    .foregroundColor(AppConstants.Colors.textSecondary)
-                Text(timeRange)
-                    .font(.body.monospacedDigit())
-                    .foregroundColor(AppConstants.Colors.textSecondary)
             } else {
-                Text(timeRange)
-                    .font(.body.weight(.medium).monospacedDigit())
-                    .foregroundColor(AppConstants.Colors.text)
+                Text("Untitled")
+                    .font(.body.weight(.regular).italic())
+                    .foregroundColor(AppConstants.Colors.textSecondary)
+                    .lineLimit(1)
+            }
+            if active {
+                activeBadge
             }
         }
     }
