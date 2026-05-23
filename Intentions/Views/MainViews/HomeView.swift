@@ -75,13 +75,19 @@ private struct ActiveSessionCard: View {
     }
 }
 
+/// Animatable value for the empty-state "+" pulse ring.
+private struct PulsePhase {
+    var scale: CGFloat = 0.6
+    var opacity: CGFloat = 0
+}
+
 /// Quick actions section
 private struct QuickActionsSection: View {
     let viewModel: ContentViewModel
     private var quickActionsViewModel: QuickActionsViewModel
     @State private var draggingQuickAction: QuickAction?
     @State private var editorMode: QuickActionEditorMode?
-    @State private var isPulsing = false
+    @State private var showSecondPulse = false
     @State private var pendingQuickAction: QuickAction?
 
     init(viewModel: ContentViewModel) {
@@ -101,16 +107,33 @@ private struct QuickActionsSection: View {
                 Button(action: {
                     editorMode = .create
                 }) {
-                    Image(systemName: "plus")
-                        .font(.title3)
-                        .foregroundColor(AppConstants.Colors.accent)
+                    ZStack {
+                        if isEmptyState {
+                            ZStack {
+                                pulseRing
+                                if showSecondPulse {
+                                    pulseRing
+                                }
+                            }
+                            .onAppear {
+                                showSecondPulse = false
+                                Task { @MainActor in
+                                    try? await Task.sleep(for: .seconds(1.5))
+                                    showSecondPulse = true
+                                }
+                            }
+                        }
+                        Image(systemName: "plus")
+                            .font(.title3)
+                            .foregroundColor(AppConstants.Colors.accent)
+                    }
                 }
+                .accessibilityLabel("Add quick action")
             }
             .padding(.horizontal)
 
-            if quickActionsViewModel.quickActions.isEmpty && !quickActionsViewModel.isLoading {
-                // Show getting started card only after loading completes
-                gettingStartedCard
+            if isEmptyState {
+                emptyCaption
             } else if !quickActionsViewModel.quickActions.isEmpty {
                 // Show available quick actions with drag-to-reorder
                 VStack(spacing: 16) {
@@ -236,80 +259,45 @@ private struct QuickActionsSection: View {
         }
     }
     
-    private var gettingStartedCard: some View {
-        VStack(spacing: 0) {
-            // Headline
-            Text("Set your first intention")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .foregroundColor(AppConstants.Colors.text)
-                .multilineTextAlignment(.center)
-                .padding(.top, 8)
-                .padding(.bottom, 28)
+    private var isEmptyState: Bool {
+        quickActionsViewModel.quickActions.isEmpty && !quickActionsViewModel.isLoading
+    }
 
-            // The altar card — a single prominent ghost card in the shape of
-            // an eventual QuickActionCard, but larger. Tapping opens the editor.
-            Button(action: {
-                editorMode = .create
-            }) {
-                VStack(spacing: 14) {
-                    // Emblem: pulsing ring around a plus symbol
-                    ZStack {
-                        // Pulsing outer ring (animates outward and fades)
-                        Circle()
-                            .stroke(AppConstants.Colors.textSecondary, lineWidth: 1)
-                            .frame(width: 88, height: 88)
-                            .scaleEffect(isPulsing ? 1.15 : 1.0)
-                            .opacity(isPulsing ? 0 : 0.5)
-
-                        // Static ring
-                        Circle()
-                            .stroke(AppConstants.Colors.textSecondary.opacity(0.5), lineWidth: 1)
-                            .frame(width: 88, height: 88)
-
-                        Image(systemName: "plus")
-                            .font(.system(size: 32, weight: .light))
-                            .foregroundColor(AppConstants.Colors.text)
-                    }
-                    .frame(width: 88, height: 88)
-                    .padding(.bottom, 4)
-
-                    Text("Create a quick action")
-                        .font(.headline)
-                        .foregroundColor(AppConstants.Colors.text)
+    private var pulseRing: some View {
+        Circle()
+            .stroke(AppConstants.Colors.text.opacity(0.6), lineWidth: 1.5)
+            .frame(width: 40, height: 40)
+            .keyframeAnimator(
+                initialValue: PulsePhase(),
+                repeating: true
+            ) { content, value in
+                content
+                    .scaleEffect(value.scale)
+                    .opacity(value.opacity)
+            } keyframes: { _ in
+                KeyframeTrack(\.scale) {
+                    CubicKeyframe(1.9, duration: 3.0)
                 }
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 340)
-                .padding(.vertical, 40)
-                .background(
-                    RadialGradient(
-                        colors: [
-                            AppConstants.Colors.text.opacity(0.04),
-                            Color.clear
-                        ],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 180
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .strokeBorder(
-                            AppConstants.Colors.textSecondary.opacity(0.6),
-                            style: StrokeStyle(lineWidth: 1, dash: [4, 4])
-                        )
-                )
+                KeyframeTrack(\.opacity) {
+                    CubicKeyframe(0.55, duration: 0.35)
+                    CubicKeyframe(0, duration: 2.65)
+                }
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Create a quick action")
-            .accessibilityHint("Double tap to open the quick action editor")
+    }
+
+    private var emptyCaption: some View {
+        HStack(spacing: 4) {
+            Text("Tap")
+            Image(systemName: "plus")
+                .font(.system(size: 12, weight: .semibold))
+            Text("to create your first")
         }
-        .padding(.horizontal)
-        .onAppear {
-            withAnimation(.easeOut(duration: 4).repeatForever(autoreverses: false)) {
-                isPulsing = true
-            }
-        }
+        .font(.footnote)
+        .foregroundColor(AppConstants.Colors.textSecondary)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 24)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Tap the plus button to create your first quick action")
     }
     
     /// Reason the quick-action cards are disabled, in priority order:
