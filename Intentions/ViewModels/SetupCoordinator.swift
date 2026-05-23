@@ -81,7 +81,7 @@ final class SetupCoordinator: Sendable {
         }
 
         setupState = actualState
-        shouldShowSetup = !actualState.isSetupSufficient || !actualState.isSetupCurrent
+        shouldShowSetup = !actualState.canEnterApp || !actualState.isSetupCurrent
     }
 
     func forceSetupFlow() {
@@ -90,8 +90,26 @@ final class SetupCoordinator: Sendable {
 
     func resetSetupStateForRerun() {
         if setupState != nil {
-            setupState = SetupState(screenTimeAuthorized: false, intentionQuoteCompleted: false)
+            setupState = SetupState(
+                screenTimeAuthorized: false,
+                intentionQuoteCompleted: false,
+                welcomeShown: false,
+                setupFinished: false
+            )
             shouldShowSetup = true
+        }
+    }
+
+    /// Marks the user as having reached the end of the walkthrough. Called
+    /// when the final (widget) step is dismissed, regardless of whether the
+    /// user actually added the widget or skipped.
+    func markSetupFinished() async {
+        guard let currentState = setupState else { return }
+        let updated = currentState.withSetupFinished(true)
+        setupState = updated
+        await stateManager.saveSetupState(updated)
+        if updated.canEnterApp {
+            shouldShowSetup = false
         }
     }
 
@@ -100,8 +118,8 @@ final class SetupCoordinator: Sendable {
 
         let updatedState: SetupState
         switch step {
-        case .landing:
-            updatedState = currentState
+        case .welcome:
+            updatedState = currentState.withWelcomeShown(true)
         case .screenTimeAuthorization:
             let authorized = await screenTimeService.authorizationStatus() == .approved
             updatedState = currentState.withScreenTimeAuthorized(authorized)
@@ -112,7 +130,7 @@ final class SetupCoordinator: Sendable {
         setupState = updatedState
         await stateManager.saveSetupState(updatedState)
 
-        if updatedState.isSetupSufficient {
+        if updatedState.canEnterApp {
             shouldShowSetup = false
         }
     }
@@ -131,8 +149,8 @@ final class SetupCoordinator: Sendable {
         }
 
         var pending: [SetupStep] = []
-        if !state.isSetupSufficient {
-            pending.append(.landing)
+        if !state.welcomeShown {
+            pending.append(.welcome)
         }
         if !state.screenTimeAuthorized {
             pending.append(.screenTimeAuthorization)
@@ -146,6 +164,9 @@ final class SetupCoordinator: Sendable {
     var completedSetupSteps: [SetupStep] {
         guard let state = setupState else { return [] }
         var completed: [SetupStep] = []
+        if state.welcomeShown {
+            completed.append(.welcome)
+        }
         if state.screenTimeAuthorized {
             completed.append(.screenTimeAuthorization)
         }

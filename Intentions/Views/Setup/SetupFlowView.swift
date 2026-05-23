@@ -10,7 +10,7 @@ import SwiftUI
 // MARK: - Setup State Machine
 
 enum SetupPage {
-    case landing
+    case welcome
     case screenTimePermission
     case alwaysAllowedInfo
     case intentionQuote
@@ -20,7 +20,7 @@ enum SetupPage {
 /// Main setup flow view with simple state machine
 struct SetupFlowView: View {
 
-    @State private var currentPage: SetupPage = .landing
+    @State private var currentPage: SetupPage = .welcome
     @State private var setupCoordinator: SetupCoordinator
     @State private var intentionQuoteText: String = ""
 
@@ -78,52 +78,39 @@ struct SetupFlowView: View {
 
             Group {
                 switch currentPage {
-                case .landing:
-                    VStack(spacing: 24) {
-                        landingPageContent
-                        Spacer(minLength: 50)
+                case .welcome:
+                    WelcomeWalkthroughView {
+                        Task {
+                            await setupCoordinator.completeSetupStep(.welcome)
+                        }
+                        currentPage = .intentionQuote
                     }
-                    .padding()
 
                 case .intentionQuote:
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            progressSection(step: 1)
-                            intentionQuoteContent
-                            Spacer(minLength: 50)
-                        }
-                        .padding()
+                    SetupStepScaffold(progressStep: 1) {
+                        intentionQuoteContent
+                    } footer: {
+                        intentionQuoteFooter
                     }
 
                 case .screenTimePermission:
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            progressSection(step: 2)
-                            screenTimePermissionContent
-                            Spacer(minLength: 50)
+                    ScreenTimeAuthorizationStepView(
+                        setupCoordinator: setupCoordinator,
+                        onComplete: {
+                            await setupCoordinator.completeSetupStep(.screenTimeAuthorization)
+                            currentPage = .alwaysAllowedInfo
                         }
-                        .padding()
-                    }
+                    )
 
                 case .alwaysAllowedInfo:
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            progressSection(step: 3)
-                            alwaysAllowedInfoContent
-                            Spacer(minLength: 50)
+                    AlwaysAllowedInfoStepView(
+                        onContinue: {
+                            currentPage = .widgetSetup
                         }
-                        .padding()
-                    }
+                    )
 
                 case .widgetSetup:
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            progressSection(step: 4)
-                            WidgetSetupStepView(onComplete: onComplete)
-                            Spacer(minLength: 50)
-                        }
-                        .padding()
-                    }
+                    WidgetSetupStepView(setupCoordinator: setupCoordinator, onComplete: onComplete)
                 }
             }
         }
@@ -135,61 +122,7 @@ struct SetupFlowView: View {
         }
     }
 
-
-    // MARK: - Progress Section
-
-    private func progressSection(step: Int) -> some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 6) {
-                ForEach(1...4, id: \.self) { i in
-                    Circle()
-                        .fill(step >= i ? AppConstants.Colors.text : Color.gray.opacity(0.3))
-                        .frame(width: 10, height: 10)
-                        .overlay(
-                            Circle()
-                                .stroke(AppConstants.Colors.text, lineWidth: step == i ? 2 : 0)
-                        )
-                    if i < 4 {
-                        Rectangle()
-                            .fill(step > i ? AppConstants.Colors.text : Color.gray.opacity(0.3))
-                            .frame(height: 2)
-                            .frame(maxWidth: 20)
-                    }
-                }
-            }
-            .padding(.horizontal)
-
-            Text("Step \(step) of 4")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-    }
-
-    // MARK: - Page Content
-
-    private var landingPageContent: some View {
-        SetupLandingView {
-            currentPage = .intentionQuote
-        }
-    }
-
-    private var screenTimePermissionContent: some View {
-        ScreenTimeAuthorizationStepView(
-            setupCoordinator: setupCoordinator,
-            onComplete: {
-                await setupCoordinator.completeSetupStep(.screenTimeAuthorization)
-                currentPage = .alwaysAllowedInfo
-            }
-        )
-    }
-
-    private var alwaysAllowedInfoContent: some View {
-        AlwaysAllowedInfoStepView(
-            onContinue: {
-                currentPage = .widgetSetup
-            }
-        )
-    }
+    // MARK: - Intention quote step
 
     @FocusState private var isIntentionFieldFocused: Bool
 
@@ -225,7 +158,7 @@ struct SetupFlowView: View {
                 .lineLimit(2...4)
                 .font(.body)
                 .padding()
-                .background(Color(.systemGray6))
+                .background(AppConstants.Colors.surface)
                 .cornerRadius(12)
                 .focused($isIntentionFieldFocused)
                 .textInputAutocapitalization(.sentences)
@@ -235,21 +168,19 @@ struct SetupFlowView: View {
                         isIntentionFieldFocused = false
                     }
                 }
+        }
+    }
 
-            SettingsPrimaryButton("Continue",
-                                  systemImage: "arrow.right",
-                                  isEnabled: isIntentionQuoteValid) {
-                let trimmed = intentionQuoteText.trimmingCharacters(in: .whitespacesAndNewlines)
-                onIntentionQuoteSet?(trimmed)
-                Task {
-                    await setupCoordinator.completeSetupStep(.intentionQuote)
-                }
-                currentPage = .screenTimePermission
+    private var intentionQuoteFooter: some View {
+        SettingsPrimaryButton("Continue",
+                              systemImage: "arrow.right",
+                              isEnabled: isIntentionQuoteValid) {
+            let trimmed = intentionQuoteText.trimmingCharacters(in: .whitespacesAndNewlines)
+            onIntentionQuoteSet?(trimmed)
+            Task {
+                await setupCoordinator.completeSetupStep(.intentionQuote)
             }
-            .padding(.horizontal)
-            .padding(.top, 8)
-
-            Spacer(minLength: 40)
+            currentPage = .screenTimePermission
         }
     }
 
@@ -258,14 +189,24 @@ struct SetupFlowView: View {
     private func initializeSetup() async {
         await setupCoordinator.validateSetupRequirements()
 
-        if let state = setupCoordinator.setupState {
-            if state.isSetupSufficient && !forceSetup {
-                onComplete()
-            } else {
-                currentPage = .landing
-            }
+        guard let state = setupCoordinator.setupState else {
+            currentPage = .welcome
+            return
+        }
+
+        if state.canEnterApp && !forceSetup {
+            onComplete()
+            return
+        }
+
+        if !state.welcomeShown {
+            currentPage = .welcome
+        } else if !state.intentionQuoteCompleted {
+            currentPage = .intentionQuote
+        } else if !state.screenTimeAuthorized {
+            currentPage = .screenTimePermission
         } else {
-            currentPage = .landing
+            currentPage = .widgetSetup
         }
     }
 }

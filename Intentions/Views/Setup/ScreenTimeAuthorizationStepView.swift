@@ -24,24 +24,17 @@ struct ScreenTimeAuthorizationStepView: View {
     }
     
     var body: some View {
-        VStack(spacing: 24) {
-            
-            // Step Header
-            stepHeader
-            
-            // Authorization Status
-            authorizationStatusSection
-            
-            // Action Button
-            actionButton
-            
-            // Manual Instructions (if needed)
-            if showingManualInstructions {
-                manualInstructionsSection
+        SetupStepScaffold(progressStep: 2) {
+            VStack(spacing: 24) {
+                stepHeader
+                authorizationStatusSection
+                if showingManualInstructions {
+                    manualInstructionsSection
+                }
             }
-            
+        } footer: {
+            actionButton
         }
-        .padding()
         .task {
             await checkAuthorizationStatus()
         }

@@ -824,12 +824,12 @@ final class ContentViewModel: Sendable {
 
         let setupState = setupCoordinator.setupState
 
-        // Only show setup flow for genuine first-time setup. If the user already
-        // completed the intention quote step, setup was finished at least once —
-        // a later auth revocation is handled by the home-screen banner, not by
-        // re-running the entire setup flow.
-        let neverCompletedSetup = setupState?.intentionQuoteCompleted != true
-        let needsSetup = setupState?.isSetupSufficient != true && neverCompletedSetup && activeSession == nil
+        // Setup is "done" only when the user reached the end of the walkthrough
+        // (widget step). Partial completion — quote set but auth not granted,
+        // or auth granted but the user force-killed before the widget step —
+        // bounces back into setup on next launch. A later auth revocation on a
+        // walkthrough-finished install is handled by the home-screen banner.
+        let needsSetup = setupState?.canEnterApp != true && activeSession == nil
 
         if needsSetup {
             showingSetupFlow = true

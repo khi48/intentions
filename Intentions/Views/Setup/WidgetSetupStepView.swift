@@ -10,21 +10,29 @@ import SwiftUI
 /// disclosure row with installation instructions, and primary/secondary CTAs.
 struct WidgetSetupStepView: View {
 
+    let setupCoordinator: SetupCoordinator
     let onComplete: () -> Void
 
     @State private var isHowToShown = false
 
+    private func finishWalkthrough() {
+        Task {
+            await setupCoordinator.markSetupFinished()
+            onComplete()
+        }
+    }
+
     var body: some View {
-        VStack(spacing: 24) {
-            header
+        SetupStepScaffold(progressStep: 4) {
+            VStack(spacing: 24) {
+                header
 
-            LockScreenPreviewCard()
+                LockScreenPreviewCard()
 
-            howToRow
-
+                howToRow
+            }
+        } footer: {
             ctaStack
-
-            Spacer(minLength: 40)
         }
         .sheet(isPresented: $isHowToShown) {
             HowToAddWidgetSheet()
@@ -83,12 +91,12 @@ struct WidgetSetupStepView: View {
 
     private var ctaStack: some View {
         VStack(spacing: 6) {
-            SettingsPrimaryButton("I added it", systemImage: "arrow.right") {
-                onComplete()
+            SettingsPrimaryButton("Continue", systemImage: "arrow.right") {
+                finishWalkthrough()
             }
 
             Button("Skip for now") {
-                onComplete()
+                finishWalkthrough()
             }
             .font(.subheadline)
             .foregroundColor(AppConstants.Colors.textSecondary)
@@ -308,8 +316,11 @@ private struct HowToAddWidgetSheet: View {
     ZStack {
         AppConstants.Colors.background.ignoresSafeArea()
         ScrollView {
-            WidgetSetupStepView(onComplete: {})
-                .padding()
+            WidgetSetupStepView(
+                setupCoordinator: SetupCoordinator(screenTimeService: MockScreenTimeService()),
+                onComplete: {}
+            )
+            .padding()
         }
     }
 }

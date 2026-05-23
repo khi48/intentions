@@ -13,30 +13,31 @@ struct AlwaysAllowedInfoStepView: View {
     let onContinue: () -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
-            // Header icon and title
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(AppConstants.Colors.surface)
-                        .frame(width: 80, height: 80)
+        SetupStepScaffold(progressStep: 3) {
+            VStack(spacing: 24) {
+                // Header icon and title
+                VStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(AppConstants.Colors.surface)
+                            .frame(width: 80, height: 80)
 
-                    Image(systemName: "checkmark.shield.fill")
-                        .font(.system(size: 40))
+                        Image(systemName: "checkmark.shield.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(AppConstants.Colors.text)
+                    }
+
+                    Text("Essential Apps")
+                        .font(.title2)
+                        .fontWeight(.semibold)
                         .foregroundColor(AppConstants.Colors.text)
+
+                    Text("Configure apps that you always need access to")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }
-
-                Text("Essential Apps")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(AppConstants.Colors.text)
-
-                Text("Configure apps that you always need access to")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
 
                 // Information card
                 VStack(alignment: .leading, spacing: 20) {
@@ -114,13 +115,11 @@ struct AlwaysAllowedInfoStepView: View {
                     .background(AppConstants.Colors.background)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-
+            }
+        } footer: {
             SettingsPrimaryButton("Continue", systemImage: "arrow.right") {
                 onContinue()
             }
-            .padding(.top, 8)
-
-            Spacer(minLength: 40)
         }
     }
 
