@@ -66,12 +66,19 @@ struct IntentionsProvider: TimelineProvider {
         var reloadPolicy: TimelineReloadPolicy
 
         if let remainingTime = entry.remainingTime, remainingTime > 0 {
-            // Active session - create entries every minute for countdown
-            let minutesToCreate = min(Int(remainingTime / 60) + 1, 60) // Max 60 entries (1 hour)
+            // Active session - create entries aligned to displayed-minute boundaries.
+            // Display uses ceil(remaining / 60), so the first transition happens
+            // when remaining crosses the next whole-minute mark, not after a full
+            // 60s from now. e.g. 4m50s left → next entry at +50s shows "4m".
+            var firstOffset = remainingTime.truncatingRemainder(dividingBy: 60)
+            if firstOffset == 0 { firstOffset = 60 }
 
-            for minuteOffset in 1...minutesToCreate {
-                let futureDate = Date().addingTimeInterval(TimeInterval(minuteOffset * 60))
-                let futureRemaining = max(0, remainingTime - TimeInterval(minuteOffset * 60))
+            let totalEntries = min(Int((remainingTime / 60).rounded(.up)), 60)
+
+            for i in 0..<totalEntries {
+                let offset = firstOffset + Double(i) * 60
+                let futureDate = Date().addingTimeInterval(offset)
+                let futureRemaining = max(0, remainingTime - offset)
 
                 entries.append(IntentionsEntry(
                     date: futureDate,
@@ -81,7 +88,6 @@ struct IntentionsProvider: TimelineProvider {
                     remainingTime: futureRemaining > 0 ? futureRemaining : nil
                 ))
 
-                // Stop creating entries once session would be expired
                 if futureRemaining <= 0 {
                     break
                 }
@@ -262,7 +268,7 @@ struct IntentionsWidgetEntryView: View {
         if entry.isDataStale {
             return "Status unknown"
         } else if let remaining = entry.remainingTime {
-            let minutes = Int(remaining / 60)
+            let minutes = Int((remaining / 60).rounded(.up))
             let hours = minutes / 60
             let mins = minutes % 60
 
@@ -282,7 +288,7 @@ struct IntentionsWidgetEntryView: View {
         if entry.isDataStale {
             return "Intent (Unknown)"
         } else if let sessionTitle = entry.sessionTitle, let remaining = entry.remainingTime {
-            let minutes = Int(remaining / 60)
+            let minutes = Int((remaining / 60).rounded(.up))
             let hours = minutes / 60
             let mins = minutes % 60
 
