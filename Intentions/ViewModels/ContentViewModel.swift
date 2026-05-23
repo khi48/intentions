@@ -813,6 +813,13 @@ final class ContentViewModel: Sendable {
         // Delegate to engine: pushes snapshot, registers next boundary,
         // applies compute(IntentLog, now) which handles session/schedule/default.
         await screenTimeService.refreshSchedule(weeklySchedule.snapshot())
+
+        // #54: canonical no-session widget push. Covers schedule edits,
+        // first-time setup completion, and foreground auth reconcile. Session-end
+        // paths already pushed via teardownSessionState; the redundant write
+        // here is harmless. activeSession is guaranteed nil at this point
+        // (expired branch above clears it; active branch returns early).
+        WidgetBridge.pushNoSession(isBlocking: weeklySchedule.isBlocking(at: Date()))
     }
     
     // MARK: - Setup
