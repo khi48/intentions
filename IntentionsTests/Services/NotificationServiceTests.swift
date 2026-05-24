@@ -576,4 +576,100 @@ final class NotificationServiceTests: XCTestCase {
         XCTAssertTrue(id1.hasPrefix(SessionEndNotification.sessionTerminatedByFreeTimeIdentifierPrefix))
         XCTAssertTrue(id2.hasPrefix(SessionEndNotification.sessionTerminatedByFreeTimeIdentifierPrefix))
     }
+
+    // MARK: - R3 banner direction gating (#62)
+    //
+    // R3 mutex-teardown banner copy ("Free time started — your session ended.")
+    // only makes sense when the boundary that fires is the entry into free-time
+    // (blocking → free-time). The inverse direction (free-time → blocking) is
+    // a free-time-exit boundary; sub-rule 2 (DROPPED in #62) used to terminate
+    // the session there, but per Q6 the session is now preserved across that
+    // boundary. The banner MUST NOT arm for that direction.
+
+    /// Build a snapshot with a single free-time window on Monday for the given
+    /// minute range. t0Reference timestamp used so test fixtures align to a
+    /// known weekday/minute regardless of host TZ.
+    private func mondayFreeWindow(
+        startMinute: Int,
+        durationMinutes: Int,
+        timeZone: TimeZone = TimeZone(identifier: "UTC")!
+    ) -> ScheduleSnapshot {
+        ScheduleSnapshot(
+            isEnabled: true,
+            routines: [
+                .init(startMinute: startMinute, durationMinutes: durationMinutes, days: [.monday])
+            ],
+            timeZoneIdentifier: timeZone.identifier
+        )
+    }
+
+    func test_R3banner_armsOnlyForFreeTimeEntryBoundary() throws {
+        // A Monday 12:00 UTC reference (an arbitrary Monday).
+        // 2026-05-25 is a Monday in UTC.
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        let monday12pm = try XCTUnwrap(cal.date(from: DateComponents(
+            year: 2026, month: 5, day: 25, hour: 12, minute: 0
+        )))
+
+        // CASE A: session started inside free-time window [11:00-13:00].
+        // `now` is 12:00. Next boundary is 13:00, which is free-time → blocking
+        // (an EXIT boundary). Spec-builder MUST return nil → no banner armed.
+        let exitSchedule = mondayFreeWindow(startMinute: 11 * 60, durationMinutes: 120)
+        let exitBoundary = SessionEndNotification.r3MutexTeardownBannerBoundary(
+            schedule: exitSchedule,
+            sessionStart: monday12pm,
+            sessionEnd: monday12pm.addingTimeInterval(60 * 60), // 1h session, ends 13:00
+            now: monday12pm
+        )
+        XCTAssertNil(exitBoundary,
+                     "next boundary is free-time→blocking (exit) — banner must NOT arm")
+
+        // CASE B (inverse): session started in blocking, next boundary is
+        // 13:00 entering free-time window [13:00-15:00] — ENTRY boundary.
+        // Spec-builder returns that boundary → banner armed.
+        let entrySchedule = mondayFreeWindow(startMinute: 13 * 60, durationMinutes: 120)
+        let entryBoundary = SessionEndNotification.r3MutexTeardownBannerBoundary(
+            schedule: entrySchedule,
+            sessionStart: monday12pm,
+            sessionEnd: monday12pm.addingTimeInterval(2 * 60 * 60), // 2h session, ends 14:00
+            now: monday12pm
+        )
+        let expectedEntry = try XCTUnwrap(cal.date(from: DateComponents(
+            year: 2026, month: 5, day: 25, hour: 13, minute: 0
+        )))
+        XCTAssertEqual(entryBoundary, expectedEntry,
+                       "next boundary is blocking→free-time (entry) — banner armed at boundary")
+    }
+
+    func test_R3banner_skipsWhenScheduleDisabled() throws {
+        let disabled = ScheduleSnapshot(isEnabled: false, routines: [], timeZoneIdentifier: "UTC")
+        let now = Date()
+        let boundary = SessionEndNotification.r3MutexTeardownBannerBoundary(
+            schedule: disabled,
+            sessionStart: now,
+            sessionEnd: now.addingTimeInterval(3600),
+            now: now
+        )
+        XCTAssertNil(boundary, "disabled schedule — banner must NOT arm")
+    }
+
+    func test_R3banner_skipsWhenBoundaryAtOrAfterSessionEnd() throws {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        let monday12pm = try XCTUnwrap(cal.date(from: DateComponents(
+            year: 2026, month: 5, day: 25, hour: 12, minute: 0
+        )))
+
+        // Session ends at 12:30, but next free-time entry is 13:00 — session
+        // ends naturally before the boundary fires.
+        let entrySchedule = mondayFreeWindow(startMinute: 13 * 60, durationMinutes: 120)
+        let boundary = SessionEndNotification.r3MutexTeardownBannerBoundary(
+            schedule: entrySchedule,
+            sessionStart: monday12pm,
+            sessionEnd: monday12pm.addingTimeInterval(30 * 60),
+            now: monday12pm
+        )
+        XCTAssertNil(boundary, "boundary at-or-after session end — banner must NOT arm")
+    }
 }

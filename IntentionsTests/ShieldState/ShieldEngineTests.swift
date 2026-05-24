@@ -280,10 +280,10 @@ final class ShieldEngineTests: XCTestCase {
         )
     }
 
-    func test_handleScheduleTransition_entersFreeTimeWithActiveSession_clearsSessionReturnsTerminated() {
+    func test_handleScheduleTransition_freeTimeEntryWithActiveSession_killsSession() {
         // DAM fires `handleScheduleTransition` at the moment we enter a
         // free-time window. Snapshot at `now` is in free-time; session is in
-        // log. R3: terminate it.
+        // log. R3 sub-rule 1 (KEPT): terminate it.
         var log = store.load()
         log.weeklySchedule = makeFreeAllWeekSnapshot()
         store.save(log)
@@ -297,13 +297,20 @@ final class ShieldEngineTests: XCTestCase {
         XCTAssertEqual(applier.calls, [.none])
     }
 
-    func test_handleScheduleTransition_exitsFreeTimeWithActiveSession_clearsSessionReturnsTerminated() {
-        // Mutex is symmetric: exiting free-time also terminates an in-log
-        // session. Engine detects "just left free-time" by probing the snapshot
-        // a minute before `now`.
+    func test_handleScheduleTransition_freeTimeExitWithActiveSession_preservesSession() {
+        // Q6 sub-rule 2 (DROPPED, #62): exiting a free-time window mid-session
+        // must NOT terminate the session. Prior behaviour used a 60s lookback
+        // (`snapshot.isFreeTime(at: now - 60s)`) to symmetrically detect "just
+        // left free-time" and treat it as a mutex violation. That conflated a
+        // free-time-end boundary fire with a free-time-entry one — the latter
+        // is the only direction that semantically conflicts with an active
+        // session ("free time means no apps blocked").
         //
-        // For this test we use an exact free-window so isFreeTime(now - 60s)
-        // is true while isFreeTime(now) is false.
+        // Setup: snapshot is in free-time at `now - 60s` but NOT at `now`
+        // (i.e. we just exited the window). Session is in the log.
+        // Expectation: session preserved, returns `.noSessionChange`. The
+        // applier still re-applies via compute() — that's expected
+        // (`.allExcept` since session is active and we're now in blocking).
         let freeSnapshot = snapshotFree(fromOffset: 0, durationSec: 120)
         var log = store.load()
         log.weeklySchedule = freeSnapshot
@@ -312,13 +319,20 @@ final class ShieldEngineTests: XCTestCase {
         applier.reset()
 
         // Fire 30s after the window ends. now - 60s = 30s before window end
-        // (still in free-time) → lookback catches it.
+        // (still in free-time). Old behaviour: lookback kills session.
+        // New behaviour: only checks `now`; we're in blocking → no mutex
+        // trigger → session preserved.
         let now = t0.addingTimeInterval(120 + 30)
         let result = engine.handleScheduleTransition(now: now)
 
-        XCTAssertEqual(result, .sessionTerminatedByFreeTime)
-        XCTAssertNil(store.load().activeSession, "session must be cleared in log on free-time exit")
-        XCTAssertEqual(applier.calls, [.all])
+        XCTAssertEqual(result, .noSessionChange,
+                       "free-time exit must preserve session (sub-rule 2 dropped)")
+        XCTAssertNotNil(store.load().activeSession,
+                        "session must remain in log on free-time exit")
+        XCTAssertEqual(applier.calls.count, 1)
+        guard case .allExcept = applier.calls.first else {
+            return XCTFail("expected session to remain — .allExcept")
+        }
     }
 
     func test_handleScheduleTransition_noSession_returnsNoChange() {
