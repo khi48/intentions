@@ -16,6 +16,7 @@ enum SharedConstants {
         static let lastUpdate = "intentions.widget.lastUpdate"
         static let sessionTitle = "intentions.widget.sessionTitle"
         static let sessionEndTime = "intentions.widget.sessionEndTime"
+        static let postSessionBlockingStatus = "intentions.widget.postSessionBlockingStatus"
     }
 
     enum ShieldKeys {

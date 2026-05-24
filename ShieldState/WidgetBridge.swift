@@ -12,17 +12,21 @@ enum WidgetBridge {
     static let suiteName = "group.oh.Intent"
 
     enum Keys {
-        static let blockingStatus = "intentions.widget.blockingStatus"
-        static let lastUpdate     = "intentions.widget.lastUpdate"
-        static let sessionTitle   = "intentions.widget.sessionTitle"
-        static let sessionEndTime = "intentions.widget.sessionEndTime"
+        static let blockingStatus            = "intentions.widget.blockingStatus"
+        static let lastUpdate                = "intentions.widget.lastUpdate"
+        static let sessionTitle              = "intentions.widget.sessionTitle"
+        static let sessionEndTime            = "intentions.widget.sessionEndTime"
+        static let postSessionBlockingStatus = "intentions.widget.postSessionBlockingStatus"
     }
 
     private static let log = Logger(subsystem: "oh.Intent", category: "WidgetBridge")
 
     /// Active-session push: sets blocking=false (session means apps unblocked)
-    /// and persists session metadata for the timer view.
-    static func pushSession(title: String, endsAt: Date) {
+    /// and persists session metadata for the timer view. `postSessionIsBlocking`
+    /// carries the schedule-derived steady state at `endsAt` so the widget's
+    /// pre-baked post-expiry entry renders the right thing without waiting for
+    /// the DAM extension's pushNoSession to land (#69).
+    static func pushSession(title: String, endsAt: Date, postSessionIsBlocking: Bool) {
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             log.error("pushSession: UserDefaults(suiteName:) returned nil")
             return
@@ -30,8 +34,9 @@ enum WidgetBridge {
         defaults.set(false, forKey: Keys.blockingStatus)
         defaults.set(title, forKey: Keys.sessionTitle)
         defaults.set(endsAt, forKey: Keys.sessionEndTime)
+        defaults.set(postSessionIsBlocking, forKey: Keys.postSessionBlockingStatus)
         defaults.set(Date(), forKey: Keys.lastUpdate)
-        log.notice("pushSession: title=\(title, privacy: .public) endsAt=\(endsAt, privacy: .public)")
+        log.notice("pushSession: title=\(title, privacy: .public) endsAt=\(endsAt, privacy: .public) postSessionIsBlocking=\(postSessionIsBlocking, privacy: .public)")
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -44,6 +49,7 @@ enum WidgetBridge {
         }
         defaults.removeObject(forKey: Keys.sessionTitle)
         defaults.removeObject(forKey: Keys.sessionEndTime)
+        defaults.removeObject(forKey: Keys.postSessionBlockingStatus)
         defaults.set(isBlocking, forKey: Keys.blockingStatus)
         defaults.set(Date(), forKey: Keys.lastUpdate)
         log.notice("pushNoSession: isBlocking=\(isBlocking, privacy: .public)")
