@@ -928,7 +928,11 @@ final class ContentViewModel: Sendable {
         case .quickAction(let quickAction): sessionTitle = quickAction.name
         case .manual: sessionTitle = String(localized: "Session", comment: "Default widget title for a manually-started session")
         }
-        WidgetBridge.pushSession(title: sessionTitle, endsAt: session.endTime)
+        WidgetBridge.pushSession(
+            title: sessionTitle,
+            endsAt: session.endTime,
+            postSessionIsBlocking: weeklySchedule.isBlocking(at: session.endTime)
+        )
     }
 
     /// Clear widget session data when session ends

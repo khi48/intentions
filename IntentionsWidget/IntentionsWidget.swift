@@ -40,6 +40,14 @@ private struct WidgetDataManager {
         sharedUserDefaults.object(forKey: SharedConstants.WidgetKeys.sessionEndTime) as? Date
     }
 
+    /// Steady-state blocking value for the post-session pre-baked entry. Written
+    /// by WidgetBridge.pushSession at session start (schedule-derived). Defaults
+    /// to `true` when missing — safety fallback matching the prior hardcode for
+    /// mid-upgrade installs where pushSession ran before this key existed (#69).
+    static func getPostSessionBlockingStatus() -> Bool {
+        sharedUserDefaults.object(forKey: SharedConstants.WidgetKeys.postSessionBlockingStatus) as? Bool ?? true
+    }
+
     // Calculate remaining time for active session
     static func getRemainingTime() -> TimeInterval? {
         guard let endTime = getSessionEndTime() else { return nil }
@@ -81,17 +89,20 @@ struct IntentionsProvider: TimelineProvider {
                 let futureRemaining = max(0, remainingTime - offset)
 
                 if futureRemaining <= 0 {
-                    // Post-expiry entry: app re-shields on session end, so the
-                    // steady-state is Blocked. Override the stale session-start
-                    // values baked into `entry` (isBlocking: false, sessionTitle)
-                    // to avoid an "Open" flash before WidgetBridge.pushNoSession
-                    // lands from the DAM extension (#58). Drop-entry alternative
-                    // tested and reverted — WidgetKit defers reload-triggered
-                    // re-renders on lockscreen, so timeline-driven transition
-                    // is more reliable than reload-driven.
+                    // Post-expiry entry: override the stale session-start values
+                    // baked into `entry` (isBlocking: false, sessionTitle) to
+                    // avoid a transient flash before WidgetBridge.pushNoSession
+                    // lands from the DAM extension (#58). Steady-state blocking
+                    // is read from the side-band key written by pushSession at
+                    // session start (#69) — pre-#69 this was hardcoded `true`,
+                    // which was wrong once #59 allowed sessions with blocking
+                    // off. Drop-entry alternative tested and reverted —
+                    // WidgetKit defers reload-triggered re-renders on
+                    // lockscreen, so timeline-driven transition is more
+                    // reliable than reload-driven.
                     entries.append(IntentionsEntry(
                         date: futureDate,
-                        isBlocking: true,
+                        isBlocking: WidgetDataManager.getPostSessionBlockingStatus(),
                         isDataStale: entry.isDataStale,
                         sessionTitle: nil,
                         remainingTime: nil
