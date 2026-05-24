@@ -514,6 +514,9 @@
     "Session active" : {
       "comment" : "Session status label during normal running"
     },
+    "Session complete." : {
+      "comment" : "Body of the natural-completion banner posted when a session ends; neutral about post-session app state"
+    },
     "Session ending soon" : {
       "comment" : "Session status label as session nears expiry"
     },

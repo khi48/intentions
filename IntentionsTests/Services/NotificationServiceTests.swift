@@ -672,4 +672,20 @@ final class NotificationServiceTests: XCTestCase {
         )
         XCTAssertNil(boundary, "boundary at-or-after session end — banner must NOT arm")
     }
+
+    // MARK: - Session completion body copy (#60)
+
+    /// Both delivery paths (pre-scheduled `session_completion_<id>` trigger and
+    /// the fallback `sendSessionExpiredNotification`) must render the same copy.
+    /// Per #60 the body is neutral — it no longer claims "Apps are now blocked
+    /// again." because after the sessions-during-unblock work lands a session
+    /// can end in any of three post-states (blocked / free-time / unblocked).
+    func testSessionCompletionBodyIsNeutral() {
+        XCTAssertEqual(NotificationService.sessionCompletionBody, "Session complete.")
+    }
+
+    func testSessionCompletionBodyDoesNotClaimAppsBlockedAgain() {
+        XCTAssertFalse(NotificationService.sessionCompletionBody.contains("blocked again"),
+                       "Body must not claim apps are blocked again — post-session state varies (#60)")
+    }
 }
