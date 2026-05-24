@@ -115,7 +115,6 @@ struct RoutinesView: View {
                         routineRow(routine, now: context.date, active: active)
                     }
                     .buttonStyle(.plain)
-                    .disabled(isReadOnly)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(
                         active
