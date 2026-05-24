@@ -174,7 +174,7 @@ final class SetupCoordinatorTests: XCTestCase {
         let stateBefore = coordinator.setupState
 
         // When
-        await coordinator.completeSetupStep(.landing)
+        await coordinator.completeSetupStep(.welcome)
 
         // Then
         XCTAssertEqual(coordinator.setupState?.screenTimeAuthorized, stateBefore?.screenTimeAuthorized)
@@ -226,7 +226,7 @@ final class SetupCoordinatorTests: XCTestCase {
         XCTAssertFalse(pending.contains(.screenTimeAuthorization))
         XCTAssertFalse(pending.contains(.intentionQuote))
         // Landing is only added when !isSetupSufficient, which is false here
-        XCTAssertFalse(pending.contains(.landing))
+        XCTAssertFalse(pending.contains(.welcome))
     }
 
     // MARK: - completedSetupSteps Tests
@@ -472,19 +472,19 @@ final class SetupCoordinatorTests: XCTestCase {
     func testSetupStepCases() {
         let allCases = SetupStep.allCases
         XCTAssertEqual(allCases.count, 3)
-        XCTAssertTrue(allCases.contains(.landing))
+        XCTAssertTrue(allCases.contains(.welcome))
         XCTAssertTrue(allCases.contains(.screenTimeAuthorization))
         XCTAssertTrue(allCases.contains(.intentionQuote))
     }
 
     func testSetupStepIsRequired() {
-        XCTAssertFalse(SetupStep.landing.isRequired)
+        XCTAssertFalse(SetupStep.welcome.isRequired)
         XCTAssertTrue(SetupStep.screenTimeAuthorization.isRequired)
         XCTAssertTrue(SetupStep.intentionQuote.isRequired)
     }
 
     func testSetupStepDisplayNames() {
-        XCTAssertEqual(SetupStep.landing.displayName, "Getting Started")
+        XCTAssertEqual(SetupStep.welcome.displayName, "Welcome")
         XCTAssertEqual(SetupStep.screenTimeAuthorization.displayName, "Screen Time Permission")
         XCTAssertEqual(SetupStep.intentionQuote.displayName, "Set Your Intention")
     }
