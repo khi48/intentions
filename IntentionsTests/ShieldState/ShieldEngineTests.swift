@@ -421,4 +421,66 @@ final class ShieldEngineTests: XCTestCase {
         XCTAssertEqual(result, .noSessionChange,
                        "disabled schedule must never trip the R3 mutex signal")
     }
+
+    // MARK: - Toggle-on preserves session (Q3 / #61)
+    //
+    // The R3 mutex clear in `refreshScheduleMonitoring` must be gated on the
+    // PRE-mutation snapshot's `isEnabled` state. If the user flips the master
+    // toggle from OFF → ON while a session is active, the new schedule's
+    // free-time windows govern the post-session default state — they MUST NOT
+    // kill the in-flight session, even when the freshly-enabled snapshot puts
+    // now-time inside a free-time window.
+    //
+    // Schedule edits made under an already-enabled snapshot (was-enabled →
+    // is-enabled) retain the existing #27 CASE B kill semantics: an explicit
+    // edit that puts now-time into free-time still terminates the session
+    // with the R3 banner.
+
+    func test_refreshScheduleMonitoring_toggleOnWithActiveSession_preservesSession() {
+        // Pre-state: master toggle OFF (disabled snapshot persisted) + a
+        // session is in the log (#59 makes this possible by removing the
+        // start guard).
+        var log = store.load()
+        log.weeklySchedule = makeDisabledSnapshot()
+        store.save(log)
+        injectActiveSession(endsAt: t0.addingTimeInterval(600))
+        applier.reset()
+
+        // User flips master toggle ON. The new enabled snapshot's full-day
+        // routine puts now-time in free-time, but that's the post-session
+        // default — the in-flight session is a deliberate commitment that
+        // overrides the schedule.
+        let enabledSnapshot = makeFreeAllWeekSnapshot()
+        let result = engine.refreshScheduleMonitoring(enabledSnapshot, now: t0.addingTimeInterval(60))
+
+        XCTAssertEqual(result, .noSessionChange,
+                       "toggle-on while session active must preserve the session — schedule governs post-session state only")
+        XCTAssertNotNil(store.load().activeSession,
+                        "session must remain in log on toggle-on, regardless of new snapshot's free-time windows")
+    }
+
+    func test_refreshScheduleMonitoring_routineEditWithActiveSession_killsSession() {
+        // Regression for #27 CASE B (Q4): editing the schedule under an
+        // already-enabled snapshot such that the new routines cover now-time
+        // still kills the session and reports `.sessionTerminatedByFreeTime`.
+        // The distinguishing signal vs the toggle-on path above is the
+        // pre-mutation snapshot's `isEnabled` flag.
+        var log = store.load()
+        log.weeklySchedule = makeBlockedAllWeekSnapshot()  // was-enabled, no free routines
+        store.save(log)
+
+        engine.startSession(apps: .init(), endsAt: t0.addingTimeInterval(600), now: t0)
+        applier.reset()
+
+        // User edits the schedule, adding a free-time window that covers
+        // now-time. Snapshot stays enabled — this is a routine edit, not a
+        // toggle.
+        let editedSnapshot = makeFreeAllWeekSnapshot()
+        let result = engine.refreshScheduleMonitoring(editedSnapshot, now: t0.addingTimeInterval(60))
+
+        XCTAssertEqual(result, .sessionTerminatedByFreeTime,
+                       "routine edit under already-enabled snapshot must still trip R3")
+        XCTAssertNil(store.load().activeSession,
+                     "session must be cleared on routine-edit-creates-free-time path")
+    }
 }

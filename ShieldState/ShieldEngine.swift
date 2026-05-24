@@ -110,12 +110,25 @@ struct ShieldEngine: Sendable {
     /// is terminated and `.sessionTerminatedByFreeTime` is returned. This
     /// covers the user-edit path (Q3 — saving a schedule that creates
     /// retroactive overlap with the active session).
+    ///
+    /// Toggle-on preservation (#61): the mutex clear is gated on the
+    /// PRE-mutation snapshot's `isEnabled` flag. If the previous snapshot was
+    /// disabled (or missing) and the incoming snapshot is enabled, the toggle
+    /// flip is treated as a change to the post-session default state, not a
+    /// kill-switch for the in-flight commitment. The session is preserved
+    /// regardless of whether the freshly-enabled snapshot puts now-time inside
+    /// a free-time window. Routine edits made under an already-enabled
+    /// snapshot retain the R3 kill semantics.
     @discardableResult
     func refreshScheduleMonitoring(_ snapshot: ScheduleSnapshot, now: Date = Date()) -> ScheduleTransitionResult {
         DebugBreadcrumbs.record(.engineRefreshSchedule, note: "isEnabled=\(snapshot.isEnabled) routines=\(snapshot.routines.count)")
         logger.notice("refreshScheduleMonitoring: isEnabled=\(snapshot.isEnabled, privacy: .public) routines=\(snapshot.routines.count, privacy: .public)")
 
         var log = store.load()
+        // Capture the pre-mutation snapshot's enabled state BEFORE assigning
+        // the new snapshot — distinguishes toggle-on (#61) from edit-under-
+        // already-enabled (#27 CASE B). Order is load-bearing.
+        let previousSnapshotWasEnabled = log.weeklySchedule?.isEnabled ?? false
         log.weeklySchedule = snapshot
 
         // Mutex check (R3): if the freshly-saved schedule is in free-time at
@@ -132,13 +145,23 @@ struct ShieldEngine: Sendable {
         // a stale state), but we report `.noSessionChange` so the caller routes
         // through the silent disable-cancel path (#28's
         // `cancelActiveSessionForDisable`) instead of the R3 banner.
+        //
+        // Toggle-on preservation (#61): when the previous snapshot was disabled
+        // (or missing) and the incoming snapshot is enabled, skip the clear
+        // entirely. Master-toggle ON re-establishes the schedule as the
+        // post-session default state; it must not kill the in-flight session
+        // even if the now-time falls inside one of the newly-enabled
+        // free-time routines.
+        let toggleOnFromDisabled = !previousSnapshotWasEnabled && snapshot.isEnabled
         var result: ScheduleTransitionResult = .noSessionChange
-        if log.activeSession != nil && snapshot.isFreeTime(at: now) {
+        if !toggleOnFromDisabled && log.activeSession != nil && snapshot.isFreeTime(at: now) {
             logger.notice("refreshScheduleMonitoring: clearing session — schedule puts us in free-time at \(now, privacy: .public) (isEnabled=\(snapshot.isEnabled, privacy: .public))")
             log.activeSession = nil
             if snapshot.isEnabled {
                 result = .sessionTerminatedByFreeTime
             }
+        } else if toggleOnFromDisabled && log.activeSession != nil {
+            logger.notice("refreshScheduleMonitoring: toggle-on with active session — preserving session (#61), snapshot governs post-session state only")
         }
 
         store.save(log)
