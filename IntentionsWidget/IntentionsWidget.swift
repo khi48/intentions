@@ -80,17 +80,32 @@ struct IntentionsProvider: TimelineProvider {
                 let futureDate = Date().addingTimeInterval(offset)
                 let futureRemaining = max(0, remainingTime - offset)
 
+                if futureRemaining <= 0 {
+                    // Post-expiry entry: app re-shields on session end, so the
+                    // steady-state is Blocked. Override the stale session-start
+                    // values baked into `entry` (isBlocking: false, sessionTitle)
+                    // to avoid an "Open" flash before WidgetBridge.pushNoSession
+                    // lands from the DAM extension (#58). Drop-entry alternative
+                    // tested and reverted — WidgetKit defers reload-triggered
+                    // re-renders on lockscreen, so timeline-driven transition
+                    // is more reliable than reload-driven.
+                    entries.append(IntentionsEntry(
+                        date: futureDate,
+                        isBlocking: true,
+                        isDataStale: entry.isDataStale,
+                        sessionTitle: nil,
+                        remainingTime: nil
+                    ))
+                    break
+                }
+
                 entries.append(IntentionsEntry(
                     date: futureDate,
                     isBlocking: entry.isBlocking,
                     isDataStale: entry.isDataStale,
                     sessionTitle: entry.sessionTitle,
-                    remainingTime: futureRemaining > 0 ? futureRemaining : nil
+                    remainingTime: futureRemaining
                 ))
-
-                if futureRemaining <= 0 {
-                    break
-                }
             }
 
             // For active sessions, reload when session expires (or in 1 hour, whichever is sooner)
