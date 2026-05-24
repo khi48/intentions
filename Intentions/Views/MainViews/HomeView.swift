@@ -137,9 +137,6 @@ private struct QuickActionsSection: View {
             } else if !quickActionsViewModel.quickActions.isEmpty {
                 // Show available quick actions with drag-to-reorder
                 VStack(spacing: 16) {
-                    if let banner = viewModel.cannotStartBanner {
-                        StateLockBanner(title: banner.title, remedy: banner.remedy)
-                    }
                     LazyVGrid(columns: [
                         GridItem(.flexible()),
                         GridItem(.flexible())
@@ -149,7 +146,7 @@ private struct QuickActionsSection: View {
                                 title: quickAction.name,
                                 subtitle: quickAction.subtitle ?? quickAction.formattedDuration,
                                 icon: quickAction.iconName,
-                                isReady: viewModel.isScreenTimeServiceReady && viewModel.canStartSession,
+                                isReady: viewModel.isScreenTimeServiceReady,
                                 disabledReason: cardDisabledReason,
                                 isRunning: isQuickActionRunning(quickAction),
                                 onTap: {
@@ -300,14 +297,11 @@ private struct QuickActionsSection: View {
         .accessibilityLabel("Tap the plus button to create your first quick action")
     }
     
-    /// Reason the quick-action cards are disabled, in priority order:
-    /// - Screen Time service not yet ready beats schedule-state messaging.
-    /// - Otherwise show `cannotStartReason` (e.g. blocking-disabled copy).
+    /// Reason the quick-action cards are disabled. With #59 sessions can start
+    /// in any blocking state, so the only disabled-reason left is Screen Time
+    /// not being ready yet.
     private var cardDisabledReason: String {
-        if !viewModel.isScreenTimeServiceReady {
-            return String(localized: "Screen Time not ready", comment: "Quick action card hint when Screen Time service is not ready")
-        }
-        return viewModel.cannotStartReason ?? String(localized: "Double tap to start session", comment: "Default accessibility hint for an enabled quick action card")
+        String(localized: "Screen Time not ready", comment: "Quick action card hint when Screen Time service is not ready")
     }
 
     private func isQuickActionRunning(_ quickAction: QuickAction) -> Bool {

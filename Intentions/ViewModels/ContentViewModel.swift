@@ -12,14 +12,6 @@ import SwiftUI
 import UserNotifications
 import OSLog
 
-/// Title + remedy pair surfaced via `StateLockBanner` when a new session cannot
-/// be started. Title states the locked state ("Sessions locked while …");
-/// remedy tells the user how to recover ("Turn on blocking in Settings…").
-struct CannotStartBanner: Sendable, Equatable {
-    let title: String
-    let remedy: String
-}
-
 /// Tracks the lifecycle state of the ScreenTimeService within ContentViewModel
 enum ScreenTimeServiceState: Sendable {
     case uninitialized
@@ -415,60 +407,20 @@ final class ContentViewModel: Sendable {
     }
     
     // MARK: - Session Management
-
-    // MARK: Session Start Guard (#28, #27)
     //
-    // Preventive guard that blocks session start when the user couldn't actually
-    // benefit from one. Two preconditions, both surfaced as a caption on the
-    // disabled session-start affordance:
-    //   (#28) Blocking disabled — "Blocking off" means nothing to manage.
-    //   (#27) Currently in a free-time window — R3 makes free-time and session
-    //         mutually exclusive; starting one would be immediately overridden
-    //         by free-time precedence in `compute()`.
-    // The reactive cancel-on-disable path (`cancelActiveSessionForDisable`) and
-    // the engine's mutex (terminates the session on free-time entry, surfaced
-    // through `ScheduleTransitionResult.sessionTerminatedByFreeTime`) are the
-    // matching safety nets for the inverse direction (state already running,
-    // now violated).
-
-    /// Whether the user is currently allowed to start a new intention session.
-    var canStartSession: Bool {
-        cannotStartBanner == nil
-    }
-
-    /// Title + remedy pair surfaced via `StateLockBanner` when a new session
-    /// cannot be started, or nil when one can. The title states the locked
-    /// state; the remedy tells the user how to unlock it.
-    var cannotStartBanner: CannotStartBanner? {
-        if !weeklySchedule.isEnabled {
-            return CannotStartBanner(
-                title: String(localized: "Sessions locked while blocking is off.", comment: "Banner title when sessions can't start because blocking is disabled"),
-                remedy: String(localized: "Turn on blocking in Settings to start one.", comment: "Banner remedy when sessions can't start because blocking is disabled")
-            )
-        }
-        if weeklySchedule.isFreeTime(at: Date()) {
-            return CannotStartBanner(
-                title: String(localized: "Sessions locked during free time.", comment: "Banner title when sessions can't start because user is in free time"),
-                remedy: String(localized: "Free time will block again later.", comment: "Banner remedy when sessions can't start because user is in free time")
-            )
-        }
-        return nil
-    }
-
-    /// Backwards-compatible single-string view of `cannotStartBanner`, joining
-    /// title and remedy with a space. Kept for callers (test suite, accessibility
-    /// hints on disabled cards) that want a flat reason caption.
-    var cannotStartReason: String? {
-        guard let banner = cannotStartBanner else { return nil }
-        return "\(banner.title) \(banner.remedy)"
-    }
+    // #59: a session is a deliberate user commitment that overrides the
+    // schedule-default state for its duration. startSession proceeds
+    // regardless of master-toggle state or free-time precondition; compute()
+    // gives session precedence over both, so the shield applies for the
+    // session's window even when blocking is otherwise "off". The reactive
+    // cancel-on-disable path (`cancelActiveSessionForDisable`) and the
+    // engine's free-time mutex (terminates the session on free-time entry,
+    // surfaced through `ScheduleTransitionResult.sessionTerminatedByFreeTime`)
+    // remain as safety nets for retroactive schedule edits — engine-side
+    // preservation across those edits is tracked in follow-up issues.
 
     /// Start a new intention session
     func startSession(_ session: IntentionSession) async {
-        guard canStartSession else {
-            logger.notice("startSession refused: \(self.cannotStartReason ?? "unknown")")
-            return
-        }
         await withLoading {
             do {
                 // If there's an existing active session, this is a replace flow.

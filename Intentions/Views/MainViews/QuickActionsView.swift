@@ -54,13 +54,6 @@ struct QuickActionsView: View {
                 // Search bar
                 searchBar
 
-                // Banner when blocking is off / a session can't be started.
-                if let banner = contentViewModel.cannotStartBanner {
-                    StateLockBanner(title: banner.title, remedy: banner.remedy)
-                        .padding(.horizontal)
-                        .padding(.top, 8)
-                }
-
                 if viewModel.isLoading {
                     loadingView
                 } else if viewModel.quickActions.isEmpty {
@@ -222,7 +215,6 @@ struct QuickActionsView: View {
                     QuickActionRowView(
                         quickAction: quickAction,
                         isRunning: isRunning,
-                        canStart: contentViewModel.canStartSession,
                         onTap: {
                             Task {
                                 await startQuickAction(quickAction)
@@ -339,12 +331,11 @@ struct QuickActionsView: View {
 private struct QuickActionRowView: View {
     let quickAction: QuickAction
     let isRunning: Bool
-    let canStart: Bool
     let onTap: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
 
-    private var isTappable: Bool { !isRunning && canStart }
+    private var isTappable: Bool { !isRunning }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {

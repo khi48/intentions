@@ -312,77 +312,14 @@ final class ContentViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.isLoading)
     }
     
-    // MARK: - Session Start Guard Tests (#28)
-
-    @MainActor
-    func testCanStartSessionTrueWhenScheduleEnabled() async throws {
-        // Given - View model with default (enabled) schedule
-        try createViewModel()
-        await mockScreenTimeService.setMockAuthorizationStatus(.approved)
-        await viewModel.initializeApp()
-
-        var schedule = WeeklySchedule()
-        schedule.isEnabled = true
-        try await mockDataService.saveWeeklySchedule(schedule)
-        await viewModel.updateWeeklySchedule(schedule)
-
-        // Then
-        XCTAssertTrue(viewModel.canStartSession)
-        XCTAssertNil(viewModel.cannotStartBanner)
-    }
-
-    @MainActor
-    func testCanStartSessionFalseWhenScheduleDisabled() async throws {
-        // Given - schedule.isEnabled = false (blocking off → all apps unlocked)
-        try createViewModel()
-        await mockScreenTimeService.setMockAuthorizationStatus(.approved)
-        await viewModel.initializeApp()
-
-        var schedule = WeeklySchedule()
-        schedule.isEnabled = false
-        try await mockDataService.saveWeeklySchedule(schedule)
-        await viewModel.updateWeeklySchedule(schedule)
-
-        // Then
-        XCTAssertFalse(viewModel.canStartSession)
-        XCTAssertEqual(
-            viewModel.cannotStartBanner?.title,
-            "Sessions locked while blocking is off."
-        )
-        XCTAssertEqual(
-            viewModel.cannotStartBanner?.remedy,
-            "Turn on blocking in Settings to start one."
-        )
-    }
-
-    @MainActor
-    func testStartSessionRefusedWhenScheduleDisabled() async throws {
-        // Given - blocking disabled, no active session
-        try createViewModel()
-        await mockScreenTimeService.setMockAuthorizationStatus(.approved)
-        await viewModel.initializeApp()
-
-        var schedule = WeeklySchedule()
-        schedule.isEnabled = false
-        try await mockDataService.saveWeeklySchedule(schedule)
-        await viewModel.updateWeeklySchedule(schedule)
-        XCTAssertNil(viewModel.activeSession)
-
-        let testSession = try IntentionSession(appGroups: [], applications: [], duration: 1800)
-
-        // When - user attempts to start a session
-        await viewModel.startSession(testSession)
-
-        // Then - guard refused; no session became active and nothing was persisted
-        XCTAssertNil(viewModel.activeSession, "startSession must early-return when canStartSession is false")
-        let savedSessions = try await mockDataService.loadIntentionSessions()
-        XCTAssertTrue(
-            savedSessions.isEmpty,
-            "No session should be persisted when guard refused start"
-        )
-    }
-
-    // MARK: - Free-time mutex Tests (#27)
+    // MARK: - Session Start (#59 — sessions runnable in any blocking state)
+    //
+    // #59 removed the #28 + #27 R3 start guards. A session is now a deliberate
+    // user commitment that overrides the schedule-default state for its
+    // duration. These tests pin that startSession proceeds regardless of
+    // blocking-off / free-time preconditions; the engine-side terminate paths
+    // (cancelActiveSessionForDisable, sessionTerminatedByFreeTime) are
+    // out-of-scope per #59 and tracked separately.
 
     /// Build a WeeklySchedule whose routine covers all weekdays for the full
     /// day — so `isFreeTime(at: Date())` is always true.
@@ -404,31 +341,38 @@ final class ContentViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testCanStartSessionFalseWhenInFreeTime() async throws {
-        // Given - schedule enabled, all-week free-time window (we are always in free-time)
+    func testStartSessionWhenBlockingDisabledStartsSession() async throws {
+        // #59: with the guard removed, startSession proceeds even when
+        // schedule.isEnabled == false. The session establishes its own
+        // blocking floor for its duration.
         try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.approved)
         await viewModel.initializeApp()
 
-        let schedule = makeAlwaysFreeSchedule()
+        let schedule = WeeklySchedule()
+        schedule.isEnabled = false
         try await mockDataService.saveWeeklySchedule(schedule)
         await viewModel.updateWeeklySchedule(schedule)
+        XCTAssertNil(viewModel.activeSession)
 
-        // Then - guard refuses, caption is the free-time copy
-        XCTAssertFalse(viewModel.canStartSession, "expected canStartSession false during free-time")
-        XCTAssertEqual(
-            viewModel.cannotStartBanner?.title,
-            "Sessions locked during free time."
-        )
-        XCTAssertEqual(
-            viewModel.cannotStartBanner?.remedy,
-            "Free time will block again later."
-        )
+        let testSession = try IntentionSession(appGroups: [], applications: [], duration: 1800)
+
+        // When
+        await viewModel.startSession(testSession)
+
+        // Then - session active + persisted
+        XCTAssertNotNil(viewModel.activeSession, "session must start even with blocking disabled")
+        XCTAssertEqual(viewModel.activeSession?.id, testSession.id)
+        let savedSessions = try await mockDataService.loadIntentionSessions()
+        XCTAssertEqual(savedSessions.count, 1)
+        XCTAssertEqual(savedSessions.first?.id, testSession.id)
     }
 
     @MainActor
-    func testStartSessionRefusedWhenInFreeTime() async throws {
-        // Given - in a free-time window, no active session
+    func testStartSessionWhenInFreeTimeWindowStartsSession() async throws {
+        // #59: with the R3 mutex removed at start, startSession proceeds
+        // inside a free-time window. compute() precedence now favours the
+        // session over free-time so the shield will actually apply.
         try createViewModel()
         await mockScreenTimeService.setMockAuthorizationStatus(.approved)
         await viewModel.initializeApp()
@@ -439,14 +383,25 @@ final class ContentViewModelTests: XCTestCase {
 
         let testSession = try IntentionSession(appGroups: [], applications: [], duration: 1800)
 
-        // When - user attempts to start a session
+        // When
         await viewModel.startSession(testSession)
 
-        // Then - guard refused; no session and nothing persisted
-        XCTAssertNil(viewModel.activeSession, "startSession must early-return in free-time")
+        // Then - session active + persisted
+        XCTAssertNotNil(viewModel.activeSession, "session must start in free-time window")
+        XCTAssertEqual(viewModel.activeSession?.id, testSession.id)
         let savedSessions = try await mockDataService.loadIntentionSessions()
-        XCTAssertTrue(savedSessions.isEmpty, "no session should be persisted when guard refused")
+        XCTAssertEqual(savedSessions.count, 1)
+        XCTAssertEqual(savedSessions.first?.id, testSession.id)
     }
+
+    // MARK: - Schedule-edit retroactive overlap (engine-side, R3 symmetry)
+    //
+    // Engine-side preservation across schedule edits is "out of scope" for #59
+    // (tracked separately). The current engine still terminates the in-flight
+    // session when a schedule edit puts `now` inside a fresh free-time window;
+    // ContentViewModel mirrors that via handleSessionTerminatedByFreeTime.
+    // Keep this regression so engine-side changes don't silently break the
+    // ContentViewModel wiring.
 
     @MainActor
     func testActiveSessionClearedWhenScheduleEditCreatesFreeTimeOverlap() async throws {
@@ -470,8 +425,8 @@ final class ContentViewModelTests: XCTestCase {
         try await mockDataService.saveWeeklySchedule(freeSchedule)
         await viewModel.updateWeeklySchedule(freeSchedule)
 
-        // Then - session terminated by mutex (Q3, R3 symmetry)
-        XCTAssertNil(viewModel.activeSession, "session must be cleared when retroactive overlap is created")
+        // Then - session terminated by engine-side mutex (separate-issue scope).
+        XCTAssertNil(viewModel.activeSession, "session cleared when retroactive overlap created (engine-side, pre-#59 behavior)")
     }
 
     // MARK: - Schedule Update Tests
