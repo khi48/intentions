@@ -183,12 +183,13 @@ struct RoutinesWeekView: View {
     @ViewBuilder
     private func blockLabel(_ block: RoutineGridBlock, height: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            if let name = block.name, !name.isEmpty, height >= 16 {
-                Text(name)
+            if height >= 16 {
+                Text(blockTitle(block))
                     .font(.system(size: 10, weight: .medium))
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .foregroundColor(AppConstants.Colors.text)
+                    .italic(isUntitled(block))
             }
             if height >= 30 {
                 Text(timeRange(block))
@@ -200,6 +201,15 @@ struct RoutinesWeekView: View {
         .padding(.horizontal, 4)
         .padding(.top, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func isUntitled(_ block: RoutineGridBlock) -> Bool {
+        (block.name ?? "").isEmpty
+    }
+
+    private func blockTitle(_ block: RoutineGridBlock) -> String {
+        if let name = block.name, !name.isEmpty { return name }
+        return String(localized: "Untitled", comment: "Placeholder title shown on a routine block that has no user-provided name")
     }
 
     private func timeRange(_ block: RoutineGridBlock) -> String {
@@ -302,7 +312,7 @@ private struct RoutineDetailSheet: View {
 
     private var displayName: String {
         guard let name = routine.name, !name.isEmpty else {
-            return String(localized: "Unnamed", comment: "Placeholder name for a routine that has no user-provided name")
+            return String(localized: "Untitled", comment: "Placeholder name for a routine that has no user-provided name")
         }
         return name
     }
