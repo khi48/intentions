@@ -60,4 +60,49 @@ enum SessionEndNotification {
             trigger: trigger
         )
     }
+
+    /// Decide whether/when to arm the per-session R3 mutex teardown banner (#30).
+    ///
+    /// Returns the boundary `Date` at which the banner should fire, or `nil`
+    /// to skip arming entirely.
+    ///
+    /// Skip rules:
+    /// - schedule disabled (no free-time semantics — R3 doesn't apply)
+    /// - no boundary in the next week
+    /// - boundary falls at-or-after session end (session ends naturally first)
+    /// - boundary direction is free-time → blocking (i.e. session was started
+    ///   inside a free-time window and the next boundary is the EXIT — #62 /
+    ///   Q6: sub-rule 2 dropped, so we no longer terminate the session there,
+    ///   and the banner copy "Free time started" would be misleading anyway).
+    ///
+    /// Direction is determined by probing the snapshot at the boundary moment
+    /// and one minute before: the banner only arms when `isFreeTime(at:
+    /// boundary)` is true and `isFreeTime(at: boundary - 60s)` is false
+    /// (blocking → free-time entry).
+    ///
+    /// The settings/trigger-interval gating remains the responsibility of
+    /// `sessionTerminatedByFreeTimeRequest(...)`; this spec-builder only
+    /// decides scheduling.
+    static func r3MutexTeardownBannerBoundary(
+        schedule: ScheduleSnapshot,
+        sessionStart: Date,
+        sessionEnd: Date,
+        now: Date = Date()
+    ) -> Date? {
+        guard schedule.isEnabled else { return nil }
+        guard let boundary = schedule.nextBoundary(after: sessionStart) else { return nil }
+        guard boundary < sessionEnd else { return nil }
+
+        // Direction gate: only arm when the boundary is an ENTRY into free-time
+        // (blocking → free-time). The inverse (free-time → blocking) is an exit
+        // boundary; #62 dropped sub-rule 2 so the session is preserved across
+        // that boundary and the "Free time started" copy doesn't apply.
+        let before = boundary.addingTimeInterval(-60)
+        guard schedule.isFreeTime(at: boundary), !schedule.isFreeTime(at: before) else {
+            return nil
+        }
+
+        _ = now // reserved for future "skip if boundary already passed" guard; currently caller computes trigger interval from Date()
+        return boundary
+    }
 }

@@ -12,9 +12,10 @@ enum ScheduleTransitionResult: Sendable, Equatable {
     /// No change to the session — either there was no session, or the
     /// schedule transition did not involve a free-time boundary.
     case noSessionChange
-    /// An active session was terminated because the schedule entered (or just
-    /// exited) a free-time window. R3: free-time and session are mutually
-    /// exclusive.
+    /// An active session was terminated because the schedule entered a
+    /// free-time window. R3: free-time and session are mutually exclusive.
+    /// Only the entry direction triggers this (Q6 / #62 — sub-rule 2 dropped,
+    /// so exiting a free-time window mid-session no longer terminates).
     case sessionTerminatedByFreeTime
 }
 
@@ -206,12 +207,15 @@ struct ShieldEngine: Sendable {
     /// fires. Idempotent reapply + chain to the next boundary.
     ///
     /// R3 (#27) mutex: if a session is in the log and the snapshot says we're
-    /// in free-time at `now` (entry case) OR we just left a free-time window
-    /// within the last minute (exit case — covers a missed entry-fire), the
-    /// session is terminated and `.sessionTerminatedByFreeTime` is returned.
-    /// The lookback window (60s) is wider than the observed DAM fire slop
-    /// (2-9s on iOS 26.5) so the symmetric "exit" path catches genuinely
-    ///-stale sessions.
+    /// in free-time at `now`, the session is terminated and
+    /// `.sessionTerminatedByFreeTime` is returned. This is the ENTRY direction
+    /// only (sub-rule 1, KEPT — Q6).
+    ///
+    /// Sub-rule 2 (exit-window lookback) was DROPPED in #62: exiting a
+    /// free-time window mid-session no longer terminates the session. The
+    /// session is preserved across the free-time→blocking boundary; compute()
+    /// renders `.allExcept` (session apps free, rest blocked) for the
+    /// remainder of the session window.
     @discardableResult
     func handleScheduleTransition(now: Date = Date()) -> ScheduleTransitionResult {
         DebugBreadcrumbs.record(.engineScheduleTransition)
@@ -224,14 +228,12 @@ struct ShieldEngine: Sendable {
         var result: ScheduleTransitionResult = .noSessionChange
         if log.activeSession != nil,
            let snapshot = log.weeklySchedule,
-           snapshot.isEnabled {
-            let lookback = now.addingTimeInterval(-60)
-            if snapshot.isFreeTime(at: now) || snapshot.isFreeTime(at: lookback) {
-                logger.notice("handleScheduleTransition: clearing session — free-time mutex triggered")
-                log.activeSession = nil
-                store.save(log)
-                result = .sessionTerminatedByFreeTime
-            }
+           snapshot.isEnabled,
+           snapshot.isFreeTime(at: now) {
+            logger.notice("handleScheduleTransition: clearing session — free-time entry triggered (sub-rule 1)")
+            log.activeSession = nil
+            store.save(log)
+            result = .sessionTerminatedByFreeTime
         }
 
         rescheduleBoundary(log: log, from: now)

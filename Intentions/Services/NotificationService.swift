@@ -211,30 +211,29 @@ final class NotificationService: NSObject, Sendable {
         }
     }
 
-    /// Pure decision + add for the R3 mutex teardown banner. Skip cases:
+    /// Pure decision + add for the R3 mutex teardown banner. Delegates the
+    /// scheduling decision to `SessionEndNotification.r3MutexTeardownBannerBoundary`
+    /// (returns the boundary `Date` or `nil` to skip). Skip cases that
+    /// spec-builder owns:
     /// - schedule disabled (R3 doesn't apply without a schedule)
-    /// - session start moment is NOT in blocking (defensive — #27 guard prevents
-    ///   session start during free time, but session may have been hydrated past
-    ///   the boundary)
     /// - no boundary in the next week
-    /// - boundary falls at or after session end (session ends naturally first)
+    /// - boundary falls at-or-after session end (session ends naturally first)
+    /// - boundary direction is free-time → blocking (i.e. EXIT boundary — #62
+    ///   / Q6 sub-rule 2 dropped; session is preserved and the banner copy
+    ///   "Free time started" doesn't apply)
+    ///
+    /// This method retains two locally-owned guards:
     /// - trigger interval < 1.0s (UNTimeIntervalNotificationTrigger requirement)
-    /// - spec-builder gating denies (settings master / completion toggle off)
+    /// - spec-builder gating in `sessionTerminatedByFreeTimeRequest` denies
+    ///   (settings master / completion toggle off).
     private func addR3MutexTeardownBanner(for session: IntentionSession, schedule: WeeklySchedule) async {
-        guard schedule.isEnabled else {
-            Self.log.notice("R3 pre-schedule skipped: schedule disabled")
-            return
-        }
-        guard schedule.isBlocking(at: session.startTime) else {
-            Self.log.notice("R3 pre-schedule skipped: session start \(session.startTime) not in blocking state")
-            return
-        }
-        guard let boundary = schedule.nextBoundary(after: session.startTime) else {
-            Self.log.notice("R3 pre-schedule skipped: no boundary in next week")
-            return
-        }
-        guard boundary < session.endTime else {
-            Self.log.notice("R3 pre-schedule skipped: boundary \(boundary) at-or-after session end \(session.endTime)")
+        let snapshot = schedule.snapshot()
+        guard let boundary = SessionEndNotification.r3MutexTeardownBannerBoundary(
+            schedule: snapshot,
+            sessionStart: session.startTime,
+            sessionEnd: session.endTime
+        ) else {
+            Self.log.notice("R3 pre-schedule skipped: boundary spec-builder returned nil (schedule disabled, no boundary, boundary at-or-after session end, or boundary direction is free-time→blocking)")
             return
         }
 
