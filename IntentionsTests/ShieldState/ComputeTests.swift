@@ -42,31 +42,42 @@ final class ComputeTests: XCTestCase {
         XCTAssertEqual(returned, picks)
     }
 
-    // MARK: - Session vs free-time mutex (R3, #27)
+    // MARK: - Session precedence (#59)
+    //
+    // New mental model: a session is a deliberate user commitment that
+    // overrides the schedule-default state for its duration. It wins over
+    // free-time and disabled-schedule alike. This reverses the R3 mutex
+    // from #27 (which made free-time win) — see issue #59 for rationale.
 
-    func test_sessionActive_inFreeTime_returnsNone() {
-        // R3: free-time wins over session. An active session during a free-time
-        // window should NOT shield other apps — free-time means all apps free.
-        // ShieldEngine clears the in-log session on the actual transition; this
-        // test pins the compute() precedence.
+    func test_sessionDuringFreeTimeWindow_returnsAllExceptSessionApps() {
+        // #59: session active during a free-time window ⇒ session wins.
+        // Non-session apps are shielded for the session's duration even
+        // though the schedule says "free-time everywhere".
         let picks = FamilyActivitySelection()
         var log = IntentLog(activeSession: session(endOffset: 300, apps: picks))
         log.weeklySchedule = snapshot(enabled: true, freeAllWeek: true)
-        XCTAssertEqual(compute(log, at: t0.addingTimeInterval(100)), .none)
+        guard case .allExcept(let returned) = compute(log, at: t0.addingTimeInterval(100)) else {
+            return XCTFail("expected .allExcept — session wins over free-time")
+        }
+        XCTAssertEqual(returned, picks)
     }
 
-    func test_sessionActive_scheduleDisabled_returnsNone() {
-        // Schedule disabled ⇒ "blocking off" ⇒ all free. Session cannot
-        // override that — free-time wins.
+    func test_sessionDuringDisabledSchedule_returnsAllExceptSessionApps() {
+        // #59: session active while schedule.isEnabled == false ⇒ session wins.
+        // A user who starts a session while blocking is "off" has explicitly
+        // opted into a temporary shield; session establishes its own floor.
         let picks = FamilyActivitySelection()
         var log = IntentLog(activeSession: session(endOffset: 300, apps: picks))
         log.weeklySchedule = snapshot(enabled: false, freeAllWeek: false)
-        XCTAssertEqual(compute(log, at: t0.addingTimeInterval(100)), .none)
+        guard case .allExcept(let returned) = compute(log, at: t0.addingTimeInterval(100)) else {
+            return XCTFail("expected .allExcept — session wins over disabled schedule")
+        }
+        XCTAssertEqual(returned, picks)
     }
 
     func test_sessionActive_outsideFree_returnsAllExceptApps() {
-        // Session inside a blocking window — session is the correct precedence
-        // (free-time mutex only applies when the schedule is in free-time).
+        // Regression: session inside a blocking window — session wins
+        // (matches the #59 precedence; this case already worked pre-#59).
         let picks = FamilyActivitySelection()
         var log = IntentLog(activeSession: session(endOffset: 300, apps: picks))
         log.weeklySchedule = snapshot(enabled: true, freeAllWeek: false)
