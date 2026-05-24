@@ -15,6 +15,7 @@ actor MockScreenTimeService: ScreenTimeManaging {
     private var mockCurrentlyAllowedApps: Set<ApplicationToken> = []
     private var mockSystemApps: Set<ApplicationToken> = []
     private var mockSessionTask: Task<Void, Never>?
+    private var mockLastScheduleSnapshot: ScheduleSnapshot?
     private let _mockIsInitialized = Atomic<Bool>(false)
     
     // MARK: - Test Configuration Properties
@@ -179,13 +180,14 @@ actor MockScreenTimeService: ScreenTimeManaging {
         // Cancel any running session task
         mockSessionTask?.cancel()
         mockSessionTask = nil
-        
+
         // Clear all tracking
         mockCurrentlyAllowedApps.removeAll()
         mockSystemApps.removeAll()
-        
+        mockLastScheduleSnapshot = nil
+
         // NOTE: Keep mockIsInitialized = true so service remains usable after cleanup
-        
+
         print("Mock: All resources cleaned up - service remains initialized")
     }
 
@@ -201,6 +203,22 @@ actor MockScreenTimeService: ScreenTimeManaging {
         // The mock proxy for "active session" is whether the mock session task
         // is currently running.
         //
+        // Capture pre-mutation snapshot's enabled state BEFORE updating —
+        // distinguishes toggle-on (#61) from edit-under-already-enabled
+        // (#27 CASE B). Order is load-bearing — same as ShieldEngine.
+        let previousSnapshotWasEnabled = mockLastScheduleSnapshot?.isEnabled ?? false
+        mockLastScheduleSnapshot = snapshot
+
+        // Toggle-on preservation (#61): if the previous snapshot was disabled
+        // (or missing) and the incoming snapshot is enabled, skip the mutex
+        // clear entirely. Master-toggle ON re-establishes the schedule as the
+        // post-session default state; it must not kill the in-flight session.
+        let toggleOnFromDisabled = !previousSnapshotWasEnabled && snapshot.isEnabled
+        if toggleOnFromDisabled && mockSessionTask != nil {
+            print("Mock: refreshSchedule — toggle-on with active session — preserving session (#61)")
+            return .noSessionChange
+        }
+
         // Disabled-schedule short-circuit (see ShieldEngine.refreshScheduleMonitoring):
         // a disabled snapshot is "blocking off", not "entered free-time", and
         // must NOT trip R3 — caller should route through #28's silent disable-cancel.
