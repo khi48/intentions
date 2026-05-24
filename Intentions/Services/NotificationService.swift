@@ -134,6 +134,18 @@ final class NotificationService: NSObject, Sendable {
 
     // MARK: - Session Notifications
 
+    /// Neutral copy for the session-completion banner — used by BOTH the
+    /// pre-scheduled `session_completion_<id>` trigger and the fallback
+    /// `sendSessionExpiredNotification` so the two delivery paths cannot drift.
+    ///
+    /// Per #60: the body deliberately does not claim "Apps are now blocked
+    /// again." — after the sessions-during-unblock work lands a session can
+    /// end in any of three post-states (blocked, free-time, fully unblocked).
+    static let sessionCompletionBody = String(
+        localized: "Session complete.",
+        comment: "Body of the natural-completion banner posted when a session ends; neutral about post-session app state"
+    )
+
     /// Schedule notifications for an active session
     func scheduleSessionNotifications(for session: IntentionSession) async {
 
@@ -315,7 +327,7 @@ final class NotificationService: NSObject, Sendable {
 
         let content = UNMutableNotificationContent()
         content.title = "Session Complete"
-        content.body = "Your focused session has ended. Apps are now blocked again."
+        content.body = Self.sessionCompletionBody
         content.sound = .default
         content.categoryIdentifier = NotificationType.sessionCompletion.rawValue
 
@@ -354,7 +366,7 @@ final class NotificationService: NSObject, Sendable {
 
         let content = UNMutableNotificationContent()
         content.title = "Session Expired"
-        content.body = "Your session has ended. Apps are now blocked again."
+        content.body = Self.sessionCompletionBody
         content.sound = .default
         content.categoryIdentifier = NotificationType.sessionCompletion.rawValue
 
